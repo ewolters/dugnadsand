@@ -33,6 +33,8 @@ requirements. If you are reading this because you are about to add a feature, re
 
 **Code: [AGPL-3.0-only](LICENSE). Documentation: [CC BY 4.0](docs/LICENSE.md).**
 
+Copyright © 2026 Eric Wolters.
+
 The copyleft is doing a specific job here. This model rests on one claim — that nothing
 in the system gates on what you have given — and we made that auditable in code rather
 than promised in a policy. AGPL's network clause means anyone running a modified version
