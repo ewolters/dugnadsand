@@ -29,6 +29,7 @@ requirements. If you are reading this because you are about to add a feature, re
 | [docs/komunitin-comparison.md](docs/komunitin-comparison.md) | Why we did not adopt Komunitin, and what we kept from it |
 | [docs/architecture.md](docs/architecture.md) | Code-level comparison with Komunitin: where the gate lives, and what replaces it |
 | [docs/design-rules.md](docs/design-rules.md) | The eight constraints that hold the model up |
+| [docs/policy-manifest.md](docs/policy-manifest.md) | The claims that are enforced by code, and why INCOMPLETE is not a soft pass |
 
 ## License
 

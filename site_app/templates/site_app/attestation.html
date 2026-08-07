@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+
+{% block title %}Policy attestation — Dugnadsand{% endblock %}
+
+{% block extra_css %}
+<style>
+  :root {
+    --birch: #EBEEE9; --ink: #17211E; --spruce: #22403A; --ochre: #C1832B;
+    --moss: #6B7F74; --rule: rgba(23,33,30,.14);
+    --sans: Optima, Candara, "Gill Sans", "Gill Sans MT", "Trebuchet MS", "Segoe UI", sans-serif;
+    --serif: Charter, "Iowan Old Style", Constantia, "Palatino Linotype", Georgia, serif;
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, "DejaVu Sans Mono", monospace;
+    --gut: clamp(1.25rem, 5vw, 3rem);
+  }
+  body { margin:0; background:var(--birch); color:var(--ink); font-family:var(--serif); line-height:1.6; }
+  body > header { border-bottom:1px solid var(--rule); }
+  body > header nav { max-width:52rem; margin-inline:auto; padding:1.1rem var(--gut); }
+  body > header .brand-name { font-family:var(--sans); font-weight:600; letter-spacing:.07em;
+    text-transform:uppercase; text-decoration:none; }
+  body > footer { border-top:1px solid var(--rule); margin-top:4rem; font-family:var(--mono);
+    font-size:.75rem; color:var(--moss); }
+  body > footer p { max-width:52rem; margin:0 auto; padding:1.5rem var(--gut); }
+  main { max-width:52rem; margin-inline:auto; padding:0 var(--gut); }
+
+  h1 { color:var(--ink); font-family:var(--sans); font-weight:600; font-size:clamp(1.9rem,5vw,2.6rem);
+       line-height:1.1; letter-spacing:-.02em; margin:3.5rem 0 .5rem; }
+  .sub { color:var(--moss); margin:0 0 2rem; }
+
+  .disclaimer { border:1px solid var(--ochre); background:#F7F0E1; padding:1rem 1.15rem;
+    margin:0 0 2.5rem; font-size:.9375rem; line-height:1.6; }
+  .disclaimer b { font-family:var(--mono); font-size:.75rem; letter-spacing:.1em;
+    text-transform:uppercase; color:#8A6410; display:block; margin-bottom:.4rem; }
+
+  .status { display:inline-block; font-family:var(--mono); font-size:.8125rem; letter-spacing:.1em;
+    padding:.35rem .75rem; border:1px solid currentColor; border-radius:2px; }
+  .UPHELD { color:#1F6F5C; background:#E8F0E9; }
+  .INCOMPLETE { color:#8A6410; background:#F7F0E1; }
+  .BREACHED { color:#A32B1E; background:#F7E9E7; }
+
+  .scroll { overflow-x:auto; border:1px solid var(--rule); background:#FAFBF9; margin:1.5rem 0; }
+  table { border-collapse:collapse; width:100%; min-width:34rem; font-size:.875rem; }
+  th,td { text-align:left; padding:.6rem .8rem; border-bottom:1px solid var(--rule); vertical-align:top; }
+  thead th { font-family:var(--mono); font-size:.6875rem; letter-spacing:.11em; text-transform:uppercase;
+    color:var(--moss); font-weight:400; background:#EAEEE9; white-space:nowrap; }
+  tbody tr:last-child td { border-bottom:0; }
+  td.id { font-family:var(--mono); white-space:nowrap; }
+  .upheld { color:#1F6F5C; } .not_enforceable { color:#8A6410; } .breached { color:#A32B1E; }
+  .ev { font-family:var(--mono); font-size:.75rem; color:var(--moss); display:block; margin-top:.3rem; }
+
+  h2 { color:var(--ink); font-family:var(--sans); font-weight:600; font-size:1.3rem;
+       margin:2.75rem 0 .6rem; }
+  dl.meta { display:grid; grid-template-columns:minmax(9rem,14ch) 1fr; gap:.3rem 1rem;
+    font-family:var(--mono); font-size:.8125rem; margin:0; }
+  dl.meta dt { color:var(--moss); } dl.meta dd { margin:0; word-break:break-all; }
+  p.note { font-size:.9375rem; color:#38443F; }
+  a { color:var(--spruce); }
+</style>
+{% endblock %}
+
+{% block content %}
+<h1>Policy attestation</h1>
+<p class="sub">What the code was checked for, when, and what the checks returned.</p>
+
+<div class="disclaimer">
+  <b>Not a legal attestation</b>
+  {{ disclaimer }}
+</div>
+
+<h2>Right now</h2>
+<p class="note">Run live when you loaded this page, so a stalled scheduler cannot make a
+  green record look like a green system.</p>
+
+<p><span class="status {{ live.status }}">{{ live.status }}</span></p>
+
+<div class="scroll">
+  <table>
+    <thead>
+      <tr><th>Claim</th><th>Result</th><th>Detail</th></tr>
+    </thead>
+    <tbody>
+      {% for r in live.results %}
+      <tr>
+        <td class="id">{{ r.id }}</td>
+        <td class="id {{ r.status }}">{{ r.status }}</td>
+        <td>{{ r.claim }}
+          <span class="ev">{{ r.detail }}</span>
+          {% for e in r.evidence %}<span class="ev">→ {{ e }}</span>{% endfor %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<h2>Last recorded run</h2>
+{% if latest %}
+  <dl class="meta">
+    <dt>Sequence</dt><dd>#{{ latest.sequence }}</dd>
+    <dt>Recorded</dt><dd>{{ latest.recorded_at|date:"Y-m-d H:i:s" }} UTC</dd>
+    <dt>Status</dt><dd>{{ latest.status }}</dd>
+    <dt>Manifest</dt><dd>{{ latest.manifest_hash }}</dd>
+    <dt>Entry hash</dt><dd>{{ latest.entry_hash }}</dd>
+    <dt>Chain</dt><dd>{% if chain_ok %}verifies to the tip{% else %}DOES NOT VERIFY — history has been altered{% endif %}</dd>
+  </dl>
+{% else %}
+  <p class="note">Nothing recorded yet. The scheduler writes the first entry on its next run.</p>
+{% endif %}
+
+<h2>What INCOMPLETE means</h2>
+<p class="note">A check whose subject does not exist yet reports <em>not enforceable</em>
+  rather than passing, and the run as a whole can never read UPHELD while any check is in
+  that state. Most of this system is not built. An honest amber is the correct answer
+  until it is, and the rows above name exactly what is missing.</p>
+
+<p class="note">The claims themselves live in
+  <a href="https://github.com/ewolters/dugnadsand/blob/master/policy/manifest.toml"><code>policy/manifest.toml</code></a>,
+  the checks behind them in
+  <a href="https://github.com/ewolters/dugnadsand/blob/master/policy/checks.py"><code>policy/checks.py</code></a>.</p>
+{% endblock %}

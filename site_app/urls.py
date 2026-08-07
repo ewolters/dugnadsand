@@ -6,4 +6,6 @@ app_name = "site_app"
 
 urlpatterns = [
     path("", views.index, name="index"),
+    path("attestation/", views.attestation, name="attestation"),
+    path("attestation/run/", views.attestation_run, name="attestation_run"),
 ]

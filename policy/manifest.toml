@@ -1,0 +1,111 @@
+# Dugnadsand policy manifest
+#
+# THIS IS NOT A LEGAL ATTESTATION. It is an engineering manifest: a list of
+# claims about how this software behaves, each bound to an automated check.
+# It says "the code does what we said it does." It does not say the model is
+# lawful, that any tax treatment applies, or that any authority agrees. Only
+# counsel can speak to that, and nothing here has been reviewed by any.
+# See docs/policy-manifest.md before quoting any of this to anyone.
+#
+# Every claim below must have an implementation in policy/checks.py, and every
+# implementation must appear below. The test suite fails if the two drift.
+
+[manifest]
+version = "1"
+subject = "dugnadsand"
+kind = "engineering-manifest"          # deliberately not "attestation-of-compliance"
+legal_effect = "none"
+
+# --------------------------------------------------------------------------
+
+[[invariant]]
+id = "no-balance"
+claim = "No member holds a balance, credit limit, or any spendable quantity."
+why = """
+A balance is what makes a record into a currency. Komunitin's Account carries
+creditLimit/balance/maximumBalance and its API has an HTTP 400 named
+InsufficientBalance; we hold that no such quantity may exist here, so no such
+error can be expressed.
+"""
+check = "no_balance"
+enforceable_when = "the domain models exist"
+
+[[invariant]]
+id = "no-gating"
+claim = "No code path consults what a member has given when deciding what they may receive."
+why = """
+The organization's stated approach is assistance without eligibility
+requirements. If giving earns standing, the record becomes consideration and
+the gift framing collapses. This is the load-bearing invariant.
+"""
+check = "no_gating"
+enforceable_when = "a claim path exists"
+
+[[invariant]]
+id = "no-exchange"
+claim = "Nothing links what a member received to what a member gave."
+why = """
+Reciprocal linkage is the definition of an exchange. Hours may never be traded
+for hours, directly or by settlement, netting, or matching. Two gifts that
+happen to run in opposite directions are still two gifts; a record that ties
+them together is a barter transaction.
+"""
+check = "no_exchange"
+enforceable_when = "the domain models exist"
+
+[[invariant]]
+id = "flat-hours"
+claim = "An hour counts as one hour, from anyone, and is never denominated in money."
+why = """
+Weighting by skill, or pegging a credit to a dollar, creates a readily
+ascertainable value. Flat hours carry no price, which is what keeps the record
+from being a valuation.
+"""
+check = "flat_hours"
+enforceable_when = "the domain models exist"
+
+[[invariant]]
+id = "no-money-rails"
+claim = "The system integrates no payment processor and moves no funds."
+why = """
+This is a check on the CODE, not on what members write. A member may describe a
+cash gift in free text — "$100 available, took me an hour to earn" — and the
+system routing that offer to someone who needs it is exactly the intended
+behaviour. What is forbidden is the software acquiring the ability to hold,
+transfer, or settle money itself.
+"""
+check = "no_money_rails"
+enforceable_when = "always"
+
+[[invariant]]
+id = "no-tax-artifact"
+claim = "The system emits no per-member valuation, total, or statement that could function as tax substantiation."
+why = """
+Donated services are not deductible (Treas. Reg. 1.170A-1(g)). A statement
+totalling a member's contributions, especially with a currency figure, would
+invite a deduction that does not exist and would push the record toward looking
+like a barter-exchange statement. The system must not produce one.
+"""
+check = "no_tax_artifact"
+enforceable_when = "always"
+
+[[invariant]]
+id = "no-catalog"
+claim = "Offerings are free text. No categories, rates, or suggested values."
+why = """
+Standardised categories create comparables and comparables create ascertainable
+value. A list of suggested hours is a price list.
+"""
+check = "no_catalog"
+enforceable_when = "the domain models exist"
+
+[[invariant]]
+id = "no-obligation"
+claim = "An offer of time is a ceiling with no floor, and stopping is recorded nowhere."
+why = """
+No obligation means no bargained-for exchange, and it is strong evidence against
+employment classification. A reliability score or an abandoned flag would make
+stopping cost something, which is precisely what must not happen.
+"""
+check = "no_obligation"
+enforceable_when = "the domain models exist"

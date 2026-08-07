@@ -1,7 +1,11 @@
 import logging
 import os
+from hmac import compare_digest
 
+from django.http import JsonResponse
 from django.shortcuts import redirect, render
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_POST
 from kjerne_platform import email, rate_limit
 
 from .forms import ContactForm
@@ -52,3 +56,59 @@ def index(request):
     )
     # Redirect after post so a refresh doesn't send it a second time.
     return redirect("/?sent=1#say-hello")
+
+
+# --------------------------------------------------------------------------
+# Policy attestation
+#
+# The manifest claims things about how this software behaves. A claim nobody
+# can check is marketing, so the result is available two ways: on a schedule
+# (Tempora POSTs to attestation_run) and on demand (anyone may GET attestation).
+# --------------------------------------------------------------------------
+
+ATTEST_TOKEN = os.environ.get("DUGNADSAND_ATTEST_TOKEN")
+
+
+def attestation(request):
+    """Public, read-only. The latest recorded run plus a live chain check.
+
+    Deliberately shows the CURRENT result too, not only the last stored one, so
+    a stale scheduler cannot make a green record look like a green system.
+    """
+    from policy import attest as attest_mod
+
+    from .models import Attestation
+
+    latest = Attestation.objects.order_by("-sequence").first()
+    report = attest_mod.verify() if latest else None
+
+    return render(request, "site_app/attestation.html", {
+        "latest": latest,
+        "live": attest_mod.attest(persist=False),
+        "chain_ok": getattr(report, "ok", None),
+        "chain_report": report,
+        "disclaimer": attest_mod.DISCLAIMER,
+    })
+
+
+@csrf_exempt
+@require_POST
+def attestation_run(request):
+    """Record an attestation. Called by Tempora; not for browsers.
+
+    Token-guarded rather than open, because an unauthenticated writer could
+    flood the chain and bury a real result under noise.
+    """
+    from policy import attest as attest_mod
+
+    if not ATTEST_TOKEN:
+        logger.error("DUGNADSAND_ATTEST_TOKEN is unset; refusing to record an attestation.")
+        return JsonResponse({"error": "attestation is not configured"}, status=503)
+
+    supplied = request.headers.get("Authorization", "").removeprefix("Bearer ").strip()
+    if not compare_digest(supplied, ATTEST_TOKEN):
+        return JsonResponse({"error": "unauthorized"}, status=401)
+
+    payload = attest_mod.attest()
+    logger.info("Attestation #%s recorded: %s", payload["sequence"], payload["status"])
+    return JsonResponse(payload, json_dumps_params={"default": str})

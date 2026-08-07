@@ -8,6 +8,14 @@ A code-level comparison. Komunitin quotes are from
 > **not built yet** — the site is live, the record-keeping is not. The Django models here
 > are the proposed schema, written out concretely so the comparison is real rather than
 > hand-waved. Read them as a spec.
+>
+> **And expect them to move.** Field names, table shapes and boundaries will change as
+> this gets built and as the board, counsel and the first members push back on it.
+> Nothing on the dugnadsand side of this document is settled — it is the current best
+> sketch, not a commitment. What is *not* expected to move is the small set of
+> invariants in [policy/manifest.toml](../policy/manifest.toml), which is precisely why
+> those are written as automated checks rather than as prose here: the schema is
+> allowed to drift, the properties are not.
 
 ---
 
