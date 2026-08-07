@@ -1,0 +1,321 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Dugnadsand — the work we do together{% endblock %}
+
+{% block extra_css %}
+<style>
+  :root {
+    --birch:  #EBEEE9;
+    --paper:  #F4F6F1;
+    --ink:    #17211E;
+    --spruce: #22403A;
+    --ochre:  #C1832B;
+    --moss:   #6B7F74;
+    --rule:   rgba(23,33,30,.14);
+
+    --sans: Optima, Candara, "Gill Sans", "Gill Sans MT", "Trebuchet MS", "Segoe UI", sans-serif;
+    --serif: Charter, "Iowan Old Style", Constantia, "Palatino Linotype", Palatino, Georgia, serif;
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, "DejaVu Sans Mono", monospace;
+
+    --gut: clamp(1.25rem, 5vw, 3rem);
+    --col: 40rem;
+  }
+
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--birch);
+    color: var(--ink);
+    font-family: var(--serif);
+    font-size: clamp(1.0625rem, .4vw + 1rem, 1.1875rem);
+    line-height: 1.62;
+    -webkit-font-smoothing: antialiased;
+  }
+  ::selection { background: var(--ochre); color: #fff; }
+  a { color: inherit; }
+  :focus-visible { outline: 2px solid var(--ochre); outline-offset: 3px; }
+
+  .wrap { max-width: var(--col); margin-inline: auto; padding-inline: var(--gut); }
+  .wide { max-width: 68rem; margin-inline: auto; padding-inline: var(--gut); }
+
+  /* ---- base.html chrome ---- */
+  body > header { border-bottom: 1px solid var(--rule); }
+  body > header nav {
+    max-width: 68rem; margin-inline: auto; padding: 1.1rem var(--gut);
+    display: flex; align-items: baseline; justify-content: space-between; gap: 1rem;
+  }
+  body > header .brand-name {
+    font-family: var(--sans); font-weight: 600; font-size: 1.0625rem;
+    letter-spacing: .07em; text-transform: uppercase; text-decoration: none;
+  }
+  body > header nav::after {
+    content: "Upstate South Carolina";
+    font-family: var(--mono); font-size: .6875rem; letter-spacing: .1em;
+    text-transform: uppercase; color: var(--moss);
+  }
+  body > main { display: block; }
+  body > footer {
+    border-top: 1px solid var(--rule); margin-top: 5rem;
+    font-family: var(--mono); font-size: .75rem; line-height: 1.7; color: var(--moss);
+  }
+  body > footer p { max-width: 68rem; margin: 0 auto; padding: 1.75rem var(--gut) .5rem; }
+
+  /* ---- hero ---- */
+  .hero { padding-block: clamp(3.5rem, 9vw, 7rem) clamp(2rem, 5vw, 3.5rem); }
+  .eyebrow {
+    font-family: var(--mono); font-size: .6875rem; letter-spacing: .18em;
+    text-transform: uppercase; color: var(--ochre); margin: 0 0 1.4rem;
+  }
+  /* brand.css carries a plain `h1,h2,h3...` colour rule. An element selector beats an
+     inherited value, so every heading below states its own colour explicitly. */
+  .hero h1 {
+    color: var(--ink);
+    font-family: var(--sans); font-weight: 600;
+    font-size: clamp(2.5rem, 7.5vw, 4.25rem); line-height: 1.02;
+    letter-spacing: -.02em; margin: 0; text-wrap: balance;
+  }
+  .hero .lede {
+    font-size: clamp(1.1875rem, .6vw + 1.05rem, 1.4375rem); line-height: 1.5;
+    margin: 1.6rem 0 0; color: #2B3733;
+  }
+
+  /* ---- figures ---- */
+  figure { margin: 0; }
+  figure img { display: block; width: 100%; height: auto; }
+  .plate { background: var(--spruce); padding: .5rem; }
+  figcaption {
+    font-family: var(--mono); font-size: .75rem; line-height: 1.65;
+    color: var(--moss); margin-top: .8rem; max-width: 34rem;
+  }
+
+  /* ---- tally band (signature) ---- */
+  .band { background: var(--spruce); color: var(--paper); margin-top: clamp(3rem, 7vw, 5rem); }
+  .band-inner { padding-block: clamp(3rem, 8vw, 5.5rem); }
+  .band h2 {
+    color: var(--paper);
+    font-family: var(--sans); font-weight: 600; font-size: clamp(1.5rem, 3.5vw, 2.125rem);
+    line-height: 1.15; letter-spacing: -.015em; margin: 0; text-wrap: balance;
+  }
+  .band p { margin: 1.15rem 0 0; color: #CBD6D0; }
+  .band .hours {
+    font-family: var(--mono); font-size: .75rem; letter-spacing: .14em;
+    text-transform: uppercase; color: var(--ochre); margin: 0 0 1.25rem;
+  }
+  .tally { margin: 2.25rem 0 2rem; }
+  .tally svg { width: 100%; max-width: 27rem; height: auto; display: block; }
+  /* Visible baseline: the marks never depend on script or animation to appear. */
+  .tally line { stroke: var(--ochre); stroke-width: 5; stroke-linecap: round; }
+
+  /* Script opts in to the reveal; without it the marks are simply already cut. */
+  .tally.is-cut line { stroke-dasharray: 90; stroke-dashoffset: 90; animation: cut .45s ease-out forwards; }
+  @keyframes cut { to { stroke-dashoffset: 0; } }
+
+  /* ---- plain statements ---- */
+  .terms { padding-block: clamp(3.5rem, 8vw, 5.5rem) 0; display: grid; gap: 2.5rem; }
+  .terms h3 {
+    color: var(--ink);
+    font-family: var(--sans); font-weight: 600; font-size: 1.3125rem;
+    line-height: 1.25; margin: 0 0 .4rem; letter-spacing: -.01em;
+  }
+  .terms p { margin: 0; color: #38443F; }
+
+  /* ---- closing ---- */
+  .closing { padding-block: clamp(3.5rem, 8vw, 5rem) 0; }
+  .closing h2 {
+    color: var(--ink);
+    font-family: var(--sans); font-weight: 600; font-size: clamp(1.5rem, 3.5vw, 2rem);
+    line-height: 1.15; letter-spacing: -.015em; margin: 0 0 1rem; text-wrap: balance;
+  }
+  .closing p { margin: 0 0 1.05rem; }
+  .closing .mail {
+    font-family: var(--mono); font-size: .9375rem;
+    text-decoration-thickness: 1px; text-underline-offset: 3px;
+  }
+  .figure-gap { margin-top: clamp(2.5rem, 6vw, 4rem); }
+  .closing .credits {
+    font-family: var(--mono); font-size: .75rem; line-height: 1.7;
+    color: var(--moss); margin-top: 3.5rem;
+  }
+  .closing .credits a { color: var(--moss); text-underline-offset: 2px; }
+
+  /* ---- contact ---- */
+  .contact { display: grid; gap: 1.25rem; margin-top: 1.75rem; max-width: 30rem; }
+  .field { display: grid; gap: .4rem; }
+  .field label {
+    font-family: var(--mono); font-size: .6875rem; letter-spacing: .12em;
+    text-transform: uppercase; color: var(--moss);
+  }
+  .contact input, .contact textarea {
+    font: inherit; font-size: 1rem; color: var(--ink);
+    background: #FBFCFA; border: 1px solid rgba(23,33,30,.22); border-radius: 2px;
+    padding: .6rem .7rem; width: 100%; box-sizing: border-box;
+  }
+  .contact textarea { resize: vertical; line-height: 1.55; }
+  .contact input:focus, .contact textarea:focus {
+    border-color: var(--spruce); outline: 2px solid var(--ochre); outline-offset: 1px;
+  }
+  .contact button {
+    font-family: var(--sans); font-size: .9375rem; font-weight: 600; letter-spacing: .02em;
+    color: var(--paper); background: var(--spruce); border: 0; border-radius: 2px;
+    padding: .7rem 1.5rem; cursor: pointer; justify-self: start;
+  }
+  .contact button:hover { background: #2C534B; }
+  .err { color: #8C3A2B; font-size: .875rem; margin: 0; }
+  .hp { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
+  .note-sent {
+    border-left: 2px solid var(--ochre); padding-left: 1rem;
+    margin-top: 1.75rem; color: #38443F;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<section class="hero wrap">
+  <p class="eyebrow">Dugnad · Norwegian</p>
+  <h1>Nobody sends an invoice.</h1>
+  <p class="lede">Dugnad is a Norwegian word. It's the Saturday the whole street turns out to clear
+     the lot or paint the community hall, and nobody keeps track of who owed what. There's usually
+     coffee and something to eat when it's done.</p>
+</section>
+
+<div class="wide">
+  <figure class="plate">
+    <picture>
+      <source srcset="{% static 'img/barn-raising.webp' %}" type="image/webp">
+      <img src="{% static 'img/barn-raising.jpg' %}" width="1500" height="1089"
+           alt="A large crowd of men, women and children standing together in a clearing before a birch wood, photographed in the early 1900s at a barn raising.">
+    </picture>
+  </figure>
+  <figcaption>A barn raising, early 1900s. Look at how many people came out — the kids, somebody's
+    baby. We borrowed a Norwegian word for it, but there's nothing Norwegian about the idea.</figcaption>
+</div>
+
+<section class="band">
+  <div class="band-inner wrap">
+    <p class="hours">The entire ledger</p>
+    <h2>We keep one record: hours.</h2>
+
+    <div class="tally" role="img" aria-label="Thirteen tally marks: two groups of five and three singles.">
+      <svg viewBox="0 0 300 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <line x1="10" y1="12" x2="12" y2="48"/>
+        <line x1="26" y1="11" x2="25" y2="47"/>
+        <line x1="41" y1="12" x2="43" y2="48"/>
+        <line x1="58" y1="11" x2="57" y2="47"/>
+        <line x1="4"  y1="44" x2="65" y2="14"/>
+        <line x1="100" y1="11" x2="101" y2="48"/>
+        <line x1="116" y1="12" x2="114" y2="47"/>
+        <line x1="131" y1="11" x2="133" y2="48"/>
+        <line x1="148" y1="12" x2="147" y2="47"/>
+        <line x1="94"  y1="45" x2="155" y2="13"/>
+        <line x1="190" y1="12" x2="191" y2="48"/>
+        <line x1="206" y1="11" x2="204" y2="47"/>
+        <line x1="221" y1="12" x2="223" y2="48"/>
+      </svg>
+    </div>
+
+    <p>Thirteen hours on a community garden. That's the whole ledger — we write down what you did,
+       and that's where it ends. The hours don't buy anything, and nobody owes them to you. You
+       can't spend them and you can't run out of them.</p>
+  </div>
+</section>
+
+<section class="terms wrap">
+  <div>
+    <h3>Nothing is bought or sold.</h3>
+    <p>There's no currency here and no marketplace. If you grew more potatoes than you can eat,
+       put them up and whoever needs them takes them. You don't need hours saved to take
+       something, and you don't get anything back for giving.</p>
+  </div>
+  <div>
+    <h3>Nothing is owed.</h3>
+    <p>Your hours aren't a claim on anybody else's time. Nobody's in debt, nobody's behind, and
+       turning up with an empty record costs you nothing at all.</p>
+  </div>
+  <div>
+    <h3>You can stop whenever.</h3>
+    <p>Offer four hours and you're offering <em>up to</em> four, never <em>at least</em> four.
+       Change your mind halfway through and nothing happens to you. We built it that way on purpose.</p>
+  </div>
+</section>
+
+<div class="wide figure-gap">
+  <figure class="plate">
+    <picture>
+      <source srcset="{% static 'img/the-break.webp' %}" type="image/webp">
+      <img src="{% static 'img/the-break.jpg' %}" width="1200" height="800" loading="lazy"
+           alt="Volunteers sitting on the ground in a pine forest, eating together, with hand tools laid out in the background after a day of trail work.">
+    </picture>
+  </figure>
+  <figcaption>A trail crew stopped for lunch, tools left back by the truck. Anyone who's done this
+    kind of work knows the sitting-down part counts for as much as the digging.</figcaption>
+</div>
+
+<section class="closing wrap" id="say-hello">
+  <h2>Getting started in upstate South Carolina.</h2>
+  <p>We're early. Right now it's a few neighbors, a long list of questions we haven't answered
+     yet, and a decision not to build anything that keeps score.</p>
+  <p>If this sounds like your street, tell us about it.</p>
+
+  {% if sent %}
+    <p class="note-sent">Thanks — that's come through. We'll write back.</p>
+  {% else %}
+    <form method="post" action="/#say-hello" class="contact" novalidate>
+      {% csrf_token %}
+      {% if form.non_field_errors %}
+        <p class="err">{{ form.non_field_errors.0 }}</p>
+      {% endif %}
+
+      <div class="field">
+        <label for="{{ form.name.id_for_label }}">Your name</label>
+        <input type="text" name="name" id="{{ form.name.id_for_label }}" maxlength="120"
+               value="{{ form.name.value|default:'' }}" required>
+        {% if form.name.errors %}<span class="err">{{ form.name.errors.0 }}</span>{% endif %}
+      </div>
+
+      <div class="field">
+        <label for="{{ form.email.id_for_label }}">Email</label>
+        <input type="email" name="email" id="{{ form.email.id_for_label }}" maxlength="254"
+               value="{{ form.email.value|default:'' }}" required>
+        {% if form.email.errors %}<span class="err">{{ form.email.errors.0 }}</span>{% endif %}
+      </div>
+
+      <div class="field">
+        <label for="{{ form.message.id_for_label }}">What's on your mind</label>
+        <textarea name="message" id="{{ form.message.id_for_label }}" rows="5" maxlength="4000"
+                  required>{{ form.message.value|default:'' }}</textarea>
+        {% if form.message.errors %}<span class="err">{{ form.message.errors.0 }}</span>{% endif %}
+      </div>
+
+      <div class="hp" aria-hidden="true">
+        <label for="id_website">Website</label>
+        <input type="text" name="website" id="id_website" tabindex="-1" autocomplete="off">
+      </div>
+
+      <button type="submit">Send it</button>
+    </form>
+  {% endif %}
+
+  <p class="credits">Dugnadsand is sponsored by <a href="https://svend.ai">SVEND</a>.<br>
+     Photographs, in order: <em>Community gathering at a barn raising bee</em>, early 1900s, and
+     <em>Little Bear Trail Work Day</em>, Coconino National Forest, 2016. Both public domain,
+     via Wikimedia Commons.</p>
+</section>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  // Cut the tally marks one at a time, as if scored into wood. Enhancement only —
+  // the marks are already visible in CSS, so a failure here changes nothing.
+  (function () {
+    var tally = document.querySelector('.tally');
+    if (!tally || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    tally.querySelectorAll('line').forEach(function (l, i) {
+      l.style.animationDelay = (0.3 + i * 0.09) + 's';
+    });
+    tally.classList.add('is-cut');
+  })();
+</script>
+{% endblock %}

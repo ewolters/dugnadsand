@@ -1,0 +1,30 @@
+/* Auto-generated from brand.json — do not edit by hand */
+:root {
+  --brand-primary: #2c2c2c;
+  --brand-secondary: #555555;
+  --brand-tertiary: #888888;
+  --brand-text-dark: #1a1a1a;
+  --brand-text-body: #333333;
+  --brand-text-muted: #666666;
+  --brand-background: #f8f7f4;
+  --brand-surface: #ffffff;
+  --brand-font-heading: 'Inter', sans-serif;
+  --brand-font-body: 'Inter', sans-serif;
+}
+
+body {
+  font-family: var(--brand-font-body);
+  color: var(--brand-text-body);
+  background: var(--brand-background);
+  margin: 0;
+  padding: 0;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--brand-font-heading);
+  color: var(--brand-text-dark);
+}
+
+a {
+  color: var(--brand-primary);
+}
