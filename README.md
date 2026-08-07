@@ -29,10 +29,29 @@ requirements. If you are reading this because you are about to add a feature, re
 | [docs/komunitin-comparison.md](docs/komunitin-comparison.md) | Why we did not adopt Komunitin, and what we kept from it |
 | [docs/design-rules.md](docs/design-rules.md) | The eight constraints that hold the model up |
 
+## License
+
+**Code: [AGPL-3.0-only](LICENSE). Documentation: [CC BY 4.0](docs/LICENSE.md).**
+
+The copyleft is doing a specific job here. This model rests on one claim — that nothing
+in the system gates on what you have given — and we made that auditable in code rather
+than promised in a policy. AGPL's network clause means anyone running a modified version
+has to be able to show its source, so a member can always ask a community to prove the
+claim still holds. A permissive license would allow a closed fork that quietly added
+gating while keeping the name.
+
+The docs are deliberately looser. If the reasoning in them helps another mutual aid
+organization avoid building a barter exchange by accident, take it and go.
+
 ## Running it
 
 Django 5, Postgres, gunicorn behind a Cloudflare tunnel. Configuration comes entirely
 from the environment; nothing secret lives in this tree.
+
+> `requirements.txt` lists `kjerne-platform`, a private package providing the shared mail
+> queue and rate limiter. It is not publicly available, so a clone will not install
+> cleanly as-is. Swap those two call sites in `site_app/views.py` for any mail backend
+> and rate limiter you like — nothing else depends on it.
 
 ```bash
 pip install -r requirements.txt
