@@ -1,0 +1,36 @@
+{% extends "app_base.html" %}
+{% block title %}Set up your account — Dugnadsand{% endblock %}
+{% block content %}
+
+{% if problem %}
+  <h1>That link won't work</h1>
+  <p class="lede">{{ problem }}</p>
+  <p>Setup links are good once and expire after a week. Ask whoever invited you
+     to send a new one.</p>
+{% else %}
+  <h1>Welcome, {{ member.display_name }}</h1>
+  <p class="lede">Choose a password. Nobody else has ever seen it — this link let you
+     set your own rather than being handed one.</p>
+
+  <form method="post" class="stack">
+    {% csrf_token %}
+    {% if form.non_field_errors %}<p class="err">{{ form.non_field_errors.0 }}</p>{% endif %}
+    <div>
+      <label>Your username</label>
+      <p style="font-family:var(--mono)">{{ username }}</p>
+    </div>
+    {% for field in form %}
+    <div>
+      <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+      {{ field }}
+      {% if field.help_text %}<p class="help">{{ field.help_text|safe }}</p>{% endif %}
+      {% if field.errors %}<p class="err">{{ field.errors.0 }}</p>{% endif %}
+    </div>
+    {% endfor %}
+    <div><button type="submit" class="act">Set it and continue</button></div>
+  </form>
+
+  <p class="note">Next you'll set up a second factor — a code from your phone that
+     changes every 30 seconds.</p>
+{% endif %}
+{% endblock %}

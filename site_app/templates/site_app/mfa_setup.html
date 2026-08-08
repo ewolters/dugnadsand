@@ -12,16 +12,21 @@
 
   <ol>
     <li>Open an authenticator app — Google Authenticator, 1Password, Aegis, whichever you use.</li>
-    <li>Add an account and paste in the key below.</li>
+    <li>{% if qr_svg %}Scan this{% else %}Add an account and paste in the key below{% endif %}.</li>
     <li>Type the six-digit code it shows.</li>
   </ol>
 
-  <div class="card">
-    <p class="who">Setup key</p>
-    <p style="font-family:var(--mono); word-break:break-all">{{ uri }}</p>
-    <p class="help">Copy it exactly. It is shown while you set up and not stored anywhere
-       you can read it again.</p>
-  </div>
+  {% if qr_svg %}
+    <div class="qr">{{ qr_svg|safe }}</div>
+  {% endif %}
+
+  <details class="card" {% if not qr_svg %}open{% endif %}>
+    <summary>Can't scan it? Type the key instead</summary>
+    <p style="font-family:var(--mono); word-break:break-all; margin-top:.8rem">{{ uri }}</p>
+    <p class="help">Shown only while you set up, and never again. If your camera won't
+       focus, or you're reading this on the machine the code is on, paste this into your
+       app by hand.</p>
+  </details>
 
   <form method="post" class="stack">
     {% csrf_token %}

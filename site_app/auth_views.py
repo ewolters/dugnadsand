@@ -22,7 +22,40 @@ from kjerne_platform import federation_sso, mfa
 logger = logging.getLogger(__name__)
 
 SESSION_FLAG = "mfa_ok"
+PENDING_URI = "mfa_pending_uri"
 ISSUER = "Dugnadsand"
+
+# Shown for every unusable setup link, whatever was actually wrong with it.
+GENERIC_REFUSAL = ("This link is not usable. Setup links work once and expire "
+                   "after a week.")
+
+
+def _qr_svg(data):
+    """Render an otpauth URI as inline SVG, or None if that is not possible.
+
+    Inline rather than an <img> to a generated endpoint: the URI contains the
+    shared secret, and a separate request for it would put that secret in a
+    server log, a proxy cache and the browser's history. Inline SVG keeps it in
+    the one response that already carries it.
+
+    Degrades rather than breaks — the setup key is shown as text alongside, so
+    somebody whose camera will not focus, or who is reading this over SSH, can
+    still enroll. Matches kjerne-services/accounts/views.py::_qr_svg.
+    """
+    try:
+        import io
+
+        import qrcode
+        import qrcode.image.svg
+
+        img = qrcode.make(data, image_factory=qrcode.image.svg.SvgPathImage,
+                          box_size=14)
+        buf = io.BytesIO()
+        img.save(buf)
+        return buf.getvalue().decode()
+    except Exception:
+        logger.warning("QR render unavailable; manual entry only", exc_info=True)
+        return None
 
 
 @login_required
@@ -43,14 +76,28 @@ def mfa_setup(request):
     if request.method == "POST":
         code = (request.POST.get("code") or "").strip()
         if mfa.confirm(email, code):
+            request.session.pop(PENDING_URI, None)
             request.session[SESSION_FLAG] = True
             return redirect("/offerings/")
         error = "That code did not match. Codes change every 30 seconds — try the next one."
 
-    secret_uri = mfa.enroll(email, issuer=ISSUER)
+    # enroll() overwrites any unconfirmed secret, so calling it on every render
+    # would silently kill the code somebody had just scanned the moment they
+    # refreshed, or failed a code and got this page back. Hold the pending URI
+    # in the session and re-show the same one, as kjerne-services does.
+    uri = request.session.get(PENDING_URI)
+    if not uri:
+        try:
+            # enroll returns (secret, otpauth_uri) — the secret is already
+            # stored, and only the URI belongs on the page.
+            _secret, uri = mfa.enroll(email, issuer=ISSUER)
+        except mfa.AlreadyEnrolled:
+            return redirect("/mfa/")
+        request.session[PENDING_URI] = uri
+
     return render(request, "site_app/mfa_setup.html", {
-        "uri": secret_uri,
-        "uri_qr": f"otpauth://{quote(str(secret_uri), safe='')}",
+        "uri": uri,
+        "qr_svg": _qr_svg(uri),
         "error": error,
     })
 
@@ -135,3 +182,57 @@ def sso_entry(request):
     auth_login(request, user, backend="django.contrib.auth.backends.ModelBackend")
     logger.info("SSO sign-in for %s (new=%s)", email, created)
     return redirect("/offerings/")
+
+
+# --------------------------------------------------------------------------
+# Setup links
+#
+# A new member is invited rather than issued a credential: the link lets them
+# choose their own password, so nothing that works travels by email. Following
+# it signs them in, and the MFA gate takes over from there.
+# --------------------------------------------------------------------------
+
+
+@csrf_exempt
+def setup(request, token):
+    from django.contrib.auth.forms import SetPasswordForm
+    from kjerne_platform import rate_limit
+
+    from .services_setup import LinkUnusable, consume_setup_link, resolve_setup_link
+    from .tenancy import bypass_rls
+
+    ip = (request.META.get("HTTP_CF_CONNECTING_IP")
+          or request.META.get("REMOTE_ADDR", "unknown"))
+    if not rate_limit.check("dugnadsand_setup", ip, 20, 3600):
+        return render(request, "site_app/setup.html",
+                      {"problem": "Too many attempts. Try again later."}, status=429)
+
+    try:
+        link, member = resolve_setup_link(token)
+    except LinkUnusable as exc:
+        # One message for unknown, used and expired. The specific reason goes to
+        # the log, not to the page: rendering "has expired" where another token
+        # gets "is not valid" tells a visitor which tokens once existed.
+        logger.info("Setup link refused: %s", exc)
+        return render(request, "site_app/setup.html",
+                      {"problem": GENERIC_REFUSAL}, status=404)
+
+    user = member.user
+    form = SetPasswordForm(user, request.POST or None)
+
+    if request.method == "POST" and form.is_valid():
+        form.save()
+        consume_setup_link(link)
+        with bypass_rls():
+            member.must_change_password = False
+            member.save(update_fields=["must_change_password"])
+        auth_login(request, user, backend="django.contrib.auth.backends.ModelBackend")
+        # Straight into enrolling a second factor; the gate would send them
+        # there anyway, and arriving on purpose reads better than a bounce.
+        return redirect("/mfa/setup/")
+
+    return render(request, "site_app/setup.html", {
+        "form": form,
+        "member": member,
+        "username": user.username,
+    })

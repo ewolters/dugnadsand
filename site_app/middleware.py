@@ -19,12 +19,13 @@ CHANGE_URL = "/password/"
 # sent them straight back to /password/, which the MFA gate then bounced to
 # /mfa/setup/ again. Neither middleware was wrong alone; the loop existed only
 # in the pair, and only on a first sign-in — which is every real one.
-EXEMPT_PREFIXES = ("/password/", "/logout/", "/static/", "/attestation/", "/mfa/")
+EXEMPT_PREFIXES = ("/password/", "/logout/", "/static/", "/attestation/",
+                   "/mfa/", "/setup/")
 
 # Reachable before a second factor has been presented. Narrower than the set
 # above: a member mid-MFA has proved a password and nothing else.
 MFA_EXEMPT_PREFIXES = ("/mfa/", "/logout/", "/login/", "/static/",
-                       "/attestation/", "/sso/")
+                       "/attestation/", "/sso/", "/setup/")
 
 
 class RequireMFAMiddleware:

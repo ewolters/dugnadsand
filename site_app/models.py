@@ -149,6 +149,34 @@ class Contribution(TenantScoped):
         return f"{self.hours}h by {self.member}"
 
 
+class SetupLink(models.Model):
+    """A single-use invitation to choose a password.
+
+    Not tenant-scoped, deliberately: the person following it is not signed in,
+    so no tenant is bound and row-level security would hide the row we need to
+    read. The member behind it is looked up under the one audited bypass.
+
+    The token is never stored. Only its SHA-256 lands here, so a copy of this
+    table is not a set of working invitations.
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    member = models.ForeignKey(Member, on_delete=models.PROTECT, related_name="setup_links")
+
+    token_hash = models.CharField(max_length=64, unique=True, editable=False)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+    used_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ("-created_at",)
+
+    def __str__(self):
+        state = "used" if self.used_at else "open"
+        return f"setup link ({state}) expiring {self.expires_at:%Y-%m-%d}"
+
+
 class Attestation(models.Model):
     """One run of the policy manifest, chained to the run before it.
 

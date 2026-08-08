@@ -81,7 +81,7 @@ class MFAGate(AuthBase):
         self.assertEqual(self.client.get("/offerings/")["Location"], "/mfa/")
 
     @mock.patch("kjerne_platform.mfa.confirm", return_value=True)
-    @mock.patch("kjerne_platform.mfa.enroll", return_value="otpauth://totp/x")
+    @mock.patch("kjerne_platform.mfa.enroll", return_value=("SECRET", "otpauth://totp/x"))
     @mock.patch("kjerne_platform.mfa.is_enrolled", return_value=False)
     def test_enrolling_confirms_and_lets_them_in(self, _e, _en, _c):
         self.client.force_login(self.member.user)
@@ -193,7 +193,7 @@ class BothGatesTogether(AuthBase):
         self.assertEqual(response.redirect_chain[-1][0], "/mfa/setup/")
 
     @mock.patch("kjerne_platform.mfa.confirm", return_value=True)
-    @mock.patch("kjerne_platform.mfa.enroll", return_value="otpauth://totp/x")
+    @mock.patch("kjerne_platform.mfa.enroll", return_value=("SECRET", "otpauth://totp/x"))
     @mock.patch("kjerne_platform.mfa.is_enrolled", return_value=False)
     def test_after_the_second_factor_the_password_gate_takes_over(self, _e, _en, _c):
         self.client.force_login(self.member.user)
@@ -203,3 +203,86 @@ class BothGatesTogether(AuthBase):
         response = self.client.get("/offerings/", follow=True)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.redirect_chain[-1][0], "/password/")
+
+
+class QRCode(AuthBase):
+    """The setup page must offer something scannable.
+
+    Without it a member has to hand-type a URI containing their shared secret,
+    which is exactly the step people give up on.
+    """
+
+    @mock.patch("kjerne_platform.mfa.enroll",
+                return_value=("ABC123",
+                              "otpauth://totp/Dugnadsand:ada@example.org?secret=ABC123&issuer=Dugnadsand"))
+    @mock.patch("kjerne_platform.mfa.is_enrolled", return_value=False)
+    def test_the_setup_page_renders_a_scannable_code(self, _enrolled, _enroll):
+        self.client.force_login(self.member.user)
+        body = self.client.get("/mfa/setup/").content.decode()
+        self.assertIn("<svg", body)
+        self.assertIn("</svg>", body)
+
+    @mock.patch("kjerne_platform.mfa.enroll",
+                return_value=("ABC123",
+                              "otpauth://totp/Dugnadsand:ada@example.org?secret=ABC123&issuer=Dugnadsand"))
+    @mock.patch("kjerne_platform.mfa.is_enrolled", return_value=False)
+    def test_the_key_is_still_offered_for_hand_entry(self, _enrolled, _enroll):
+        # A camera that will not focus must not be the end of the road.
+        self.client.force_login(self.member.user)
+        body = self.client.get("/mfa/setup/").content.decode()
+        self.assertIn("secret=ABC123", body)
+
+    @mock.patch("site_app.auth_views._qr_svg", return_value=None)
+    @mock.patch("kjerne_platform.mfa.enroll", return_value=("ABC123", "otpauth://totp/x?secret=ABC123"))
+    @mock.patch("kjerne_platform.mfa.is_enrolled", return_value=False)
+    def test_a_failed_render_degrades_instead_of_breaking(self, _e, _en, _qr):
+        # qrcode missing or throwing must leave a usable page, not a 500.
+        self.client.force_login(self.member.user)
+        response = self.client.get("/mfa/setup/")
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("secret=ABC123", response.content.decode())
+
+
+class EnrollmentIsStable(AuthBase):
+    """Reloading setup must not kill the code somebody just scanned.
+
+    mfa.enroll() overwrites any unconfirmed secret, so calling it per render
+    meant a refresh - or a mistyped code, which re-renders this page - silently
+    invalidated the QR already sitting in the member's authenticator app.
+    """
+
+    @mock.patch("kjerne_platform.mfa.is_enrolled", return_value=False)
+    def test_a_reload_shows_the_same_secret(self, _):
+        self.client.force_login(self.member.user)
+        with mock.patch("kjerne_platform.mfa.enroll",
+                        return_value=("S1", "otpauth://totp/x?secret=S1")) as enroll:
+            first = self.client.get("/mfa/setup/").content.decode()
+            second = self.client.get("/mfa/setup/").content.decode()
+
+        enroll.assert_called_once()
+        self.assertIn("secret=S1", first)
+        self.assertIn("secret=S1", second)
+
+    @mock.patch("kjerne_platform.mfa.verify", return_value=False)
+    @mock.patch("kjerne_platform.mfa.confirm", return_value=False)
+    @mock.patch("kjerne_platform.mfa.is_enrolled", return_value=False)
+    def test_a_wrong_code_keeps_the_same_secret(self, _en, _c, _v):
+        self.client.force_login(self.member.user)
+        with mock.patch("kjerne_platform.mfa.enroll",
+                        return_value=("S1", "otpauth://totp/x?secret=S1")) as enroll:
+            self.client.get("/mfa/setup/")
+            retry = self.client.post("/mfa/setup/", {"code": "000000"}).content.decode()
+
+        enroll.assert_called_once()
+        self.assertIn("secret=S1", retry)
+
+    @mock.patch("kjerne_platform.mfa.is_enrolled", return_value=False)
+    def test_the_uri_is_a_string_not_a_tuple(self, _):
+        """enroll() returns (secret, uri). Rendering the pair would put the
+        secret on the page twice and encode a Python repr into the QR."""
+        self.client.force_login(self.member.user)
+        with mock.patch("kjerne_platform.mfa.enroll",
+                        return_value=("SEEKRIT", "otpauth://totp/x?secret=SEEKRIT")):
+            body = self.client.get("/mfa/setup/").content.decode()
+        self.assertNotIn("(&#x27;SEEKRIT&#x27;", body)
+        self.assertIn("otpauth://totp/x?secret=SEEKRIT", body)

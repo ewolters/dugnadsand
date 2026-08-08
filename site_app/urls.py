@@ -18,6 +18,7 @@ urlpatterns = [
     path("mfa/", auth_views.mfa_challenge, name="mfa_challenge"),
     path("mfa/setup/", auth_views.mfa_setup, name="mfa_setup"),
     path("sso/", auth_views.sso_entry, name="sso_entry"),
+    path("setup/<str:token>/", auth_views.setup, name="setup"),
     path("members/", views.members, name="members"),
     path("members/new/", views.member_new, name="member_new"),
     path("attestation/", views.attestation, name="attestation"),
