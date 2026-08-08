@@ -14,6 +14,9 @@ urlpatterns = [
     path("offerings/<uuid:offering_id>/close/", views.offering_close, name="offering_close"),
     path("offerings/<uuid:offering_id>/hours/", views.contribution_new, name="contribution_new"),
     path("ledger/", views.ledger, name="ledger"),
+    path("password/", views.change_password, name="change_password"),
+    path("members/", views.members, name="members"),
+    path("members/new/", views.member_new, name="member_new"),
     path("attestation/", views.attestation, name="attestation"),
     path("attestation/run/", views.attestation_run, name="attestation_run"),
 ]

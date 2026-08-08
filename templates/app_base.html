@@ -78,6 +78,9 @@
     td.hrs { font-family:var(--mono); white-space:nowrap; font-variant-numeric:tabular-nums; }
     .scroll { overflow-x:auto; }
     .note { font-size:.9rem; color:var(--moss); }
+    dl.meta { display:grid; grid-template-columns:minmax(7rem,12ch) 1fr; gap:.3rem 1rem;
+      font-family:var(--mono); font-size:.9rem; margin:.8rem 0; }
+    dl.meta dt { color:var(--moss); } dl.meta dd { margin:0; word-break:break-all; }
   </style>
 </head>
 <body>
@@ -88,6 +91,8 @@
       <nav>
         <a href="/offerings/" {% if section == "offerings" %}aria-current="page"{% endif %}>On offer</a>
         <a href="/ledger/" {% if section == "ledger" %}aria-current="page"{% endif %}>Ledger</a>
+        {% if user.member.is_organizer %}<a href="/members/">Members</a>{% endif %}
+        <a href="/password/">Password</a>
         <form method="post" action="/logout/" style="display:inline">{% csrf_token %}
           <button type="submit">Sign out</button>
         </form>

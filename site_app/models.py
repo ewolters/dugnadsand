@@ -56,6 +56,15 @@ class Member(TenantScoped):
     display_name = models.CharField(max_length=120)
     joined_at = models.DateTimeField(auto_now_add=True)
 
+    # Organizers can add other members. That is the whole privilege — they get
+    # no extra visibility into the ledger and no say over who may claim what,
+    # because there is nothing to have a say over.
+    is_organizer = models.BooleanField(default=False)
+
+    # New members arrive with a password somebody else typed and read aloud.
+    # Until they replace it, the person who added them can sign in as them.
+    must_change_password = models.BooleanField(default=False)
+
     class Meta:
         ordering = ("display_name",)
 

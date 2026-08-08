@@ -312,3 +312,91 @@ def ledger(request):
         "entries": entries,
         "chain_ok": getattr(report, "ok", None),
     })
+
+
+# --------------------------------------------------------------------------
+# Passwords and organizers
+#
+# A member arrives with a password somebody else typed and read aloud. Until
+# they replace it, the person who added them can sign in as them — so the
+# change is forced rather than suggested.
+# --------------------------------------------------------------------------
+
+
+@login_required
+def change_password(request):
+    from django.contrib.auth import update_session_auth_hash
+    from django.contrib.auth.forms import PasswordChangeForm
+
+    member = _member(request)
+    form = PasswordChangeForm(request.user, request.POST or None)
+
+    if request.method == "POST" and form.is_valid():
+        form.save()
+        # Changing a password rotates the session hash; without this the member
+        # is signed out by their own success.
+        update_session_auth_hash(request, form.user)
+        if member is not None and member.must_change_password:
+            member.must_change_password = False
+            member.save(update_fields=["must_change_password"])
+        return redirect("/offerings/")
+
+    return render(request, "site_app/password_change.html", {
+        "form": form,
+        "forced": bool(member and member.must_change_password),
+    })
+
+
+@login_required
+def members(request):
+    """Who is in this organization.
+
+    Shows names and roles. Deliberately NOT what anyone has given: a members
+    page is exactly where an hours column would feel natural, and that column
+    would turn the record into standing. See policy/manifest.toml,
+    no-aggregate-display.
+    """
+    from .models import Member
+
+    member = _member(request)
+    if member is None or not member.is_organizer:
+        return HttpResponseForbidden("Only organizers can see the member list.")
+
+    return render(request, "site_app/members.html", {
+        "member": member,
+        "members": Member.objects.order_by("display_name"),
+    })
+
+
+@login_required
+def member_new(request):
+    from .forms import AddMemberForm
+    from .services_members import MemberExists, create_member
+
+    member = _member(request)
+    if member is None or not member.is_organizer:
+        return HttpResponseForbidden("Only organizers can add members.")
+
+    form = AddMemberForm(request.POST or None)
+    created = None
+
+    if request.method == "POST" and form.is_valid():
+        try:
+            new_member, password = create_member(
+                organization=member.organization,
+                username=form.cleaned_data["username"],
+                display_name=form.cleaned_data["display_name"],
+                email=form.cleaned_data["email"],
+                is_organizer=form.cleaned_data["is_organizer"],
+            )
+        except (MemberExists, ValueError) as exc:
+            form.add_error(None, str(exc))
+        else:
+            # Rendered once and never stored. Reloading the page loses it,
+            # which is the correct behaviour for a credential.
+            created = {"member": new_member,
+                       "username": form.cleaned_data["username"].strip(),
+                       "password": password}
+            form = AddMemberForm()
+
+    return render(request, "site_app/member_form.html", {"form": form, "created": created})

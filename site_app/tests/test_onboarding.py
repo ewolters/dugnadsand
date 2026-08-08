@@ -62,15 +62,23 @@ class AddMember(TestCase):
             self.assertEqual(member.organization_id, self.org.id)
         self.assertIn("password:", out.getvalue())
 
-    def test_the_printed_password_actually_works(self):
+    def test_the_printed_password_works_and_lands_on_the_change_page(self):
+        """A handed-over password signs in, and goes straight to replacing itself.
+
+        The login view redirects to /offerings/; ForcePasswordChangeMiddleware
+        bounces that to /password/ because the member has not chosen their own
+        password yet. Following the chain is the honest assertion.
+        """
         out = StringIO()
         call_command("add_member", "alpha", "ada", "Ada", stdout=out)
         password = [ln.split("password:")[1].strip()
                     for ln in out.getvalue().splitlines() if "password:" in ln][0]
 
         set_tenant(None)
-        response = self.client.post("/login/", {"username": "ada", "password": password})
-        self.assertRedirects(response, "/offerings/")
+        response = self.client.post(
+            "/login/", {"username": "ada", "password": password}, follow=True)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.redirect_chain[-1][0], "/password/")
 
     def test_an_unknown_organization_is_refused(self):
         with self.assertRaises(CommandError):

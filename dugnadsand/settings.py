@@ -39,6 +39,8 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     # Binds the connection to one organization. Fails closed: no tenant, no rows.
     "site_app.tenancy.TenantMiddleware",
+    # After TenantMiddleware: reading request.user.member needs a bound tenant.
+    "site_app.middleware.ForcePasswordChangeMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]

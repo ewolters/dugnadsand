@@ -1,0 +1,39 @@
+{% extends "app_base.html" %}
+{% block title %}Add someone — Dugnadsand{% endblock %}
+{% block content %}
+<h1>Add someone</h1>
+
+{% if created %}
+  <div class="card">
+    <p><strong>{{ created.member.display_name }} has been added.</strong></p>
+    <p>Give them these, in person or on the phone. They will be asked to choose their
+       own password the first time they sign in.</p>
+    <dl class="meta">
+      <dt>Username</dt><dd>{{ created.username }}</dd>
+      <dt>Password</dt><dd>{{ created.password }}</dd>
+    </dl>
+    <p class="help">Shown once. Reloading this page will not bring it back — that is
+       deliberate for a credential.</p>
+  </div>
+  <p><a class="act quiet" href="/members/">Back to members</a></p>
+{% endif %}
+
+<p class="lede">They will appear in {{ user.member.organization.name }}.</p>
+
+<form method="post" class="stack">
+  {% csrf_token %}
+  {% if form.non_field_errors %}<p class="err">{{ form.non_field_errors.0 }}</p>{% endif %}
+  {% for field in form %}
+  <div>
+    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+    {{ field }}
+    {% if field.help_text %}<p class="help">{{ field.help_text }}</p>{% endif %}
+    {% if field.errors %}<p class="err">{{ field.errors.0 }}</p>{% endif %}
+  </div>
+  {% endfor %}
+  <div class="row">
+    <button type="submit" class="act">Add them</button>
+    <a class="act quiet" href="/members/">Cancel</a>
+  </div>
+</form>
+{% endblock %}

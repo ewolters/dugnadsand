@@ -58,3 +58,18 @@ class ContributionForm(forms.Form):
     note = forms.CharField(max_length=2000, required=False,
                            widget=forms.Textarea(attrs={"rows": 3}),
                            label="Anything worth remembering (optional)")
+
+
+class AddMemberForm(forms.Form):
+    """An organizer adding somebody to their own organization.
+
+    No organization field: it is always the organizer's own, taken from the
+    request. Offering a choice would be offering a way to get it wrong.
+    """
+
+    username = forms.CharField(max_length=150, label="Username they'll sign in with")
+    display_name = forms.CharField(max_length=120, label="How they appear to others")
+    email = forms.EmailField(max_length=254, required=False, label="Email (optional)")
+    is_organizer = forms.BooleanField(
+        required=False, label="Can add other members",
+        help_text="Organizers add people. They get no extra view of the ledger.")
