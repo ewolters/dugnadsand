@@ -2,8 +2,10 @@ import logging
 import os
 from hmac import compare_digest
 
-from django.http import JsonResponse
-from django.shortcuts import redirect, render
+from django.contrib.auth.decorators import login_required
+from django.http import (HttpResponseBadRequest, HttpResponseForbidden,
+                         JsonResponse)
+from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 from kjerne_platform import email, rate_limit
@@ -112,3 +114,34 @@ def attestation_run(request):
     payload = attest_mod.attest()
     logger.info("Attestation #%s recorded: %s", payload["sequence"], payload["status"])
     return JsonResponse(payload, json_dumps_params={"default": str})
+
+
+# --------------------------------------------------------------------------
+# Claiming
+#
+# This function does not import, reference, or query Contribution. That absence
+# is the load-bearing property of the whole system and is enforced two ways:
+# statically by policy/checks.py (no function named *claim* may name
+# Contribution) and at runtime by a test that drives a real claim and captures
+# the SQL. If you are here to add "check they've contributed first" — read
+# docs/design-rules.md §1 before you do.
+# --------------------------------------------------------------------------
+
+
+@login_required
+@require_POST
+def claim_offering(request, offering_id):
+    from .models import Offering
+    from .services import claim_offering as do_claim
+
+    member = getattr(request.user, "member", None)
+    if member is None:
+        return HttpResponseForbidden("Not a member of any organization.")
+
+    offering = get_object_or_404(Offering, pk=offering_id)
+    try:
+        do_claim(offering=offering, member=member)
+    except ValueError as exc:
+        return HttpResponseBadRequest(str(exc))
+
+    return redirect("/")

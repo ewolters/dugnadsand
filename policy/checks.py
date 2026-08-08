@@ -55,7 +55,11 @@ def _python_sources():
     """Every .py file in the project, excluding migrations and this package."""
     for path in BASE_DIR.rglob("*.py"):
         parts = path.parts
-        if "migrations" in parts or "policy" in parts or ".venv" in parts:
+        # Tests are excluded: test_policy.py necessarily NAMES Contribution inside
+        # a function called test_claiming_..., which would read as a breach of the
+        # very claim it exists to verify.
+        if ("migrations" in parts or "policy" in parts or ".venv" in parts
+                or "tests" in parts):
             continue
         yield path
 

@@ -104,8 +104,13 @@ class ChainIntegrity(TestCase):
 
         from site_app.models import Attestation
         first = Attestation.objects.order_by("sequence").first()
+        # Use a sentinel rather than a real status. The first version of this
+        # test wrote "UPHELD", which silently became a no-op the day the real
+        # status turned UPHELD — so it passed by coincidence of the value it
+        # picked rather than by detecting anything.
         payload = dict(first.payload)
-        payload["status"] = "UPHELD"          # the lie an operator would tell
+        self.assertNotEqual(payload.get("status"), "TAMPERED-BY-TEST")
+        payload["status"] = "TAMPERED-BY-TEST"
         Attestation.objects.filter(pk=first.pk).update(payload=payload)
 
         report = attest.verify()
@@ -121,22 +126,52 @@ class ChainIntegrity(TestCase):
 # --------------------------------------------------------------------------
 
 class NoGatingAtRuntime(TestCase):
-    def test_claiming_never_reads_the_contribution_ledger(self):
-        try:
-            from site_app.models import Claim, Contribution, Offering  # noqa: F401
-        except ImportError:
-            self.skipTest("domain models not built yet; manifest reports INCOMPLETE")
+    """The runtime half of no-gating.
 
+    Static analysis cannot see through indirection, so the claim is also tested
+    by driving a real claim and watching the SQL. The test asserts the claim
+    actually SUCCEEDED before asserting nothing was read — otherwise a redirect
+    to a login page would satisfy it trivially, which is the vacuous pass this
+    whole manifest exists to avoid.
+    """
+
+    def setUp(self):
+        from django.contrib.auth.models import User
+
+        from site_app.models import Member, Offering, Organization
+        from site_app.tenancy import set_tenant, tenant_context
+
+        self.org = Organization.objects.create(slug="probe", name="Probe Mutual Aid")
+        self.user = User.objects.create_user("probe", password="dugnad-test-pw")
+        with tenant_context(self.org):
+            self.member = Member.objects.create(
+                organization=self.org, display_name="Probe", user=self.user)
+            self.offering = Offering.objects.create(
+                organization=self.org, member=self.member,
+                description="A spare afternoon.")
+        set_tenant(None)
+
+    def test_claiming_never_reads_the_contribution_ledger(self):
         from django.db import connection
         from django.test.utils import CaptureQueriesContext
 
-        offering = Offering.objects.first()
+        from site_app.models import Claim
+        from site_app.tenancy import tenant_context
+
+        self.client.force_login(self.user)
+
         with CaptureQueriesContext(connection) as ctx:
-            self.client.post(f"/offerings/{offering.id}/claim/")
+            response = self.client.post(f"/offerings/{self.offering.id}/claim/")
+
+        # Guard the guard: prove the claim path actually ran.
+        self.assertEqual(response.status_code, 302, "the claim did not succeed")
+        with tenant_context(self.org):
+            self.assertEqual(Claim.objects.count(), 1, "no claim was created")
 
         touched = " ".join(q["sql"].lower() for q in ctx.captured_queries)
+        self.assertIn("site_app_claim", touched, "no claim SQL was captured")
         self.assertNotIn(
-            "contribution", touched,
+            "site_app_contribution", touched,
             "The claim path read the contribution ledger. Nothing may gate on what a "
-            "member has given — see docs/design-rules.md §1.",
+            "member has given - see docs/design-rules.md section 1.",
         )
