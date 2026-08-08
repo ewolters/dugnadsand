@@ -11,23 +11,25 @@ import re
 from django.contrib.auth.models import User
 from django.test import TestCase
 
+from .helpers import SignedIn
+
 from site_app.models import Member, Offering, Organization
 from site_app.services_members import MemberExists, create_member
 from site_app.tenancy import bypass_rls, set_tenant, tenant_context
 
 
-class MembersBase(TestCase):
+class MembersBase(SignedIn, TestCase):
     def setUp(self):
         self.alpha = Organization.objects.create(slug="alpha", name="Alpha Mutual Aid")
         self.beta = Organization.objects.create(slug="beta", name="Beta Mutual Aid")
 
         self.organizer, self.organizer_pw = create_member(
             organization=self.alpha, username="ola", display_name="Ola",
-            is_organizer=True)
+            is_organizer=True, email="ola@example.org")
         self.plain, self.plain_pw = create_member(
-            organization=self.alpha, username="ada", display_name="Ada")
+            organization=self.alpha, username="ada", display_name="Ada", email="ada@example.org")
         self.outsider, self.outsider_pw = create_member(
-            organization=self.beta, username="bo", display_name="Bo", is_organizer=True)
+            organization=self.beta, username="bo", display_name="Bo", is_organizer=True, email="bo@example.org")
         set_tenant(None)
 
     def tearDown(self):
@@ -44,7 +46,7 @@ class MembersBase(TestCase):
 class ForcedPasswordChange(MembersBase):
     def test_a_new_member_must_change_before_anything_else(self):
         self.assertTrue(self.plain.must_change_password)
-        self.client.force_login(self.plain.user)
+        self.sign_in(self.plain.user)
 
         for path in ("/offerings/", "/ledger/", "/offerings/new/"):
             response = self.client.get(path)
@@ -52,16 +54,16 @@ class ForcedPasswordChange(MembersBase):
             self.assertEqual(response["Location"], "/password/", path)
 
     def test_the_password_page_itself_is_reachable(self):
-        self.client.force_login(self.plain.user)
+        self.sign_in(self.plain.user)
         self.assertEqual(self.client.get("/password/").status_code, 200)
 
     def test_signing_out_is_reachable(self):
         # Otherwise a member with an outstanding change is trapped.
-        self.client.force_login(self.plain.user)
+        self.sign_in(self.plain.user)
         self.assertEqual(self.client.post("/logout/").status_code, 302)
 
     def test_changing_it_clears_the_flag_and_keeps_them_signed_in(self):
-        self.client.force_login(self.plain.user)
+        self.sign_in(self.plain.user)
         response = self.client.post("/password/", {
             "old_password": self.plain_pw,
             "new_password1": "a-quiet-saturday-97",
@@ -78,7 +80,7 @@ class ForcedPasswordChange(MembersBase):
         self.assertEqual(self.client.get("/offerings/").status_code, 200)
 
     def test_the_old_password_stops_working(self):
-        self.client.force_login(self.plain.user)
+        self.sign_in(self.plain.user)
         self.client.post("/password/", {
             "old_password": self.plain_pw,
             "new_password1": "a-quiet-saturday-97",
@@ -99,20 +101,20 @@ class OrganizerPrivilege(MembersBase):
         self.settle(self.plain)
 
     def test_an_organizer_sees_the_member_list(self):
-        self.client.force_login(self.organizer.user)
+        self.sign_in(self.organizer.user)
         response = self.client.get("/members/")
         self.assertContains(response, "Ada")
         self.assertContains(response, "Ola")
 
     def test_a_plain_member_may_not(self):
-        self.client.force_login(self.plain.user)
+        self.sign_in(self.plain.user)
         self.assertEqual(self.client.get("/members/").status_code, 403)
         self.assertEqual(self.client.get("/members/new/").status_code, 403)
 
     def test_an_organizer_adds_somebody_and_sees_the_password_once(self):
-        self.client.force_login(self.organizer.user)
+        self.sign_in(self.organizer.user)
         response = self.client.post("/members/new/", {
-            "username": "eir", "display_name": "Eir", "email": "",
+            "username": "eir", "display_name": "Eir", "email": "eir@example.org",
         })
         self.assertEqual(response.status_code, 200)
         # Pull the credential actually rendered, so the reload check below is
@@ -137,11 +139,11 @@ class OrganizerPrivilege(MembersBase):
 
     def test_added_members_land_in_the_organizers_own_organization(self):
         # There is no organization field on the form, so this cannot be steered.
-        self.client.force_login(self.outsider.user)
+        self.sign_in(self.outsider.user)
         self.settle(self.outsider)
-        self.client.force_login(self.outsider.user)
+        self.sign_in(self.outsider.user)
         self.client.post("/members/new/", {
-            "username": "nyx", "display_name": "Nyx", "email": ""})
+            "username": "nyx", "display_name": "Nyx", "email": "nyx@example.org"})
 
         with bypass_rls():
             nyx = Member.objects.get(display_name="Nyx")
@@ -157,7 +159,7 @@ class OrganizerPrivilege(MembersBase):
                 member=self.plain, offering=offering, hours=3)
         set_tenant(None)
 
-        self.client.force_login(self.organizer.user)
+        self.sign_in(self.organizer.user)
         body = self.client.get("/members/").content.decode().lower()
         for forbidden in ("3.00", "hours given", "total", "contributed"):
             self.assertNotIn(forbidden, body, forbidden)
@@ -166,15 +168,15 @@ class OrganizerPrivilege(MembersBase):
 class CreateMemberService(MembersBase):
     def test_a_duplicate_username_is_refused(self):
         with self.assertRaises(MemberExists):
-            create_member(organization=self.alpha, username="ada", display_name="Ada 2")
+            create_member(organization=self.alpha, username="ada", display_name="Ada 2", email="ada@example.org")
 
     def test_a_blank_username_is_refused(self):
         with self.assertRaises(ValueError):
-            create_member(organization=self.alpha, username="   ", display_name="X")
+            create_member(organization=self.alpha, username="   ", display_name="X", email="   @example.org")
 
     def test_the_generated_password_is_not_stored_in_readable_form(self):
         member, password = create_member(
-            organization=self.alpha, username="sig", display_name="Sig")
+            organization=self.alpha, username="sig", display_name="Sig", email="sig@example.org")
         user = User.objects.get(username="sig")
         self.assertNotIn(password, user.password)
         self.assertTrue(user.check_password(password))

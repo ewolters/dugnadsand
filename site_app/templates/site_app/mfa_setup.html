@@ -1,0 +1,37 @@
+{% extends "app_base.html" %}
+{% block title %}Set up your second factor — Dugnadsand{% endblock %}
+{% block content %}
+<h1>Set up your second factor</h1>
+
+{% if no_email %}
+  <p class="lede">Your account has no email address, and the second factor is keyed to
+     one. Ask an organizer to add it, then come back.</p>
+{% else %}
+  <p class="lede">A password on its own can be handed over, guessed or reused. This adds a
+     code that changes every 30 seconds and lives only on your phone.</p>
+
+  <ol>
+    <li>Open an authenticator app — Google Authenticator, 1Password, Aegis, whichever you use.</li>
+    <li>Add an account and paste in the key below.</li>
+    <li>Type the six-digit code it shows.</li>
+  </ol>
+
+  <div class="card">
+    <p class="who">Setup key</p>
+    <p style="font-family:var(--mono); word-break:break-all">{{ uri }}</p>
+    <p class="help">Copy it exactly. It is shown while you set up and not stored anywhere
+       you can read it again.</p>
+  </div>
+
+  <form method="post" class="stack">
+    {% csrf_token %}
+    {% if error %}<p class="err">{{ error }}</p>{% endif %}
+    <div>
+      <label for="id_code">The six digits your app is showing</label>
+      <input type="text" name="code" id="id_code" inputmode="numeric" autocomplete="one-time-code"
+             pattern="[0-9]*" maxlength="8" required autofocus>
+    </div>
+    <div><button type="submit" class="act">Turn it on</button></div>
+  </form>
+{% endif %}
+{% endblock %}

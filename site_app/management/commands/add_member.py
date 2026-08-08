@@ -22,7 +22,7 @@ class Command(BaseCommand):
         parser.add_argument("org", help="Organization slug")
         parser.add_argument("username")
         parser.add_argument("display_name", help='How they appear to others, e.g. "Ada"')
-        parser.add_argument("--email", default="")
+        parser.add_argument("email", help="Required: the second factor is keyed by it")
         parser.add_argument(
             "--organizer", action="store_true",
             help="May add other members. The first member of an organization needs this.")

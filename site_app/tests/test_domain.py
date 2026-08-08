@@ -11,12 +11,14 @@ from decimal import Decimal
 from django.contrib.auth.models import User
 from django.test import TestCase
 
+from .helpers import SignedIn
+
 from site_app import services
 from site_app.models import Claim, Contribution, Member, Offering, Organization
 from site_app.tenancy import bypass_rls, set_tenant, tenant_context
 
 
-class TenancyBase(TestCase):
+class TenancyBase(SignedIn, TestCase):
     def setUp(self):
         # Organization is not tenant-scoped, so it is writable with no tenant bound.
         self.alpha = Organization.objects.create(slug="alpha", name="Alpha Mutual Aid")
@@ -149,7 +151,7 @@ class ClaimEndpoint(TenancyBase):
             self.a_member.save()
 
     def test_posting_a_claim_creates_one(self):
-        self.client.force_login(self.user)
+        self.sign_in(self.user)
         response = self.client.post(f"/offerings/{self.a_offering.id}/claim/")
         self.assertEqual(response.status_code, 302)
 

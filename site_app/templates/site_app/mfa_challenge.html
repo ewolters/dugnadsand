@@ -1,0 +1,23 @@
+{% extends "app_base.html" %}
+{% block title %}Your code — Dugnadsand{% endblock %}
+{% block content %}
+<h1>Your code</h1>
+<p class="lede">Open your authenticator app and type the six digits it is showing.</p>
+
+<form method="post" class="stack">
+  {% csrf_token %}
+  {% if error %}<p class="err">{{ error }}</p>{% endif %}
+  <div>
+    <label for="id_code">Six digits</label>
+    <input type="text" name="code" id="id_code" inputmode="numeric" autocomplete="one-time-code"
+           pattern="[0-9]*" maxlength="8" required autofocus>
+  </div>
+  <div><button type="submit" class="act">Continue</button></div>
+</form>
+
+{# A separate form. Nesting one inside another is invalid HTML and the browser #}
+{# silently drops the inner one, so the sign-out button would have done nothing. #}
+<form method="post" action="/logout/" style="margin-top:1rem">{% csrf_token %}
+  <button type="submit" class="act quiet">Sign out instead</button>
+</form>
+{% endblock %}

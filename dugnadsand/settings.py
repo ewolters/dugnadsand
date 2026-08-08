@@ -39,6 +39,9 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     # Binds the connection to one organization. Fails closed: no tenant, no rows.
     "site_app.tenancy.TenantMiddleware",
+    # Second factor first: someone who has proved only a password should be
+    # sent to prove the second one, not to change a credential.
+    "site_app.middleware.RequireMFAMiddleware",
     # After TenantMiddleware: reading request.user.member needs a bound tenant.
     "site_app.middleware.ForcePasswordChangeMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
@@ -169,3 +172,13 @@ LOGGING = {
         },
     },
 }
+
+
+# Password hashing — Argon2 primary (memory-hard), matching kjerne-services.
+# PBKDF2 kept behind it so existing hashes still verify and upgrade on use.
+PASSWORD_HASHERS = [
+    "django.contrib.auth.hashers.Argon2PasswordHasher",
+    "django.contrib.auth.hashers.PBKDF2PasswordHasher",
+    "django.contrib.auth.hashers.PBKDF2SHA1PasswordHasher",
+    "django.contrib.auth.hashers.BCryptSHA256PasswordHasher",
+]

@@ -4,10 +4,10 @@
 **For** the Board of Directors, Once Upon a Table, Inc.
 **Subject** Adding a labor-and-goods gift ledger to the organization's existing work
 
-> A note on sourcing: the description of Once Upon a Table below comes from
-> Hannah's public interview with *Voyage South Carolina* and the organization's
-> own materials. Anything we have wrong, please correct — the argument depends on
-> getting your model right, not ours.
+> A note on sourcing: the description of Once Upon a Table below comes from your own
+> site at onceuponatable.rentals and Hannah's public interview with *Voyage South
+> Carolina*. Anything we have wrong, please correct — the argument depends on getting
+> your model right, not ours.
 
 ---
 
@@ -34,7 +34,12 @@ cost to the organization.
 
 ### 1. It encodes the philosophy you already operate on
 
-Your own description of how you serve people is *"rapid, flexible assistance without
+Your own site says **"Setting the table for community mutual aid."** Not an event-rental
+company that donates its profits — a mutual aid organization whose rentals are the
+funding mechanism. And under Community Aid you offer a form that lets somebody ask for
+help **anonymously**, without identifying themselves and without qualifying for anything.
+
+Your description of how you serve people is *"rapid, flexible assistance without
 eligibility requirements"* and a *"radical trust-centered approach."*
 
 That is not a value statement we are accommodating. It is the single hardest
@@ -48,6 +53,9 @@ This matters because it is the thing most systems of this kind get wrong. The ob
 design — everyone earns credits, credits buy help — quietly creates eligibility
 requirements and puts people in debt. Ours cannot, because the balance is never
 consulted. It is a property we can demonstrate in the code, not a promise in a policy.
+
+Put plainly: the anonymous form under Community Aid already says that asking should cost
+nothing and require nothing. We wrote that same sentence as a test that fails the build.
 
 ### 2. It extends your reach without extending your fundraising
 

@@ -1,6 +1,6 @@
 from django.urls import path
 
-from . import views
+from . import auth_views, views
 
 app_name = "site_app"
 
@@ -15,6 +15,9 @@ urlpatterns = [
     path("offerings/<uuid:offering_id>/hours/", views.contribution_new, name="contribution_new"),
     path("ledger/", views.ledger, name="ledger"),
     path("password/", views.change_password, name="change_password"),
+    path("mfa/", auth_views.mfa_challenge, name="mfa_challenge"),
+    path("mfa/setup/", auth_views.mfa_setup, name="mfa_setup"),
+    path("sso/", auth_views.sso_entry, name="sso_entry"),
     path("members/", views.members, name="members"),
     path("members/new/", views.member_new, name="member_new"),
     path("attestation/", views.attestation, name="attestation"),

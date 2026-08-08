@@ -14,11 +14,13 @@ manifest says it behaves, and nothing further.
 
 from django.test import TestCase
 
+from .helpers import SignedIn
+
 from policy import attest
 from policy.checks import BREACHED, CHECKS, NOT_ENFORCEABLE, UPHELD
 
 
-class ManifestIntegrity(TestCase):
+class ManifestIntegrity(SignedIn, TestCase):
     def setUp(self):
         self.manifest = attest.load_manifest()
         self.invariants = self.manifest["invariant"]
@@ -43,7 +45,7 @@ class ManifestIntegrity(TestCase):
         self.assertEqual(thin, [], f"claims with no stated rationale: {thin}")
 
 
-class ChecksRun(TestCase):
+class ChecksRun(SignedIn, TestCase):
     def test_no_claim_is_breached(self):
         results, _ = attest.run_checks()
         breached = [
@@ -63,7 +65,7 @@ class ChecksRun(TestCase):
         self.assertEqual(result.status, UPHELD, result.detail)
 
 
-class NoVacuousPass(TestCase):
+class NoVacuousPass(SignedIn, TestCase):
     """The manifest must never look green because it tested nothing."""
 
     def test_status_is_never_upheld_while_a_check_cannot_run(self):
@@ -87,7 +89,7 @@ class NoVacuousPass(TestCase):
         self.assertEqual(len(payload["manifest_hash"]), 64)
 
 
-class ChainIntegrity(TestCase):
+class ChainIntegrity(SignedIn, TestCase):
     def test_attestations_chain_and_verify(self):
         first = attest.attest()
         second = attest.attest()
@@ -125,7 +127,7 @@ class ChainIntegrity(TestCase):
 # rather than assumed away.
 # --------------------------------------------------------------------------
 
-class NoGatingAtRuntime(TestCase):
+class NoGatingAtRuntime(SignedIn, TestCase):
     """The runtime half of no-gating.
 
     Static analysis cannot see through indirection, so the claim is also tested
@@ -158,7 +160,7 @@ class NoGatingAtRuntime(TestCase):
         from site_app.models import Claim
         from site_app.tenancy import tenant_context
 
-        self.client.force_login(self.user)
+        self.sign_in(self.user)
 
         with CaptureQueriesContext(connection) as ctx:
             response = self.client.post(f"/offerings/{self.offering.id}/claim/")

@@ -11,13 +11,15 @@ from django.contrib.auth.models import User
 from django.core.management import call_command
 from django.core.management.base import CommandError
 from django.test import TestCase
+
+from .helpers import SignedIn
 from django.urls import NoReverseMatch, reverse
 
 from site_app.models import Member, Organization
 from site_app.tenancy import bypass_rls, set_tenant, tenant_context
 
 
-class AdmitOrganization(TestCase):
+class AdmitOrganization(SignedIn, TestCase):
     def tearDown(self):
         set_tenant(None)
 
@@ -42,7 +44,7 @@ class AdmitOrganization(TestCase):
         self.assertEqual(Organization.objects.filter(slug="alpha").count(), 1)
 
 
-class AddMember(TestCase):
+class AddMember(SignedIn, TestCase):
     def setUp(self):
         call_command("admit_organization", "Alpha Mutual Aid", slug="alpha",
                      stdout=StringIO())
@@ -53,7 +55,7 @@ class AddMember(TestCase):
 
     def test_it_creates_a_login_and_a_membership(self):
         out = StringIO()
-        call_command("add_member", "alpha", "ada", "Ada", stdout=out)
+        call_command("add_member", "alpha", "ada", "Ada", "ada@example.org", stdout=out)
 
         user = User.objects.get(username="ada")
         with tenant_context(self.org):
@@ -62,15 +64,16 @@ class AddMember(TestCase):
             self.assertEqual(member.organization_id, self.org.id)
         self.assertIn("password:", out.getvalue())
 
-    def test_the_printed_password_works_and_lands_on_the_change_page(self):
-        """A handed-over password signs in, and goes straight to replacing itself.
+    def test_the_printed_password_works_and_lands_on_the_second_factor(self):
+        """A handed-over password signs in, and stops at the second factor.
 
-        The login view redirects to /offerings/; ForcePasswordChangeMiddleware
-        bounces that to /password/ because the member has not chosen their own
-        password yet. Following the chain is the honest assertion.
+        Two gates stand in front of a brand-new member, in this order: set up a
+        second factor, then replace the password somebody typed for you. MFA
+        comes first because the password page changes a credential and should
+        itself sit behind a full sign-in.
         """
         out = StringIO()
-        call_command("add_member", "alpha", "ada", "Ada", stdout=out)
+        call_command("add_member", "alpha", "ada", "Ada", "ada@example.org", stdout=out)
         password = [ln.split("password:")[1].strip()
                     for ln in out.getvalue().splitlines() if "password:" in ln][0]
 
@@ -78,30 +81,30 @@ class AddMember(TestCase):
         response = self.client.post(
             "/login/", {"username": "ada", "password": password}, follow=True)
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.redirect_chain[-1][0], "/password/")
+        self.assertEqual(response.redirect_chain[-1][0], "/mfa/setup/")
 
     def test_an_unknown_organization_is_refused(self):
         with self.assertRaises(CommandError):
-            call_command("add_member", "nope", "ada", "Ada", stdout=StringIO())
+            call_command("add_member", "nope", "ada", "Ada", "ada@example.org", stdout=StringIO())
         self.assertFalse(User.objects.filter(username="ada").exists())
 
     def test_a_duplicate_username_is_refused_without_leaving_a_stray_user(self):
-        call_command("add_member", "alpha", "ada", "Ada", stdout=StringIO())
+        call_command("add_member", "alpha", "ada", "Ada", "ada@example.org", stdout=StringIO())
         with self.assertRaises(CommandError):
-            call_command("add_member", "alpha", "ada", "Ada Again", stdout=StringIO())
+            call_command("add_member", "alpha", "ada", "Ada Again", "ada@example.org", stdout=StringIO())
         self.assertEqual(User.objects.filter(username="ada").count(), 1)
         with bypass_rls():
             self.assertEqual(Member.objects.filter(display_name="Ada Again").count(), 0)
 
     def test_two_organizations_can_hold_members_of_the_same_name(self):
         call_command("admit_organization", "Beta", stdout=StringIO())
-        call_command("add_member", "alpha", "ada", "Ada", stdout=StringIO())
-        call_command("add_member", "beta", "ada2", "Ada", stdout=StringIO())
+        call_command("add_member", "alpha", "ada", "Ada", "ada@example.org", stdout=StringIO())
+        call_command("add_member", "beta", "ada2", "Ada", "ada2@example.org", stdout=StringIO())
         with bypass_rls():
             self.assertEqual(Member.objects.filter(display_name="Ada").count(), 2)
 
 
-class NoAdminSurface(TestCase):
+class NoAdminSurface(SignedIn, TestCase):
     """Django admin is not mounted, and must not drift back.
 
     It arrived from the create-site scaffold with nothing registered, making it

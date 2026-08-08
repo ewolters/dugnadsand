@@ -11,11 +11,13 @@ from decimal import Decimal
 from django.contrib.auth.models import User
 from django.test import TestCase
 
+from .helpers import SignedIn
+
 from site_app.models import Claim, Contribution, Member, Offering, Organization
 from site_app.tenancy import set_tenant, tenant_context
 
 
-class AppBase(TestCase):
+class AppBase(SignedIn, TestCase):
     def setUp(self):
         self.alpha = Organization.objects.create(slug="alpha", name="Alpha Mutual Aid")
         self.beta = Organization.objects.create(slug="beta", name="Beta Mutual Aid")
@@ -46,10 +48,16 @@ class AppBase(TestCase):
 
 
 class SignIn(AppBase):
-    def test_a_member_can_sign_in_and_reach_the_offerings(self):
+    def test_a_member_can_sign_in_and_is_sent_to_the_second_factor(self):
+        """Signing in proves one factor, and lands on proving the second.
+
+        The login view redirects to /offerings/; RequireMFAMiddleware bounces
+        that to /mfa/setup/ because this account has not enrolled. Following the
+        chain is the honest assertion.
+        """
         response = self.client.post(
-            "/login/", {"username": "ada", "password": "dugnad-test-pw"})
-        self.assertRedirects(response, "/offerings/")
+            "/login/", {"username": "ada", "password": "dugnad-test-pw"}, follow=True)
+        self.assertEqual(response.redirect_chain[-1][0], "/mfa/setup/")
 
     def test_a_wrong_password_does_not_sign_in(self):
         response = self.client.post(
@@ -65,27 +73,27 @@ class SignIn(AppBase):
 
 class Isolation(AppBase):
     def test_a_member_sees_only_their_own_organizations_offerings(self):
-        self.client.force_login(self.ada_user)
+        self.sign_in(self.ada_user)
         response = self.client.get("/offerings/")
         self.assertContains(response, "potatoes")
         self.assertNotContains(response, "Ladder")
 
     def test_the_other_organization_sees_the_mirror_image(self):
-        self.client.force_login(self.bo_user)
+        self.sign_in(self.bo_user)
         response = self.client.get("/offerings/")
         self.assertContains(response, "Ladder")
         self.assertNotContains(response, "potatoes")
 
     def test_another_organizations_offering_cannot_be_claimed_by_url(self):
         # Guessing the id is not enough: RLS makes the row unreachable.
-        self.client.force_login(self.ada_user)
+        self.sign_in(self.ada_user)
         response = self.client.post(f"/offerings/{self.b_offering.id}/claim/")
         self.assertEqual(response.status_code, 404)
 
 
 class Offering_(AppBase):
     def test_a_member_can_put_something_up(self):
-        self.client.force_login(self.ada_user)
+        self.sign_in(self.ada_user)
         response = self.client.post("/offerings/new/", {
             "description": "Half a Saturday and a working truck.",
             "hours_cap": "4",
@@ -107,14 +115,14 @@ class Offering_(AppBase):
 
         self.assertEqual(set(OfferingForm().fields), {"description", "hours_cap"})
 
-        self.client.force_login(self.ada_user)
+        self.sign_in(self.ada_user)
         body = self.client.get("/offerings/new/").content.decode().lower()
         self.assertNotIn("<select", body, "the offering form has a dropdown")
         posted = set(re.findall(r'<(?:input|textarea)[^>]*name="([^"]+)"', body))
         self.assertEqual(posted - {"csrfmiddlewaretoken"}, {"description", "hours_cap"})
 
     def test_only_the_offerer_can_close_it(self):
-        self.client.force_login(self.ada_user)
+        self.sign_in(self.ada_user)
         response = self.client.post(f"/offerings/{self.a_offering.id}/close/")
         self.assertEqual(response.status_code, 403)
         with tenant_context(self.alpha):
@@ -125,7 +133,7 @@ class Offering_(AppBase):
 class ClaimingIsUngated(AppBase):
     def test_a_member_with_no_contributions_can_claim(self):
         """The load-bearing behaviour of the whole system."""
-        self.client.force_login(self.ada_user)
+        self.sign_in(self.ada_user)
         with tenant_context(self.alpha):
             self.assertEqual(Contribution.objects.filter(member=self.ada).count(), 0)
 
@@ -137,7 +145,7 @@ class ClaimingIsUngated(AppBase):
 
     def test_the_offerings_page_never_shows_what_anyone_has_given(self):
         # If a total ever appears next to a name, the log has become a score.
-        self.client.force_login(self.ada_user)
+        self.sign_in(self.ada_user)
         body = self.client.get("/offerings/").content.decode().lower()
         for forbidden in ("hours given:", "total hours", "contributed ", "balance"):
             self.assertNotIn(forbidden, body)
@@ -145,7 +153,7 @@ class ClaimingIsUngated(AppBase):
 
 class Ledger(AppBase):
     def test_recorded_hours_appear_in_the_log(self):
-        self.client.force_login(self.ada_user)
+        self.sign_in(self.ada_user)
         response = self.client.post(f"/offerings/{self.a_offering.id}/hours/", {
             "hours": "2.5", "note": "Dug and washed them.",
         })
@@ -156,7 +164,7 @@ class Ledger(AppBase):
         self.assertIn("Dug and washed them.", body)
 
     def test_the_ledger_shows_no_totals(self):
-        self.client.force_login(self.ada_user)
+        self.sign_in(self.ada_user)
         self.client.post(f"/offerings/{self.a_offering.id}/hours/",
                          {"hours": "2.5", "note": ""})
         self.client.post(f"/offerings/{self.a_offering.id}/hours/",
@@ -177,13 +185,13 @@ class Ledger(AppBase):
             services.record_contribution(
                 member=self.bo, offering=self.b_offering, hours=Decimal("9"))
 
-        self.client.force_login(self.ada_user)
+        self.sign_in(self.ada_user)
         body = self.client.get("/ledger/").content.decode()
         self.assertNotIn("Bo", body)
         self.assertNotIn("9.00", body)
 
 
-class WayIn(TestCase):
+class WayIn(SignedIn, TestCase):
     """The front page must offer a way to sign in.
 
     It did not: a member arriving at dugnadsand.org had to already know to type
@@ -212,7 +220,7 @@ class WayIn(TestCase):
             Member.objects.create(organization=org, display_name="Wi", user=user)
         set_tenant(None)
 
-        self.client.force_login(user)
+        self.sign_in(user)
         body = self.client.get("/").content.decode()
         self.assertIn('href="/offerings/"', body)
         self.assertNotIn("Sign in", body)

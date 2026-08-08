@@ -69,7 +69,9 @@ class AddMemberForm(forms.Form):
 
     username = forms.CharField(max_length=150, label="Username they'll sign in with")
     display_name = forms.CharField(max_length=120, label="How they appear to others")
-    email = forms.EmailField(max_length=254, required=False, label="Email (optional)")
+    email = forms.EmailField(
+        max_length=254, label="Email",
+        help_text="Required. Their second factor is keyed to this address.")
     is_organizer = forms.BooleanField(
         required=False, label="Can add other members",
         help_text="Organizers add people. They get no extra view of the ledger.")
