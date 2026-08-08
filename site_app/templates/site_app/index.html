@@ -6,13 +6,13 @@
 {% block extra_css %}
 <style>
   :root {
-    --birch:  #EBEEE9;
-    --paper:  #F4F6F1;
-    --ink:    #17211E;
-    --spruce: #22403A;
-    --ochre:  #C1832B;
-    --moss:   #6B7F74;
-    --rule:   rgba(23,33,30,.14);
+    --birch:  var(--brand-background);
+    --paper:  var(--brand-surface);
+    --ink:    var(--brand-text-dark);
+    --spruce: var(--brand-primary);
+    --ochre:  var(--brand-secondary);
+    --moss:   var(--brand-tertiary);
+    --rule:   var(--brand-rule);
 
     --sans: Optima, Candara, "Gill Sans", "Gill Sans MT", "Trebuchet MS", "Segoe UI", sans-serif;
     --serif: Charter, "Iowan Old Style", Constantia, "Palatino Linotype", Palatino, Georgia, serif;
@@ -77,7 +77,7 @@
   }
   .hero .lede {
     font-size: clamp(1.1875rem, .6vw + 1.05rem, 1.4375rem); line-height: 1.5;
-    margin: 1.6rem 0 0; color: #2B3733;
+    margin: 1.6rem 0 0; color: var(--brand-text-body);
   }
 
   /* ---- figures ---- */
@@ -97,7 +97,7 @@
     font-family: var(--sans); font-weight: 600; font-size: clamp(1.5rem, 3.5vw, 2.125rem);
     line-height: 1.15; letter-spacing: -.015em; margin: 0; text-wrap: balance;
   }
-  .band p { margin: 1.15rem 0 0; color: #CBD6D0; }
+  .band p { margin: 1.15rem 0 0; color: var(--brand-on-primary); }
   .band .hours {
     font-family: var(--mono); font-size: .75rem; letter-spacing: .14em;
     text-transform: uppercase; color: var(--ochre); margin: 0 0 1.25rem;
@@ -118,7 +118,7 @@
     font-family: var(--sans); font-weight: 600; font-size: 1.3125rem;
     line-height: 1.25; margin: 0 0 .4rem; letter-spacing: -.01em;
   }
-  .terms p { margin: 0; color: #38443F; }
+  .terms p { margin: 0; color: var(--brand-text-soft); }
 
   /* ---- closing ---- */
   .closing { padding-block: clamp(3.5rem, 8vw, 5rem) 0; }
@@ -148,7 +148,7 @@
   }
   .contact input, .contact textarea {
     font: inherit; font-size: 1rem; color: var(--ink);
-    background: #FBFCFA; border: 1px solid rgba(23,33,30,.22); border-radius: 2px;
+    background: var(--brand-field); border: 1px solid var(--brand-rule-strong); border-radius: 2px;
     padding: .6rem .7rem; width: 100%; box-sizing: border-box;
   }
   .contact textarea { resize: vertical; line-height: 1.55; }
@@ -160,12 +160,12 @@
     color: var(--paper); background: var(--spruce); border: 0; border-radius: 2px;
     padding: .7rem 1.5rem; cursor: pointer; justify-self: start;
   }
-  .contact button:hover { background: #2C534B; }
-  .err { color: #8C3A2B; font-size: .875rem; margin: 0; }
+  .contact button:hover { background: var(--brand-spruce-hover); }
+  .err { color: var(--brand-error); font-size: .875rem; margin: 0; }
   .hp { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
   .note-sent {
     border-left: 2px solid var(--ochre); padding-left: 1rem;
-    margin-top: 1.75rem; color: #38443F;
+    margin-top: 1.75rem; color: var(--brand-text-soft);
   }
 </style>
 {% endblock %}

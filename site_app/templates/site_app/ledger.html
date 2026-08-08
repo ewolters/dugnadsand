@@ -1,0 +1,31 @@
+{% extends "app_base.html" %}
+{% block title %}Ledger — Dugnadsand{% endblock %}
+{% block content %}
+<h1>Ledger</h1>
+<p class="lede">Work that was done, in the order it happened. There are no totals here,
+   by anyone, on purpose — this is a record, not a scoreboard.</p>
+
+<div class="scroll">
+  <table class="ledger">
+    <thead>
+      <tr><th>When</th><th>Hours</th><th>Who</th><th>Toward</th><th>Note</th></tr>
+    </thead>
+    <tbody>
+      {% for e in entries %}
+      <tr>
+        <td>{{ e.recorded_at|date:"j M Y" }}</td>
+        <td class="hrs">{{ e.hours }}</td>
+        <td>{{ e.member.display_name }}</td>
+        <td>{{ e.offering.description|truncatechars:60 }}</td>
+        <td>{{ e.note|default:"—" }}</td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="5" class="empty">Nothing recorded yet.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<p class="note">{% if chain_ok %}Every entry above verifies against the one before it.
+  {% else %}⚠ This chain does not verify — an entry has been altered. Tell an organizer.{% endif %}</p>
+{% endblock %}

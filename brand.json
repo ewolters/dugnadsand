@@ -2,17 +2,33 @@
   "name": "Dugnadsand",
   "domain": "dugnadsand.org",
   "fonts": {
-    "heading": "Inter",
-    "body": "Inter"
+    "heading": "Optima",
+    "body": "Charter"
   },
   "colors": {
-    "primary": "#2c2c2c",
-    "secondary": "#555555",
-    "tertiary": "#888888",
-    "text_dark": "#1a1a1a",
-    "text_body": "#333333",
-    "text_muted": "#666666",
-    "background": "#f8f7f4",
-    "surface": "#ffffff"
+    "primary": "#22403A",
+    "secondary": "#C1832B",
+    "tertiary": "#6B7F74",
+    "text_dark": "#17211E",
+    "text_body": "#2B3733",
+    "text_muted": "#6B7F74",
+    "background": "#EBEEE9",
+    "surface": "#FAFBF9",
+    "spruce_hover": "#2C534B",
+    "quiet_hover": "#E2E7E1",
+    "table_head": "#EAEEE9",
+    "error": "#8C3A2B",
+    "plate": "#22403A",
+    "rule": "rgba(23,33,30,.14)",
+    "rule_strong": "rgba(23,33,30,.22)",
+    "ok": "#1F6F5C",
+    "ok_wash": "#E8F0E9",
+    "warn": "#8A6410",
+    "warn_wash": "#F7F0E1",
+    "alert": "#A32B1E",
+    "alert_wash": "#F7E9E7",
+    "text_soft": "#38443F",
+    "on_primary": "#CBD6D0",
+    "field": "#FBFCFA"
   }
 }

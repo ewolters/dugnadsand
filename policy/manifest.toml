@@ -109,3 +109,16 @@ stopping cost something, which is precisely what must not happen.
 """
 check = "no_obligation"
 enforceable_when = "the domain models exist"
+
+[[invariant]]
+id = "no-aggregate-display"
+claim = "Nothing computes or displays a per-member total of contributed hours."
+why = """
+The record is recognition, not standing. A visible number people can compare is
+a score whatever it is called, and a score creates the social gating that
+no-gating forbids in code. Members see a log in time order; nobody sees a
+total, including their own. This became enforceable only once there was a
+member-facing application to enforce it against.
+"""
+check = "no_aggregate_display"
+enforceable_when = "always"

@@ -145,3 +145,170 @@ def claim_offering(request, offering_id):
         return HttpResponseBadRequest(str(exc))
 
     return redirect("/")
+
+
+# --------------------------------------------------------------------------
+# The member application
+#
+# Deliberately absent from every view below: any per-member total, any ordering
+# by contribution, any eligibility check. Members see a LOG of what has been
+# given, never a score — the record is recognition, and a number people can
+# compare is a score whatever we call it. See docs/design-rules.md §1.
+# --------------------------------------------------------------------------
+
+
+def member_login(request):
+    from django.contrib.auth import authenticate, login
+    from kjerne_platform import login_protection
+
+    from .forms import MemberLoginForm
+
+    form = MemberLoginForm(request.POST or None)
+    error = None
+
+    if request.method == "POST" and form.is_valid():
+        username = form.cleaned_data["username"]
+        if not login_protection.check_login(request, username):
+            error = "Too many attempts. Try again in a few minutes."
+        else:
+            user = authenticate(
+                request, username=username, password=form.cleaned_data["password"])
+            if user is None:
+                error = "That username and password do not match."
+            else:
+                login(request, user)
+                return redirect("/offerings/")
+
+    return render(request, "site_app/login.html", {"form": form, "error": error})
+
+
+def member_logout(request):
+    from django.contrib.auth import logout
+
+    logout(request)
+    return redirect("/")
+
+
+def _member(request):
+    return getattr(request.user, "member", None)
+
+
+@login_required
+def offerings(request):
+    """Everything currently on offer in this member's organization.
+
+    Ordered by recency. Never by who has given most — that ordering would make
+    the record function as standing, which is the thing that must not happen.
+    """
+    from .models import Offering
+
+    member = _member(request)
+    if member is None:
+        return HttpResponseForbidden("Not a member of any organization.")
+
+    # RLS scopes this to the member's organization; the filter is for openness.
+    open_offerings = (
+        Offering.objects.filter(open=True)
+        .select_related("member")
+        .order_by("-created_at")
+    )
+    return render(request, "site_app/offerings.html", {
+        "member": member,
+        "offerings": open_offerings,
+    })
+
+
+@login_required
+def offering_new(request):
+    from .forms import OfferingForm
+
+    member = _member(request)
+    if member is None:
+        return HttpResponseForbidden("Not a member of any organization.")
+
+    form = OfferingForm(request.POST or None)
+    if request.method == "POST" and form.is_valid():
+        offering = form.save(commit=False)
+        offering.member = member
+        offering.organization_id = member.organization_id
+        offering.save()
+        return redirect("/offerings/")
+
+    return render(request, "site_app/offering_form.html", {"form": form})
+
+
+@login_required
+@require_POST
+def offering_close(request, offering_id):
+    from .models import Offering
+
+    member = _member(request)
+    offering = get_object_or_404(Offering, pk=offering_id)
+    if member is None or offering.member_id != member.id:
+        return HttpResponseForbidden("Only the person who offered it can close it.")
+
+    offering.open = False
+    offering.save(update_fields=["open"])
+    return redirect("/offerings/")
+
+
+@login_required
+def contribution_new(request, offering_id):
+    """Write down hours that were given.
+
+    Recording hours is a separate act from claiming, and the two never meet in
+    a row — see no-exchange.
+    """
+    from .forms import ContributionForm
+    from .models import Offering
+    from .services import record_contribution
+
+    member = _member(request)
+    if member is None:
+        return HttpResponseForbidden("Not a member of any organization.")
+
+    offering = get_object_or_404(Offering, pk=offering_id)
+    form = ContributionForm(request.POST or None)
+
+    if request.method == "POST" and form.is_valid():
+        try:
+            record_contribution(
+                member=member,
+                offering=offering,
+                hours=form.cleaned_data["hours"],
+                note=form.cleaned_data["note"],
+            )
+        except ValueError as exc:
+            form.add_error(None, str(exc))
+        else:
+            return redirect("/ledger/")
+
+    return render(request, "site_app/contribution_form.html",
+                  {"form": form, "offering": offering})
+
+
+@login_required
+def ledger(request):
+    """The organization's contribution log.
+
+    A list, in time order, with no totals and no per-member aggregation. It
+    reads like a commit log because that is exactly what it is: visible work,
+    conferring standing on nobody.
+    """
+    from .models import Contribution
+    from .services import verify_contributions
+
+    member = _member(request)
+    if member is None:
+        return HttpResponseForbidden("Not a member of any organization.")
+
+    entries = (
+        Contribution.objects.select_related("member", "offering")
+        .order_by("-recorded_at")[:200]
+    )
+    report = verify_contributions(member.organization)
+
+    return render(request, "site_app/ledger.html", {
+        "entries": entries,
+        "chain_ok": getattr(report, "ok", None),
+    })

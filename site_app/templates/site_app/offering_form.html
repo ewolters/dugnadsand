@@ -1,0 +1,28 @@
+{% extends "app_base.html" %}
+{% block title %}Offer something — Dugnadsand{% endblock %}
+{% block content %}
+<h1>Offer something</h1>
+<p class="lede">Write it however you like. There is no category to pick and no rate to set —
+   both would turn this into a price list.</p>
+
+<form method="post" class="stack">
+  {% csrf_token %}
+  {% if form.non_field_errors %}<p class="err">{{ form.non_field_errors.0 }}</p>{% endif %}
+  <div>
+    <label for="{{ form.description.id_for_label }}">What are you offering</label>
+    {{ form.description }}
+    {% if form.description.errors %}<p class="err">{{ form.description.errors.0 }}</p>{% endif %}
+  </div>
+  <div>
+    <label for="{{ form.hours_cap.id_for_label }}">Up to how many hours (optional)</label>
+    {{ form.hours_cap }}
+    <p class="help">A ceiling, never a floor. You can stop before this, at any time,
+       and nothing is recorded about it.</p>
+    {% if form.hours_cap.errors %}<p class="err">{{ form.hours_cap.errors.0 }}</p>{% endif %}
+  </div>
+  <div class="row">
+    <button type="submit" class="act">Put it up</button>
+    <a class="act quiet" href="/offerings/">Cancel</a>
+  </div>
+</form>
+{% endblock %}

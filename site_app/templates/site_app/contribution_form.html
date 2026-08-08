@@ -1,0 +1,25 @@
+{% extends "app_base.html" %}
+{% block title %}Record hours — Dugnadsand{% endblock %}
+{% block content %}
+<h1>Record hours given</h1>
+<p class="lede">For: {{ offering.description|truncatechars:120 }}</p>
+
+<form method="post" class="stack">
+  {% csrf_token %}
+  {% if form.non_field_errors %}<p class="err">{{ form.non_field_errors.0 }}</p>{% endif %}
+  <div>
+    <label for="{{ form.hours.id_for_label }}">Hours given</label>
+    {{ form.hours }}
+    <p class="help">An hour is an hour, from anyone, whatever the work was.</p>
+    {% if form.hours.errors %}<p class="err">{{ form.hours.errors.0 }}</p>{% endif %}
+  </div>
+  <div>
+    <label for="{{ form.note.id_for_label }}">Anything worth remembering (optional)</label>
+    {{ form.note }}
+  </div>
+  <div class="row">
+    <button type="submit" class="act">Write it down</button>
+    <a class="act quiet" href="/offerings/">Cancel</a>
+  </div>
+</form>
+{% endblock %}

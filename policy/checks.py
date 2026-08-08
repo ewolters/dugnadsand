@@ -307,6 +307,43 @@ def no_obligation():
                   "Offers are ceilings. Nothing records a minimum, a completion, or a penalty for stopping.")
 
 
+# Aggregating a member's hours turns a log into a score.
+_AGGREGATION = re.compile(
+    r"\b(Sum|Avg|Count)\s*\(\s*[\"']?(hours|contributions)|"
+    r"\.aggregate\s*\(|"
+    r"contributions\s*\|\s*length|"
+    r"contributions\.count|"
+    r"total_hours|hours_total|hours_given_total",
+    re.I,
+)
+
+
+def no_aggregate_display():
+    """Enforceable today: nothing totals a member's hours, anywhere.
+
+    Scans application code and templates. The log is allowed - and is the whole
+    point - but a number that can be compared between members is a score, and a
+    score reintroduces by social pressure exactly what no-gating removes from
+    the code.
+    """
+    hits = []
+    targets = list(_python_sources()) + [
+        p for p in BASE_DIR.rglob("*.html")
+        if "staticfiles" not in p.parts and "docs" not in p.parts
+    ]
+    for path in targets:
+        text = path.read_text(errors="ignore")
+        for m in _AGGREGATION.finditer(text):
+            line = text[: m.start()].count("\n") + 1
+            hits.append(f"{path.relative_to(BASE_DIR)}:{line} '{m.group(0).strip()}'")
+
+    if hits:
+        return Result("no-aggregate-display", BREACHED,
+                      "Something totals contributed hours.", hits)
+    return Result("no-aggregate-display", UPHELD,
+                  "No per-member total of contributed hours is computed or displayed.")
+
+
 # Every manifest entry's `check` must resolve here, and nothing may be here
 # without a manifest entry. test_policy.py asserts both directions.
 CHECKS = {
@@ -318,4 +355,5 @@ CHECKS = {
     "no_tax_artifact": no_tax_artifact,
     "no_catalog": no_catalog,
     "no_obligation": no_obligation,
+    "no_aggregate_display": no_aggregate_display,
 }

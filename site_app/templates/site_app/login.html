@@ -1,0 +1,22 @@
+{% extends "app_base.html" %}
+{% block title %}Sign in — Dugnadsand{% endblock %}
+{% block content %}
+<h1>Sign in</h1>
+<p class="lede">Accounts are created by your organization. There is no sign-up form —
+   admission is a conversation, not a button.</p>
+
+<form method="post" class="stack">
+  {% csrf_token %}
+  {% if error %}<p class="err">{{ error }}</p>{% endif %}
+  <div>
+    <label for="id_username">Username</label>
+    <input type="text" name="username" id="id_username" autocomplete="username"
+           value="{{ form.username.value|default:'' }}" required>
+  </div>
+  <div>
+    <label for="id_password">Password</label>
+    <input type="password" name="password" id="id_password" autocomplete="current-password" required>
+  </div>
+  <div><button type="submit" class="act">Sign in</button></div>
+</form>
+{% endblock %}

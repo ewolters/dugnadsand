@@ -1,0 +1,183 @@
+"""The member application, end to end.
+
+The tests that matter most are the ones asserting what the app will NOT do:
+serve another organization's offerings, or let anything depend on what a member
+has given.
+"""
+
+import re
+from decimal import Decimal
+
+from django.contrib.auth.models import User
+from django.test import TestCase
+
+from site_app.models import Claim, Contribution, Member, Offering, Organization
+from site_app.tenancy import set_tenant, tenant_context
+
+
+class AppBase(TestCase):
+    def setUp(self):
+        self.alpha = Organization.objects.create(slug="alpha", name="Alpha Mutual Aid")
+        self.beta = Organization.objects.create(slug="beta", name="Beta Mutual Aid")
+
+        self.ada_user = User.objects.create_user("ada", password="dugnad-test-pw")
+        self.bo_user = User.objects.create_user("bo", password="dugnad-test-pw")
+
+        with tenant_context(self.alpha):
+            self.ada = Member.objects.create(
+                organization=self.alpha, display_name="Ada", user=self.ada_user)
+            self.other_alpha = Member.objects.create(
+                organization=self.alpha, display_name="Ola")
+            self.a_offering = Offering.objects.create(
+                organization=self.alpha, member=self.other_alpha,
+                description="Two crates of potatoes.")
+
+        with tenant_context(self.beta):
+            self.bo = Member.objects.create(
+                organization=self.beta, display_name="Bo", user=self.bo_user)
+            self.b_offering = Offering.objects.create(
+                organization=self.beta, member=self.bo,
+                description="Ladder, free to borrow.")
+
+        set_tenant(None)
+
+    def tearDown(self):
+        set_tenant(None)
+
+
+class SignIn(AppBase):
+    def test_a_member_can_sign_in_and_reach_the_offerings(self):
+        response = self.client.post(
+            "/login/", {"username": "ada", "password": "dugnad-test-pw"})
+        self.assertRedirects(response, "/offerings/")
+
+    def test_a_wrong_password_does_not_sign_in(self):
+        response = self.client.post(
+            "/login/", {"username": "ada", "password": "wrong"})
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "do not match")
+
+    def test_offerings_require_signing_in(self):
+        response = self.client.get("/offerings/")
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("/login/", response["Location"])
+
+
+class Isolation(AppBase):
+    def test_a_member_sees_only_their_own_organizations_offerings(self):
+        self.client.force_login(self.ada_user)
+        response = self.client.get("/offerings/")
+        self.assertContains(response, "potatoes")
+        self.assertNotContains(response, "Ladder")
+
+    def test_the_other_organization_sees_the_mirror_image(self):
+        self.client.force_login(self.bo_user)
+        response = self.client.get("/offerings/")
+        self.assertContains(response, "Ladder")
+        self.assertNotContains(response, "potatoes")
+
+    def test_another_organizations_offering_cannot_be_claimed_by_url(self):
+        # Guessing the id is not enough: RLS makes the row unreachable.
+        self.client.force_login(self.ada_user)
+        response = self.client.post(f"/offerings/{self.b_offering.id}/claim/")
+        self.assertEqual(response.status_code, 404)
+
+
+class Offering_(AppBase):
+    def test_a_member_can_put_something_up(self):
+        self.client.force_login(self.ada_user)
+        response = self.client.post("/offerings/new/", {
+            "description": "Half a Saturday and a working truck.",
+            "hours_cap": "4",
+        })
+        self.assertRedirects(response, "/offerings/")
+        with tenant_context(self.alpha):
+            o = Offering.objects.get(member=self.ada)
+            self.assertEqual(o.hours_cap, 4)
+
+    def test_the_form_offers_no_category_or_rate(self):
+        """no-catalog, as a UI test.
+
+        Checks the CONTROLS, not the prose. An earlier version grepped the whole
+        page for "category" and failed on the lede, which says there is no
+        category to pick — which would have forced a choice between honest copy
+        and a green build.
+        """
+        from site_app.forms import OfferingForm
+
+        self.assertEqual(set(OfferingForm().fields), {"description", "hours_cap"})
+
+        self.client.force_login(self.ada_user)
+        body = self.client.get("/offerings/new/").content.decode().lower()
+        self.assertNotIn("<select", body, "the offering form has a dropdown")
+        posted = set(re.findall(r'<(?:input|textarea)[^>]*name="([^"]+)"', body))
+        self.assertEqual(posted - {"csrfmiddlewaretoken"}, {"description", "hours_cap"})
+
+    def test_only_the_offerer_can_close_it(self):
+        self.client.force_login(self.ada_user)
+        response = self.client.post(f"/offerings/{self.a_offering.id}/close/")
+        self.assertEqual(response.status_code, 403)
+        with tenant_context(self.alpha):
+            self.a_offering.refresh_from_db()
+            self.assertTrue(self.a_offering.open)
+
+
+class ClaimingIsUngated(AppBase):
+    def test_a_member_with_no_contributions_can_claim(self):
+        """The load-bearing behaviour of the whole system."""
+        self.client.force_login(self.ada_user)
+        with tenant_context(self.alpha):
+            self.assertEqual(Contribution.objects.filter(member=self.ada).count(), 0)
+
+        response = self.client.post(f"/offerings/{self.a_offering.id}/claim/")
+        self.assertEqual(response.status_code, 302)
+
+        with tenant_context(self.alpha):
+            self.assertEqual(Claim.objects.filter(member=self.ada).count(), 1)
+
+    def test_the_offerings_page_never_shows_what_anyone_has_given(self):
+        # If a total ever appears next to a name, the log has become a score.
+        self.client.force_login(self.ada_user)
+        body = self.client.get("/offerings/").content.decode().lower()
+        for forbidden in ("hours given:", "total hours", "contributed ", "balance"):
+            self.assertNotIn(forbidden, body)
+
+
+class Ledger(AppBase):
+    def test_recorded_hours_appear_in_the_log(self):
+        self.client.force_login(self.ada_user)
+        response = self.client.post(f"/offerings/{self.a_offering.id}/hours/", {
+            "hours": "2.5", "note": "Dug and washed them.",
+        })
+        self.assertRedirects(response, "/ledger/")
+
+        body = self.client.get("/ledger/").content.decode()
+        self.assertIn("2.50", body)
+        self.assertIn("Dug and washed them.", body)
+
+    def test_the_ledger_shows_no_totals(self):
+        self.client.force_login(self.ada_user)
+        self.client.post(f"/offerings/{self.a_offering.id}/hours/",
+                         {"hours": "2.5", "note": ""})
+        self.client.post(f"/offerings/{self.a_offering.id}/hours/",
+                         {"hours": "1.5", "note": ""})
+
+        # Assert on the table DATA, not the page prose - the lede legitimately
+        # says "there are no totals here".
+        body = self.client.get("/ledger/").content.decode()
+        tbody = re.search(r"<tbody>(.*?)</tbody>", body, re.S).group(1)
+        figures = re.findall(r'<td class="hrs">([\d.]+)</td>', tbody)
+        self.assertEqual(sorted(figures), ["1.50", "2.50"])
+        # 2.5 + 1.5 = 4.00 is computed nowhere and rendered nowhere.
+        self.assertNotIn("4.00", tbody)
+
+    def test_the_ledger_is_scoped_to_the_organization(self):
+        with tenant_context(self.beta):
+            from site_app import services
+            services.record_contribution(
+                member=self.bo, offering=self.b_offering, hours=Decimal("9"))
+
+        self.client.force_login(self.ada_user)
+        body = self.client.get("/ledger/").content.decode()
+        self.assertNotIn("Bo", body)
+        self.assertNotIn("9.00", body)

@@ -1,15 +1,31 @@
 /* Auto-generated from brand.json — do not edit by hand */
 :root {
-  --brand-primary: #2c2c2c;
-  --brand-secondary: #555555;
-  --brand-tertiary: #888888;
-  --brand-text-dark: #1a1a1a;
-  --brand-text-body: #333333;
-  --brand-text-muted: #666666;
-  --brand-background: #f8f7f4;
-  --brand-surface: #ffffff;
-  --brand-font-heading: 'Inter', sans-serif;
-  --brand-font-body: 'Inter', sans-serif;
+  --brand-primary: #22403A;
+  --brand-secondary: #C1832B;
+  --brand-tertiary: #6B7F74;
+  --brand-text-dark: #17211E;
+  --brand-text-body: #2B3733;
+  --brand-text-muted: #6B7F74;
+  --brand-background: #EBEEE9;
+  --brand-surface: #FAFBF9;
+  --brand-spruce-hover: #2C534B;
+  --brand-quiet-hover: #E2E7E1;
+  --brand-table-head: #EAEEE9;
+  --brand-error: #8C3A2B;
+  --brand-plate: #22403A;
+  --brand-rule: rgba(23,33,30,.14);
+  --brand-rule-strong: rgba(23,33,30,.22);
+  --brand-ok: #1F6F5C;
+  --brand-ok-wash: #E8F0E9;
+  --brand-warn: #8A6410;
+  --brand-warn-wash: #F7F0E1;
+  --brand-alert: #A32B1E;
+  --brand-alert-wash: #F7E9E7;
+  --brand-text-soft: #38443F;
+  --brand-on-primary: #CBD6D0;
+  --brand-field: #FBFCFA;
+  --brand-font-heading: 'Optima', sans-serif;
+  --brand-font-body: 'Charter', sans-serif;
 }
 
 body {
