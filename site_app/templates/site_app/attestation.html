@@ -14,7 +14,13 @@
   }
   body { margin:0; background:var(--birch); color:var(--ink); font-family:var(--serif); line-height:1.6; }
   body > header { border-bottom:1px solid var(--rule); }
-  body > header nav { max-width:52rem; margin-inline:auto; padding:1.1rem var(--gut); }
+  body > header nav { max-width:52rem; margin-inline:auto; padding:1.1rem var(--gut);
+    display:flex; align-items:baseline; justify-content:space-between; gap:1rem; }
+  body > header .nav-right { display:flex; align-items:baseline; gap:1.25rem; }
+  body > header .place, body > header .signin {
+    font-family:var(--mono); font-size:.6875rem; letter-spacing:.1em;
+    text-transform:uppercase; color:var(--moss); }
+  body > header .signin { color:var(--ochre); text-decoration:none; }
   body > header .brand-name { font-family:var(--sans); font-weight:600; letter-spacing:.07em;
     text-transform:uppercase; text-decoration:none; }
   body > footer { border-top:1px solid var(--rule); margin-top:4rem; font-family:var(--mono);

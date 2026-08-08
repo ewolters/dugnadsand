@@ -49,10 +49,21 @@
     font-family: var(--sans); font-weight: 600; font-size: 1.0625rem;
     letter-spacing: .07em; text-transform: uppercase; text-decoration: none;
   }
-  body > header nav::after {
-    content: "Upstate South Carolina";
+  /* The place used to be a ::after on the nav. It became real markup so a
+     sign-in link could sit beside it — a member arriving at the front page had
+     no way in and had to know to type /login/. */
+  body > header .nav-right { display: flex; align-items: baseline; gap: 1.25rem; }
+  body > header .place,
+  body > header .signin {
     font-family: var(--mono); font-size: .6875rem; letter-spacing: .1em;
     text-transform: uppercase; color: var(--moss);
+  }
+  body > header .signin { color: var(--ochre); text-decoration: none; }
+  body > header .signin:hover { text-decoration: underline; text-underline-offset: 3px; }
+
+  @media (max-width: 30rem) {
+    /* The place is decoration; the way in is not. */
+    body > header .place { display: none; }
   }
   body > main { display: block; }
   body > footer {

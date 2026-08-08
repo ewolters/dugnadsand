@@ -181,3 +181,38 @@ class Ledger(AppBase):
         body = self.client.get("/ledger/").content.decode()
         self.assertNotIn("Bo", body)
         self.assertNotIn("9.00", body)
+
+
+class WayIn(TestCase):
+    """The front page must offer a way to sign in.
+
+    It did not: a member arriving at dugnadsand.org had to already know to type
+    /login/. The link is small on purpose - this is a public page about an idea,
+    not a product login - but it has to exist.
+    """
+
+    def test_the_landing_page_links_to_sign_in(self):
+        body = self.client.get("/").content.decode()
+        self.assertIn('href="/login/"', body)
+        self.assertIn("Sign in", body)
+
+    def test_the_attestation_page_links_to_sign_in_too(self):
+        body = self.client.get("/attestation/").content.decode()
+        self.assertIn('href="/login/"', body)
+
+    def test_a_signed_in_member_is_pointed_at_the_app_instead(self):
+        from django.contrib.auth.models import User
+
+        from site_app.models import Member, Organization
+        from site_app.tenancy import set_tenant, tenant_context
+
+        org = Organization.objects.create(slug="wayin", name="Way In")
+        user = User.objects.create_user("wi", password="dugnad-test-pw")
+        with tenant_context(org):
+            Member.objects.create(organization=org, display_name="Wi", user=user)
+        set_tenant(None)
+
+        self.client.force_login(user)
+        body = self.client.get("/").content.decode()
+        self.assertIn('href="/offerings/"', body)
+        self.assertNotIn("Sign in", body)

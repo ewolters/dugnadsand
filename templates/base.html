@@ -12,6 +12,14 @@
     <header>
         <nav>
             <a href="/" class="brand-name">Dugnadsand</a>
+            <span class="nav-right">
+                <span class="place">Upstate South Carolina</span>
+                {% if user.is_authenticated %}
+                <a class="signin" href="/offerings/">On offer</a>
+                {% else %}
+                <a class="signin" href="/login/">Sign in</a>
+                {% endif %}
+            </span>
         </nav>
     </header>
 
