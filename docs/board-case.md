@@ -1,49 +1,44 @@
-# A proposal for the Once Upon a Table board
+# A proposal for a mutual aid board
 
-**Prepared by** SVEND · 7 August 2026
-**For** the Board of Directors, Once Upon a Table, Inc.
+**Prepared by** SVEND · August 2026
+**For** the board of a small mutual aid organization
 **Subject** Adding a labor-and-goods gift ledger to the organization's existing work
 
-> A note on sourcing: the description of Once Upon a Table below comes from your own
-> site at onceuponatable.rentals and Hannah's public interview with *Voyage South
-> Carolina*. Anything we have wrong, please correct — the argument depends on getting
-> your model right, not ours.
+> This is written for a particular kind of organization: one already giving direct
+> assistance, already working without eligibility tests, and already funding that work from
+> something other than grants. If that is not you, most of the argument below will not
+> land. Where it says "you", read your own model into it and correct anything we have
+> assumed wrongly — the case depends on getting your model right, not ours.
 
 ---
 
 ## The short version
 
-Once Upon a Table already moves money to people who need it. In its first year the
-organization ran 55 events and distributed **more than $16,000** in direct assistance,
-with no debt and no grants, because rental revenue covers operations and donations go
-out whole.
-
-That is a real machine, and it has a ceiling: **you can only give away what you take in.**
+You already move money to people who need it, and that machine has a ceiling: **you can
+only give away what you take in.** Every dollar of assistance has to be raised or earned
+first.
 
 What we are proposing does not raise money. It moves a different resource — hours and
-goods that neighbors already have and would give — and keeps a record of it. A member
-grows more potatoes than they can eat and puts them up. Someone takes them. Nobody
-pays, nobody owes, and the hours are written down because the work was real.
+goods that neighbors already have and would give — and keeps a record of it. Somebody
+grows more potatoes than they can eat and puts them up. Someone takes them. Nobody pays,
+nobody owes, and the hours are written down because the work was real.
 
 It runs under your 501(c)(3), it is already built, and it is sponsored by SVEND at no
 cost to the organization.
 
 ---
 
-## Why this fits Once Upon a Table specifically
+## Why this fits an organization like yours
 
-### 1. It encodes the philosophy you already operate on
+### 1. It encodes a philosophy you may already operate on
 
-Your own site says **"Setting the table for community mutual aid."** Not an event-rental
-company that donates its profits — a mutual aid organization whose rentals are the
-funding mechanism. And under Community Aid you offer a form that lets somebody ask for
-help **anonymously**, without identifying themselves and without qualifying for anything.
+Many small mutual aid organizations describe their work in almost the same words: rapid,
+flexible assistance without eligibility requirements, offered on trust. Some take
+requests anonymously, so that asking costs nothing and proves nothing.
 
-Your description of how you serve people is *"rapid, flexible assistance without
-eligibility requirements"* and a *"radical trust-centered approach."*
-
-That is not a value statement we are accommodating. It is the single hardest
-architectural constraint in this system, and we built to it deliberately:
+If that describes you, then what follows is not a value statement we are accommodating.
+It is the single hardest architectural constraint in this system, and we built to it
+deliberately:
 
 **Nothing in this software gates on what you have given.** There is no path in the code
 from a member's contribution record to their eligibility to receive. You can take
@@ -54,22 +49,22 @@ design — everyone earns credits, credits buy help — quietly creates eligibil
 requirements and puts people in debt. Ours cannot, because the balance is never
 consulted. It is a property we can demonstrate in the code, not a promise in a policy.
 
-Put plainly: the anonymous form under Community Aid already says that asking should cost
-nothing and require nothing. We wrote that same sentence as a test that fails the build.
+Put plainly: an anonymous request form already says that asking should cost nothing and
+require nothing. We wrote that same sentence as a test that fails the build.
 
 ### 2. It extends your reach without extending your fundraising
 
-Every dollar of assistance you distribute has to be earned first. Labor and goods do
-not come out of that budget at all.
+Every dollar of assistance you distribute has to be earned first. Labor and goods do not
+come out of that budget at all.
 
-A member spending a Saturday repairing someone's porch is help delivered that never
-touched the $16,000. The two systems are additive: money for what money is needed for,
-and this for everything else.
+Somebody spending a Saturday repairing a neighbor's porch is help delivered that never
+touched your bank balance. The two systems are additive: money for what money is needed
+for, and this for everything else.
 
 ### 3. It protects your exempt status rather than risking it
 
-This is the part we would most want counsel to look at, and the reason we did not
-simply adopt an existing platform.
+This is the part we would most want counsel to look at, and the reason we did not simply
+adopt an existing platform.
 
 The obvious off-the-shelf option is a *community currency* — members earn transferable
 credits and spend them on each other's services. Under US law that design looks a great
@@ -78,24 +73,22 @@ requires collecting members' Social Security numbers, and puts the organization 
 business of tracking taxable income for everyone who participates.
 
 Our model avoids that by not being an exchange at all. Nothing is transferable, nothing
-is owed, and no one gets anything in return for giving. That is a gift, and gifts are
-not income to the recipient (IRC §102).
+is owed, and no one gets anything in return for giving. That is a gift, and gifts are not
+income to the recipient (IRC §102).
 
-**We are not offering a legal opinion, and the board should not treat this as one.**
-We are saying the design was chosen with this question in front of us rather than
-discovered afterward, and that it gives your counsel a much easier position to defend.
+**We are not offering a legal opinion, and the board should not treat this as one.** We
+are saying the design was chosen with this question in front of us rather than discovered
+afterward, and that it gives your counsel a much easier position to defend.
 
-### 4. It is the same instinct your organization is named after
-
-Your work is about a table — people gathered around one, treated with dignity, given
-something beautiful.
+### 4. The gathering is the point, not the overhead
 
 *Dugnad* is the Norwegian word for a neighborhood doing work together, and the part
 Norwegians will tell you actually matters is the coffee afterward. One of the two
-photographs on the site is a trail crew stopped for lunch, tools left by the truck.
-The sitting-down part counts for as much as the digging.
+photographs on the site is a trail crew stopped for lunch, tools left by the truck. The
+sitting-down part counts for as much as the digging.
 
-We think these are the same idea, arriving from two directions.
+Organizations that do this well tend to know that already. The software is built so the
+record never gets in the way of it.
 
 ---
 

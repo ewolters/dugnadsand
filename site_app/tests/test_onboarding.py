@@ -25,17 +25,17 @@ class AdmitOrganization(SignedIn, TestCase):
 
     def test_it_admits_an_organization_and_derives_a_slug(self):
         out = StringIO()
-        call_command("admit_organization", "Once Upon a Table", stdout=out)
+        call_command("admit_organization", "Rivertown Mutual Aid", stdout=out)
 
-        org = Organization.objects.get(slug="once-upon-a-table")
-        self.assertEqual(org.name, "Once Upon a Table")
+        org = Organization.objects.get(slug="rivertown-mutual-aid")
+        self.assertEqual(org.name, "Rivertown Mutual Aid")
         self.assertTrue(org.active)
         self.assertIn("Admitted", out.getvalue())
 
     def test_an_explicit_slug_wins(self):
-        call_command("admit_organization", "Once Upon a Table", slug="ouat",
+        call_command("admit_organization", "Rivertown Mutual Aid", slug="rma",
                      stdout=StringIO())
-        self.assertTrue(Organization.objects.filter(slug="ouat").exists())
+        self.assertTrue(Organization.objects.filter(slug="rma").exists())
 
     def test_admitting_the_same_organization_twice_is_refused(self):
         call_command("admit_organization", "Alpha", stdout=StringIO())

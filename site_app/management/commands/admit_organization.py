@@ -17,7 +17,7 @@ class Command(BaseCommand):
     help = "Admit a vetted mutual aid organization."
 
     def add_arguments(self, parser):
-        parser.add_argument("name", help='Display name, e.g. "Once Upon a Table"')
+        parser.add_argument("name", help='Display name, e.g. "Rivertown Mutual Aid"')
         parser.add_argument(
             "--slug", help="URL-safe short name; derived from the name if omitted")
 

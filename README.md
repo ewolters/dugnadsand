@@ -4,9 +4,10 @@
 whole street turns out to clear the lot or paint the community hall, and nobody keeps
 track of who owed what. *Dugnadsånd* is the spirit of it.
 
-This is the site and, in time, the record-keeping for a mutual aid pilot in upstate
-South Carolina, run under the 501(c)(3) of [Once Upon a Table, Inc.](https://southcarolinavoyager.com/interview/exploring-life-business-with-hannah-smith-of-once-upon-a-table-inc)
-and sponsored by [SVEND](https://svend.ai).
+This is the site and, in time, the record-keeping for mutual aid organizations in
+upstate South Carolina. It is multi-tenant: each organization is admitted deliberately,
+and row-level security keeps every organization's members, offerings and ledger
+invisible to the others. Sponsored by [SVEND](https://svend.ai).
 
 **Live at [dugnadsand.org](https://dugnadsand.org).**
 
@@ -25,7 +26,7 @@ requirements. If you are reading this because you are about to add a feature, re
 
 | | |
 |---|---|
-| [docs/board-case.md](docs/board-case.md) | The proposal to the Once Upon a Table board |
+| [docs/board-case.md](docs/board-case.md) | The proposal a prospective organization's board would read |
 | [docs/komunitin-comparison.md](docs/komunitin-comparison.md) | Why we did not adopt Komunitin, and what we kept from it |
 | [docs/architecture.md](docs/architecture.md) | Code-level comparison with Komunitin: where the gate lives, and what replaces it |
 | [docs/design-rules.md](docs/design-rules.md) | The eight constraints that hold the model up |
