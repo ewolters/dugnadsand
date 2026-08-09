@@ -130,21 +130,21 @@ def attestation_run(request):
 
 @login_required
 @require_POST
-def claim_offering(request, offering_id):
-    from .models import Offering
-    from .services import claim_offering as do_claim
+def claim_posting(request, posting_id):
+    from .models import Posting
+    from .services import claim_posting as do_claim
 
     member = getattr(request.user, "member", None)
     if member is None:
         return HttpResponseForbidden("Not a member of any organization.")
 
-    offering = get_object_or_404(Offering, pk=offering_id)
+    posting = get_object_or_404(Posting, pk=posting_id)
     try:
-        do_claim(offering=offering, member=member)
+        do_claim(posting=posting, member=member)
     except ValueError as exc:
         return HttpResponseBadRequest(str(exc))
 
-    return redirect("/")
+    return redirect("/board/")
 
 
 # --------------------------------------------------------------------------
@@ -177,7 +177,7 @@ def member_login(request):
                 error = "That username and password do not match."
             else:
                 login(request, user)
-                return redirect("/offerings/")
+                return redirect("/board/")
 
     return render(request, "site_app/login.html", {"form": form, "error": error})
 
@@ -194,87 +194,93 @@ def _member(request):
 
 
 @login_required
-def offerings(request):
-    """Everything currently on offer in this member's organization.
+def board(request):
+    """Everything open in this member's organization, both directions.
 
-    Ordered by recency. Never by who has given most — that ordering would make
-    the record function as standing, which is the thing that must not happen.
+    Ordered by recency, and only by recency. Ranking either column by who has
+    given most would make the record function as standing — see no-gating — and
+    a request sorted by its asker's contribution is the exact failure this
+    system exists to avoid.
     """
-    from .models import Offering
+    from .models import Posting
 
     member = _member(request)
     if member is None:
         return HttpResponseForbidden("Not a member of any organization.")
 
     # RLS scopes this to the member's organization; the filter is for openness.
-    open_offerings = (
-        Offering.objects.filter(open=True)
+    # claims are prefetched so the board can say who is already on something,
+    # which is the coordination the board is for.
+    open_postings = (
+        Posting.objects.filter(open=True)
         .select_related("member")
+        .prefetch_related("claims__member")
         .order_by("-created_at")
     )
-    return render(request, "site_app/offerings.html", {
+    return render(request, "site_app/board.html", {
         "member": member,
-        "offerings": open_offerings,
+        "needs": [p for p in open_postings if p.kind == Posting.NEED],
+        "offers": [p for p in open_postings if p.kind == Posting.OFFER],
     })
 
 
 @login_required
-def offering_new(request):
-    from .forms import OfferingForm
+def posting_new(request):
+    from .forms import PostingForm
 
     member = _member(request)
     if member is None:
         return HttpResponseForbidden("Not a member of any organization.")
 
-    form = OfferingForm(request.POST or None)
+    form = PostingForm(request.POST or None)
     if request.method == "POST" and form.is_valid():
-        offering = form.save(commit=False)
-        offering.member = member
-        offering.organization_id = member.organization_id
-        offering.save()
-        return redirect("/offerings/")
+        posting = form.save(commit=False)
+        posting.member = member
+        posting.organization_id = member.organization_id
+        posting.save()
+        return redirect("/board/")
 
-    return render(request, "site_app/offering_form.html", {"form": form})
+    return render(request, "site_app/posting_form.html", {"form": form})
 
 
 @login_required
 @require_POST
-def offering_close(request, offering_id):
-    from .models import Offering
+def posting_close(request, posting_id):
+    from .models import Posting
 
     member = _member(request)
-    offering = get_object_or_404(Offering, pk=offering_id)
-    if member is None or offering.member_id != member.id:
+    posting = get_object_or_404(Posting, pk=posting_id)
+    if member is None or posting.member_id != member.id:
         return HttpResponseForbidden("Only the person who offered it can close it.")
 
-    offering.open = False
-    offering.save(update_fields=["open"])
-    return redirect("/offerings/")
+    posting.open = False
+    posting.save(update_fields=["open"])
+    return redirect("/board/")
 
 
 @login_required
-def contribution_new(request, offering_id):
+def contribution_new(request, posting_id):
     """Write down hours that were given.
 
     Recording hours is a separate act from claiming, and the two never meet in
     a row — see no-exchange.
     """
     from .forms import ContributionForm
-    from .models import Offering
+    from .models import Posting
     from .services import record_contribution
 
     member = _member(request)
     if member is None:
         return HttpResponseForbidden("Not a member of any organization.")
 
-    offering = get_object_or_404(Offering, pk=offering_id)
+    posting = get_object_or_404(Posting, pk=posting_id)
     form = ContributionForm(request.POST or None)
 
     if request.method == "POST" and form.is_valid():
         try:
             record_contribution(
                 member=member,
-                offering=offering,
+                posting=posting,
                 hours=form.cleaned_data["hours"],
                 note=form.cleaned_data["note"],
             )
@@ -284,7 +290,7 @@ def contribution_new(request, offering_id):
             return redirect("/ledger/")
 
     return render(request, "site_app/contribution_form.html",
-                  {"form": form, "offering": offering})
+                  {"form": form, "posting": posting})
 
 
 @login_required
@@ -303,7 +309,7 @@ def ledger(request):
         return HttpResponseForbidden("Not a member of any organization.")
 
     entries = (
-        Contribution.objects.select_related("member", "offering")
+        Contribution.objects.select_related("member", "posting")
         .order_by("-recorded_at")[:200]
     )
     report = verify_contributions(member.organization)
@@ -339,7 +345,7 @@ def change_password(request):
         if member is not None and member.must_change_password:
             member.must_change_password = False
             member.save(update_fields=["must_change_password"])
-        return redirect("/offerings/")
+        return redirect("/board/")
 
     return render(request, "site_app/password_change.html", {
         "form": form,

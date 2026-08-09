@@ -72,8 +72,21 @@ class Member(TenantScoped):
         return self.display_name
 
 
-class Offering(TenantScoped):
-    """Something a member is putting up: hours, produce, a spare ladder.
+class Posting(TenantScoped):
+    """Something on the board, in either direction.
+
+    An OFFER is something a member is putting up — produce, an afternoon, a
+    spare ladder. A NEED is something a member is asking for. Both are the same
+    shape, which is why they are one model: free text, a rough size, open or
+    closed.
+
+    The roles flip between them, and that is why a Claim means "I am the one on
+    this" rather than "I am taking this". On an offer the poster gives and the
+    claimer receives; on a need the poster receives and the claimer gives.
+
+    Asking must cost nothing and prove nothing. Nothing here, and nothing in
+    the views that read it, may consult what the poster has contributed — see
+    policy/manifest.toml, no-gating.
 
     `description` is free text on purpose. A category list would create
     comparables, comparables create ascertainable value, and a suggested-hours
@@ -84,7 +97,12 @@ class Offering(TenantScoped):
     no-obligation.
     """
 
-    member = models.ForeignKey(Member, on_delete=models.PROTECT, related_name="offerings")
+    OFFER = "offer"
+    NEED = "need"
+    KINDS = [(OFFER, "Offering"), (NEED, "Need")]
+
+    member = models.ForeignKey(Member, on_delete=models.PROTECT, related_name="postings")
+    kind = models.CharField(max_length=8, choices=KINDS, default=OFFER)
     description = models.TextField()
     hours_cap = models.PositiveIntegerField(null=True, blank=True)
     open = models.BooleanField(default=True)
@@ -93,12 +111,20 @@ class Offering(TenantScoped):
     class Meta:
         ordering = ("-created_at",)
 
+    @property
+    def is_need(self):
+        return self.kind == self.NEED
+
     def __str__(self):
-        return self.description[:60]
+        return f"{self.get_kind_display()}: {self.description[:50]}"
 
 
 class Claim(TenantScoped):
-    """Somebody took what was offered.
+    """Somebody is the one on this posting.
+
+    On an offer that means they are taking it. On a need it means they are
+    doing it. One word for both, because the record does not care which
+    direction the help ran.
 
     Note what is absent, because the absence is the design: no amount, no
     counterparty balance, no settlement, and no link to any contribution. Taking
@@ -106,7 +132,7 @@ class Claim(TenantScoped):
     claimant has given — see no-gating and no-exchange.
     """
 
-    offering = models.ForeignKey(Offering, on_delete=models.PROTECT, related_name="claims")
+    posting = models.ForeignKey(Posting, on_delete=models.PROTECT, related_name="claims")
     member = models.ForeignKey(Member, on_delete=models.PROTECT, related_name="claims")
     claimed_at = models.DateTimeField(auto_now_add=True)
 
@@ -114,11 +140,11 @@ class Claim(TenantScoped):
         ordering = ("-claimed_at",)
 
     def __str__(self):
-        return f"{self.member} claimed {self.offering}"
+        return f"{self.member} is on {self.posting}"
 
 
 class Contribution(TenantScoped):
-    """Hours that were actually given, attached to the offering they went into.
+    """Hours that were actually given, attached to the posting they went into.
 
     There is no balance anywhere for these to accumulate into. An hour is one
     hour from anyone, never weighted by skill and never denominated in money —
@@ -131,7 +157,7 @@ class Contribution(TenantScoped):
     """
 
     member = models.ForeignKey(Member, on_delete=models.PROTECT, related_name="contributions")
-    offering = models.ForeignKey(Offering, on_delete=models.PROTECT, related_name="contributions")
+    posting = models.ForeignKey(Posting, on_delete=models.PROTECT, related_name="contributions")
 
     hours = models.DecimalField(max_digits=6, decimal_places=2)
     note = models.TextField(blank=True)

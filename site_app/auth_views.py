@@ -78,7 +78,7 @@ def mfa_setup(request):
         if mfa.confirm(email, code):
             request.session.pop(PENDING_URI, None)
             request.session[SESSION_FLAG] = True
-            return redirect("/offerings/")
+            return redirect("/board/")
         error = "That code did not match. Codes change every 30 seconds — try the next one."
 
     # enroll() overwrites any unconfirmed secret, so calling it on every render
@@ -114,7 +114,7 @@ def mfa_challenge(request):
         code = (request.POST.get("code") or "").strip()
         if mfa.verify(email, code):
             request.session[SESSION_FLAG] = True
-            return redirect(request.GET.get("next") or "/offerings/")
+            return redirect(request.GET.get("next") or "/board/")
         # Deliberately vague: a distinct message for "wrong code" versus
         # "replayed code" would tell an attacker which they had.
         error = "That code did not match."
@@ -181,7 +181,7 @@ def sso_entry(request):
 
     auth_login(request, user, backend="django.contrib.auth.backends.ModelBackend")
     logger.info("SSO sign-in for %s (new=%s)", email, created)
-    return redirect("/offerings/")
+    return redirect("/board/")
 
 
 # --------------------------------------------------------------------------

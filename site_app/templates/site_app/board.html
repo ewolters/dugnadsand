@@ -1,0 +1,72 @@
+{% extends "app_base.html" %}
+{% block title %}The board — Dugnadsand{% endblock %}
+{% block content %}
+<h1>The board</h1>
+<p class="lede">What people are asking for, and what people are offering. Take anything.
+   Ask for anything. You do not need to have given first, and nobody can see whether
+   you have.</p>
+
+<p><a class="act" href="/board/new/">Post something</a></p>
+
+<h2>People are asking for</h2>
+{% for p in needs %}
+  <div class="card need">
+    <p class="who">{{ p.member.display_name }} · {{ p.created_at|date:"j M" }}</p>
+    <p>{{ p.description|linebreaksbr }}</p>
+    {% if p.hours_cap %}<p class="cap">Roughly {{ p.hours_cap }} hour{{ p.hours_cap|pluralize }}</p>{% endif %}
+
+    {% if p.claims.all %}
+      <p class="on">On it:
+        {% for c in p.claims.all %}{{ c.member.display_name }}{% if not forloop.last %}, {% endif %}{% endfor %}
+      </p>
+    {% endif %}
+
+    <div class="row">
+      {% if p.member_id != member.id %}
+        <form method="post" action="/board/{{ p.id }}/claim/">{% csrf_token %}
+          <button type="submit" class="act">I'll do this</button>
+        </form>
+      {% endif %}
+      <a class="act quiet" href="/board/{{ p.id }}/hours/">Record hours given</a>
+      {% if p.member_id == member.id %}
+        <form method="post" action="/board/{{ p.id }}/close/">{% csrf_token %}
+          <button type="submit" class="act quiet">Close it</button>
+        </form>
+      {% endif %}
+    </div>
+  </div>
+{% empty %}
+  <p class="empty">Nobody is asking for anything right now.</p>
+{% endfor %}
+
+<h2>People are offering</h2>
+{% for p in offers %}
+  <div class="card">
+    <p class="who">{{ p.member.display_name }} · {{ p.created_at|date:"j M" }}</p>
+    <p>{{ p.description|linebreaksbr }}</p>
+    {% if p.hours_cap %}<p class="cap">Up to {{ p.hours_cap }} hour{{ p.hours_cap|pluralize }} — never at least</p>{% endif %}
+
+    {% if p.claims.all %}
+      <p class="on">Taken by:
+        {% for c in p.claims.all %}{{ c.member.display_name }}{% if not forloop.last %}, {% endif %}{% endfor %}
+      </p>
+    {% endif %}
+
+    <div class="row">
+      {% if p.member_id != member.id %}
+        <form method="post" action="/board/{{ p.id }}/claim/">{% csrf_token %}
+          <button type="submit" class="act">I'll take this</button>
+        </form>
+      {% endif %}
+      <a class="act quiet" href="/board/{{ p.id }}/hours/">Record hours given</a>
+      {% if p.member_id == member.id %}
+        <form method="post" action="/board/{{ p.id }}/close/">{% csrf_token %}
+          <button type="submit" class="act quiet">Close it</button>
+        </form>
+      {% endif %}
+    </div>
+  </div>
+{% empty %}
+  <p class="empty">Nothing on offer yet. Be the first.</p>
+{% endfor %}
+{% endblock %}

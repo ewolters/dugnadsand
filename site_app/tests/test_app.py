@@ -1,7 +1,7 @@
 """The member application, end to end.
 
 The tests that matter most are the ones asserting what the app will NOT do:
-serve another organization's offerings, or let anything depend on what a member
+serve another organization's postings, or let anything depend on what a member
 has given.
 """
 
@@ -13,7 +13,7 @@ from django.test import TestCase
 
 from .helpers import SignedIn
 
-from site_app.models import Claim, Contribution, Member, Offering, Organization
+from site_app.models import Claim, Contribution, Member, Posting, Organization
 from site_app.tenancy import set_tenant, tenant_context
 
 
@@ -30,14 +30,14 @@ class AppBase(SignedIn, TestCase):
                 organization=self.alpha, display_name="Ada", user=self.ada_user)
             self.other_alpha = Member.objects.create(
                 organization=self.alpha, display_name="Ola")
-            self.a_offering = Offering.objects.create(
+            self.a_offering = Posting.objects.create(
                 organization=self.alpha, member=self.other_alpha,
                 description="Two crates of potatoes.")
 
         with tenant_context(self.beta):
             self.bo = Member.objects.create(
                 organization=self.beta, display_name="Bo", user=self.bo_user)
-            self.b_offering = Offering.objects.create(
+            self.b_offering = Posting.objects.create(
                 organization=self.beta, member=self.bo,
                 description="Ladder, free to borrow.")
 
@@ -51,7 +51,7 @@ class SignIn(AppBase):
     def test_a_member_can_sign_in_and_is_sent_to_the_second_factor(self):
         """Signing in proves one factor, and lands on proving the second.
 
-        The login view redirects to /offerings/; RequireMFAMiddleware bounces
+        The login view redirects to /board/; RequireMFAMiddleware bounces
         that to /mfa/setup/ because this account has not enrolled. Following the
         chain is the honest assertion.
         """
@@ -66,41 +66,42 @@ class SignIn(AppBase):
         self.assertContains(response, "do not match")
 
     def test_offerings_require_signing_in(self):
-        response = self.client.get("/offerings/")
+        response = self.client.get("/board/")
         self.assertEqual(response.status_code, 302)
         self.assertIn("/login/", response["Location"])
 
 
 class Isolation(AppBase):
-    def test_a_member_sees_only_their_own_organizations_offerings(self):
+    def test_a_member_sees_only_their_own_organizations_postings(self):
         self.sign_in(self.ada_user)
-        response = self.client.get("/offerings/")
+        response = self.client.get("/board/")
         self.assertContains(response, "potatoes")
         self.assertNotContains(response, "Ladder")
 
     def test_the_other_organization_sees_the_mirror_image(self):
         self.sign_in(self.bo_user)
-        response = self.client.get("/offerings/")
+        response = self.client.get("/board/")
         self.assertContains(response, "Ladder")
         self.assertNotContains(response, "potatoes")
 
     def test_another_organizations_offering_cannot_be_claimed_by_url(self):
         # Guessing the id is not enough: RLS makes the row unreachable.
         self.sign_in(self.ada_user)
-        response = self.client.post(f"/offerings/{self.b_offering.id}/claim/")
+        response = self.client.post(f"/board/{self.b_offering.id}/claim/")
         self.assertEqual(response.status_code, 404)
 
 
-class Offering_(AppBase):
+class Postings(AppBase):
     def test_a_member_can_put_something_up(self):
         self.sign_in(self.ada_user)
-        response = self.client.post("/offerings/new/", {
+        response = self.client.post("/board/new/", {
+            "kind": "offer",
             "description": "Half a Saturday and a working truck.",
             "hours_cap": "4",
         })
-        self.assertRedirects(response, "/offerings/")
+        self.assertRedirects(response, "/board/")
         with tenant_context(self.alpha):
-            o = Offering.objects.get(member=self.ada)
+            o = Posting.objects.get(member=self.ada)
             self.assertEqual(o.hours_cap, 4)
 
     def test_the_form_offers_no_category_or_rate(self):
@@ -111,19 +112,19 @@ class Offering_(AppBase):
         category to pick — which would have forced a choice between honest copy
         and a green build.
         """
-        from site_app.forms import OfferingForm
+        from site_app.forms import PostingForm
 
-        self.assertEqual(set(OfferingForm().fields), {"description", "hours_cap"})
+        self.assertEqual(set(PostingForm().fields), {"kind", "description", "hours_cap"})
 
         self.sign_in(self.ada_user)
-        body = self.client.get("/offerings/new/").content.decode().lower()
-        self.assertNotIn("<select", body, "the offering form has a dropdown")
+        body = self.client.get("/board/new/").content.decode().lower()
+        self.assertNotIn("<select", body, "the posting form has a dropdown")
         posted = set(re.findall(r'<(?:input|textarea)[^>]*name="([^"]+)"', body))
-        self.assertEqual(posted - {"csrfmiddlewaretoken"}, {"description", "hours_cap"})
+        self.assertEqual(posted - {"csrfmiddlewaretoken"}, {"kind", "description", "hours_cap"})
 
     def test_only_the_offerer_can_close_it(self):
         self.sign_in(self.ada_user)
-        response = self.client.post(f"/offerings/{self.a_offering.id}/close/")
+        response = self.client.post(f"/board/{self.a_offering.id}/close/")
         self.assertEqual(response.status_code, 403)
         with tenant_context(self.alpha):
             self.a_offering.refresh_from_db()
@@ -137,7 +138,7 @@ class ClaimingIsUngated(AppBase):
         with tenant_context(self.alpha):
             self.assertEqual(Contribution.objects.filter(member=self.ada).count(), 0)
 
-        response = self.client.post(f"/offerings/{self.a_offering.id}/claim/")
+        response = self.client.post(f"/board/{self.a_offering.id}/claim/")
         self.assertEqual(response.status_code, 302)
 
         with tenant_context(self.alpha):
@@ -146,7 +147,7 @@ class ClaimingIsUngated(AppBase):
     def test_the_offerings_page_never_shows_what_anyone_has_given(self):
         # If a total ever appears next to a name, the log has become a score.
         self.sign_in(self.ada_user)
-        body = self.client.get("/offerings/").content.decode().lower()
+        body = self.client.get("/board/").content.decode().lower()
         for forbidden in ("hours given:", "total hours", "contributed ", "balance"):
             self.assertNotIn(forbidden, body)
 
@@ -154,7 +155,7 @@ class ClaimingIsUngated(AppBase):
 class Ledger(AppBase):
     def test_recorded_hours_appear_in_the_log(self):
         self.sign_in(self.ada_user)
-        response = self.client.post(f"/offerings/{self.a_offering.id}/hours/", {
+        response = self.client.post(f"/board/{self.a_offering.id}/hours/", {
             "hours": "2.5", "note": "Dug and washed them.",
         })
         self.assertRedirects(response, "/ledger/")
@@ -165,9 +166,9 @@ class Ledger(AppBase):
 
     def test_the_ledger_shows_no_totals(self):
         self.sign_in(self.ada_user)
-        self.client.post(f"/offerings/{self.a_offering.id}/hours/",
+        self.client.post(f"/board/{self.a_offering.id}/hours/",
                          {"hours": "2.5", "note": ""})
-        self.client.post(f"/offerings/{self.a_offering.id}/hours/",
+        self.client.post(f"/board/{self.a_offering.id}/hours/",
                          {"hours": "1.5", "note": ""})
 
         # Assert on the table DATA, not the page prose - the lede legitimately
@@ -183,7 +184,7 @@ class Ledger(AppBase):
         with tenant_context(self.beta):
             from site_app import services
             services.record_contribution(
-                member=self.bo, offering=self.b_offering, hours=Decimal("9"))
+                member=self.bo, posting=self.b_offering, hours=Decimal("9"))
 
         self.sign_in(self.ada_user)
         body = self.client.get("/ledger/").content.decode()
@@ -222,5 +223,103 @@ class WayIn(SignedIn, TestCase):
 
         self.sign_in(user)
         body = self.client.get("/").content.decode()
-        self.assertIn('href="/offerings/"', body)
+        self.assertIn('href="/board/"', body)
         self.assertNotIn("Sign in", body)
+
+
+class Needs(AppBase):
+    """Asking must cost nothing and prove nothing.
+
+    A need is the direction mutual aid actually runs in most of the time, and
+    it is also where gating would creep back: it is very natural to rank
+    requests by who has given most, or to let people ask only once they have
+    contributed. Neither may exist.
+    """
+
+    def post_need(self, description="A ride to the clinic on Thursday."):
+        self.sign_in(self.ada_user)
+        return self.client.post("/board/new/", {
+            "kind": "need", "description": description, "hours_cap": "2"})
+
+    def test_a_member_can_ask_for_something(self):
+        from site_app.models import Posting
+
+        response = self.post_need()
+        self.assertRedirects(response, "/board/")
+        with tenant_context(self.alpha):
+            need = Posting.objects.get(kind=Posting.NEED)
+            self.assertEqual(need.member, self.ada)
+            self.assertTrue(need.is_need)
+
+    def test_somebody_who_has_given_nothing_can_still_ask(self):
+        """The whole point, restated for the asking direction."""
+        from site_app.models import Contribution, Posting
+
+        with tenant_context(self.alpha):
+            self.assertEqual(Contribution.objects.filter(member=self.ada).count(), 0)
+        self.post_need()
+        with tenant_context(self.alpha):
+            self.assertEqual(Posting.objects.filter(kind=Posting.NEED).count(), 1)
+
+    def test_the_board_shows_needs_and_offers_separately(self):
+        self.post_need("A ride to the clinic on Thursday.")
+        body = self.client.get("/board/").content.decode()
+        self.assertIn("People are asking for", body)
+        self.assertIn("People are offering", body)
+        self.assertIn("ride to the clinic", body)
+        self.assertIn("potatoes", body)
+
+    def test_needs_are_ordered_only_by_recency(self):
+        """Ranking requests by contribution is gating wearing a sort order."""
+        from site_app.models import Posting
+
+        self.sign_in(self.ada_user)
+        for text in ("first need", "second need"):
+            self.client.post("/board/new/",
+                             {"kind": "need", "description": text, "hours_cap": ""})
+
+        body = self.client.get("/board/").content.decode()
+        self.assertLess(body.index("second need"), body.index("first need"))
+
+    def test_somebody_can_take_on_a_need(self):
+        from site_app.models import Claim, Posting
+
+        self.post_need()
+        with tenant_context(self.alpha):
+            need = Posting.objects.get(kind=Posting.NEED)
+
+        # A different member steps forward.
+        other = User.objects.create_user("ola", password="dugnad-test-pw")
+        with tenant_context(self.alpha):
+            self.other_alpha.user = other
+            self.other_alpha.save()
+
+        self.sign_in(other)
+        self.assertEqual(self.client.post(f"/board/{need.id}/claim/").status_code, 302)
+        with tenant_context(self.alpha):
+            self.assertEqual(Claim.objects.filter(posting=need).count(), 1)
+
+    def test_the_board_shows_who_is_on_a_posting(self):
+        from site_app.models import Posting
+
+        self.post_need()
+        with tenant_context(self.alpha):
+            need = Posting.objects.get(kind=Posting.NEED)
+        other = User.objects.create_user("ola", password="dugnad-test-pw")
+        with tenant_context(self.alpha):
+            self.other_alpha.user = other
+            self.other_alpha.save()
+
+        self.sign_in(other)
+        self.client.post(f"/board/{need.id}/claim/")
+        body = self.client.get("/board/").content.decode()
+        self.assertIn("On it:", body)
+        self.assertIn("Ola", body)
+
+    def test_the_form_still_offers_no_category(self):
+        # kind is a direction, not a taxonomy: exactly two choices, both fixed.
+        from site_app.forms import PostingForm
+
+        choices = dict(PostingForm().fields["kind"].choices)
+        self.assertEqual(set(choices), {"offer", "need"})
+        self.assertEqual(set(PostingForm().fields), {"kind", "description", "hours_cap"})

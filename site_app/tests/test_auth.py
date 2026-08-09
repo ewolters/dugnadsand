@@ -41,7 +41,7 @@ class MFAGate(AuthBase):
     @mock.patch("kjerne_platform.mfa.is_enrolled", return_value=True)
     def test_an_enrolled_member_is_challenged_before_anything(self, _):
         self.client.force_login(self.member.user)
-        for path in ("/offerings/", "/ledger/", "/members/", "/password/"):
+        for path in ("/board/", "/ledger/", "/members/", "/password/"):
             response = self.client.get(path)
             self.assertEqual(response.status_code, 302, path)
             self.assertEqual(response["Location"], "/mfa/", path)
@@ -49,7 +49,7 @@ class MFAGate(AuthBase):
     @mock.patch("kjerne_platform.mfa.is_enrolled", return_value=False)
     def test_an_unenrolled_member_is_sent_to_set_it_up(self, _):
         self.client.force_login(self.member.user)
-        response = self.client.get("/offerings/")
+        response = self.client.get("/board/")
         self.assertEqual(response["Location"], "/mfa/setup/")
 
     @mock.patch("kjerne_platform.mfa.is_enrolled", return_value=True)
@@ -68,8 +68,8 @@ class MFAGate(AuthBase):
     def test_a_good_code_opens_the_app(self, _enrolled, _verify):
         self.client.force_login(self.member.user)
         response = self.client.post("/mfa/", {"code": "123456"})
-        self.assertRedirects(response, "/offerings/")
-        self.assertEqual(self.client.get("/offerings/").status_code, 200)
+        self.assertRedirects(response, "/board/")
+        self.assertEqual(self.client.get("/board/").status_code, 200)
 
     @mock.patch("kjerne_platform.mfa.verify", return_value=False)
     @mock.patch("kjerne_platform.mfa.is_enrolled", return_value=True)
@@ -78,7 +78,7 @@ class MFAGate(AuthBase):
         response = self.client.post("/mfa/", {"code": "000000"})
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "did not match")
-        self.assertEqual(self.client.get("/offerings/")["Location"], "/mfa/")
+        self.assertEqual(self.client.get("/board/")["Location"], "/mfa/")
 
     @mock.patch("kjerne_platform.mfa.confirm", return_value=True)
     @mock.patch("kjerne_platform.mfa.enroll", return_value=("SECRET", "otpauth://totp/x"))
@@ -86,7 +86,7 @@ class MFAGate(AuthBase):
     def test_enrolling_confirms_and_lets_them_in(self, _e, _en, _c):
         self.client.force_login(self.member.user)
         response = self.client.post("/mfa/setup/", {"code": "123456"})
-        self.assertRedirects(response, "/offerings/")
+        self.assertRedirects(response, "/board/")
 
     def test_an_account_without_an_email_is_told_why_not(self):
         # MFA is keyed by email; looping such a person through a challenge they
@@ -136,7 +136,7 @@ class SSOEndpoint(AuthBase):
         self.assertFalse(Member.objects.filter(user=user).exists())
 
         self.pass_mfa()
-        self.assertEqual(self.client.get("/offerings/").status_code, 403)
+        self.assertEqual(self.client.get("/board/").status_code, 403)
 
     def test_a_forged_signature_is_refused(self):
         forged = self.mint()
@@ -200,7 +200,7 @@ class BothGatesTogether(AuthBase):
         self.client.post("/mfa/setup/", {"code": "123456"})
 
         # MFA satisfied; now the other gate should claim them, exactly once.
-        response = self.client.get("/offerings/", follow=True)
+        response = self.client.get("/board/", follow=True)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.redirect_chain[-1][0], "/password/")
 

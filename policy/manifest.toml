@@ -91,7 +91,7 @@ enforceable_when = "always"
 
 [[invariant]]
 id = "no-catalog"
-claim = "Offerings are free text. No categories, rates, or suggested values."
+claim = "Postings are free text. No categories, rates, or suggested values."
 why = """
 Standardised categories create comparables and comparables create ascertainable
 value. A list of suggested hours is a price list.

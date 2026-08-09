@@ -1,0 +1,38 @@
+{% extends "app_base.html" %}
+{% block title %}Post something — Dugnadsand{% endblock %}
+{% block content %}
+<h1>Post something</h1>
+<p class="lede">Offer what you have, or ask for what you need. Write it however you like —
+   there is no category to pick and no rate to set, because both would turn this into a
+   price list.</p>
+
+<form method="post" class="stack">
+  {% csrf_token %}
+  {% if form.non_field_errors %}<p class="err">{{ form.non_field_errors.0 }}</p>{% endif %}
+
+  <fieldset class="kind">
+    <legend>{{ form.kind.label }}</legend>
+    {{ form.kind }}
+    <p class="help">{{ form.kind.help_text }}</p>
+    {% if form.kind.errors %}<p class="err">{{ form.kind.errors.0 }}</p>{% endif %}
+  </fieldset>
+
+  <div>
+    <label for="{{ form.description.id_for_label }}">{{ form.description.label }}</label>
+    {{ form.description }}
+    {% if form.description.errors %}<p class="err">{{ form.description.errors.0 }}</p>{% endif %}
+  </div>
+
+  <div>
+    <label for="{{ form.hours_cap.id_for_label }}">{{ form.hours_cap.label }}</label>
+    {{ form.hours_cap }}
+    <p class="help">{{ form.hours_cap.help_text }}</p>
+    {% if form.hours_cap.errors %}<p class="err">{{ form.hours_cap.errors.0 }}</p>{% endif %}
+  </div>
+
+  <div class="row">
+    <button type="submit" class="act">Put it up</button>
+    <a class="act quiet" href="/board/">Cancel</a>
+  </div>
+</form>
+{% endblock %}

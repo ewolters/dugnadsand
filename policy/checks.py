@@ -27,7 +27,7 @@ NOT_ENFORCEABLE = "not_enforceable"
 
 # Models that carry the domain. Until these exist, most claims are about
 # nothing and must not report green.
-DOMAIN_MODELS = ("Offering", "Claim", "Contribution")
+DOMAIN_MODELS = ("Posting", "Claim", "Contribution")
 
 
 @dataclass
@@ -275,11 +275,11 @@ def no_catalog():
     for model in apps.get_models():
         if re.search(r"category|categories|tag|sku|service_type|rate_card", model.__name__, re.I):
             hits.append(f"model {model.__name__}")
-    offering = _domain_models()["Offering"]
-    for f in _all_fields(offering):
+    posting = _domain_models()["Posting"]
+    for f in _all_fields(posting):
         fname = getattr(f, "name", "")
         if re.search(r"category|tag|sku|rate|suggested", fname, re.I):
-            hits.append(f"Offering.{fname}")
+            hits.append(f"Posting.{fname}")
 
     if hits:
         return Result("no-catalog", BREACHED, "A catalog or rate structure exists.", hits)
@@ -293,7 +293,7 @@ def no_obligation():
         return blocked
 
     hits = []
-    for name in ("Offering", "Claim", "Contribution"):
+    for name in ("Posting", "Claim", "Contribution"):
         for f in _all_fields(_domain_models()[name]):
             fname = getattr(f, "name", "")
             if re.search(r"hours_min|minimum|required|commitment|reliability|"

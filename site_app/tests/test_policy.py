@@ -140,7 +140,7 @@ class NoGatingAtRuntime(SignedIn, TestCase):
     def setUp(self):
         from django.contrib.auth.models import User
 
-        from site_app.models import Member, Offering, Organization
+        from site_app.models import Member, Posting, Organization
         from site_app.tenancy import set_tenant, tenant_context
 
         self.org = Organization.objects.create(slug="probe", name="Probe Mutual Aid")
@@ -148,7 +148,7 @@ class NoGatingAtRuntime(SignedIn, TestCase):
         with tenant_context(self.org):
             self.member = Member.objects.create(
                 organization=self.org, display_name="Probe", user=self.user)
-            self.offering = Offering.objects.create(
+            self.posting = Posting.objects.create(
                 organization=self.org, member=self.member,
                 description="A spare afternoon.")
         set_tenant(None)
@@ -163,7 +163,7 @@ class NoGatingAtRuntime(SignedIn, TestCase):
         self.sign_in(self.user)
 
         with CaptureQueriesContext(connection) as ctx:
-            response = self.client.post(f"/offerings/{self.offering.id}/claim/")
+            response = self.client.post(f"/board/{self.posting.id}/claim/")
 
         # Guard the guard: prove the claim path actually ran.
         self.assertEqual(response.status_code, 302, "the claim did not succeed")

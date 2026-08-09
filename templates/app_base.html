@@ -49,6 +49,18 @@
                  color:var(--moss); text-transform:uppercase; }
     .cap { font-family:var(--mono); font-size:.75rem; color:var(--ochre); }
     .row { display:flex; gap:.6rem; flex-wrap:wrap; margin-top:.9rem; }
+    .card.need { border-left:3px solid var(--ochre); }
+    fieldset.kind { border:1px solid var(--rule); border-radius:2px; padding:.9rem 1.1rem;
+                    margin:0; background:var(--paper); }
+    fieldset.kind legend { font-family:var(--mono); font-size:.7rem; letter-spacing:.1em;
+                    text-transform:uppercase; color:var(--moss); padding:0 .4rem; }
+    fieldset.kind ul { list-style:none; margin:.3rem 0 0; padding:0; display:flex;
+                    gap:1.5rem; flex-wrap:wrap; }
+    fieldset.kind label { display:inline; text-transform:none; letter-spacing:0;
+                    font-family:var(--serif); font-size:1rem; color:var(--ink);
+                    margin-left:.35rem; }
+    .on { font-family:var(--mono); font-size:.75rem; color:var(--brand-ok);
+          margin:.4rem 0 0; }
 
     button.act, a.act { font-family:var(--sans); font-size:.9rem; font-weight:600;
       color:var(--paper); background:var(--spruce); border:0; border-radius:2px;
@@ -98,7 +110,7 @@
       <a class="brand" href="/">Dugnadsand</a>
       {% if user.is_authenticated %}
       <nav>
-        <a href="/offerings/" {% if section == "offerings" %}aria-current="page"{% endif %}>On offer</a>
+        <a href="/board/" {% if section == "board" %}aria-current="page"{% endif %}>The board</a>
         <a href="/ledger/" {% if section == "ledger" %}aria-current="page"{% endif %}>Ledger</a>
         {% if user.member.is_organizer %}<a href="/members/">Members</a>{% endif %}
         <a href="/password/">Password</a>

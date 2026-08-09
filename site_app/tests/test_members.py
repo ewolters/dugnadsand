@@ -13,7 +13,7 @@ from django.test import TestCase
 
 from .helpers import SignedIn
 
-from site_app.models import Member, Offering, Organization
+from site_app.models import Member, Posting, Organization
 from site_app.services_members import MemberExists, create_member
 from site_app.tenancy import bypass_rls, set_tenant, tenant_context
 
@@ -48,7 +48,7 @@ class ForcedPasswordChange(MembersBase):
         self.assertTrue(self.plain.must_change_password)
         self.sign_in(self.plain.user)
 
-        for path in ("/offerings/", "/ledger/", "/offerings/new/"):
+        for path in ("/board/", "/ledger/", "/board/new/"):
             response = self.client.get(path)
             self.assertEqual(response.status_code, 302, path)
             self.assertEqual(response["Location"], "/password/", path)
@@ -69,7 +69,7 @@ class ForcedPasswordChange(MembersBase):
             "new_password1": "a-quiet-saturday-97",
             "new_password2": "a-quiet-saturday-97",
         })
-        self.assertRedirects(response, "/offerings/")
+        self.assertRedirects(response, "/board/")
 
         with tenant_context(self.alpha):
             self.plain.refresh_from_db()
@@ -77,7 +77,7 @@ class ForcedPasswordChange(MembersBase):
         set_tenant(None)
 
         # Still signed in: the session hash was updated, not invalidated.
-        self.assertEqual(self.client.get("/offerings/").status_code, 200)
+        self.assertEqual(self.client.get("/board/").status_code, 200)
 
     def test_the_old_password_stops_working(self):
         self.sign_in(self.plain.user)
@@ -152,11 +152,11 @@ class OrganizerPrivilege(MembersBase):
     def test_the_member_list_never_shows_what_anyone_has_given(self):
         """no-aggregate-display, at the place it would feel most natural."""
         with tenant_context(self.alpha):
-            offering = Offering.objects.create(
+            posting = Posting.objects.create(
                 organization=self.alpha, member=self.plain, description="Potatoes.")
             from site_app import services
             services.record_contribution(
-                member=self.plain, offering=offering, hours=3)
+                member=self.plain, posting=posting, hours=3)
         set_tenant(None)
 
         self.sign_in(self.organizer.user)

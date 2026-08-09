@@ -24,30 +24,36 @@ class MemberLoginForm(forms.Form):
     password = forms.CharField(widget=forms.PasswordInput)
 
 
-class OfferingForm(forms.ModelForm):
-    """Free text and a ceiling. That is the entire form, on purpose.
+class PostingForm(forms.ModelForm):
+    """A direction, free text, and a rough size. That is the entire form.
 
     No category, no service type, no suggested hours, no rate. Standardised
     options create comparables and comparables create ascertainable value —
     see policy/manifest.toml, no-catalog. If you are here to add a dropdown so
-    offerings are easier to search, that is exactly the change the manifest
+    postings are easier to search, that is exactly the change the manifest
     forbids.
     """
 
     class Meta:
-        from .models import Offering
+        from .models import Posting
 
-        model = Offering
-        fields = ("description", "hours_cap")
+        model = Posting
+        fields = ("kind", "description", "hours_cap")
         labels = {
-            "description": "What are you offering",
-            "hours_cap": "Up to how many hours (optional)",
+            "kind": "Are you offering something, or asking for something",
+            "description": "In your own words",
+            "hours_cap": "Roughly how many hours (optional)",
         }
         help_texts = {
-            "hours_cap": "A ceiling, never a floor. You can stop before this, "
-                         "any time, and nothing is recorded.",
+            "kind": "Asking costs nothing and proves nothing. Nobody can see "
+                    "what you have or have not contributed.",
+            "hours_cap": "A ceiling, never a floor. Whoever takes this on can "
+                         "stop before it, any time, and nothing is recorded.",
         }
-        widgets = {"description": forms.Textarea(attrs={"rows": 4})}
+        widgets = {
+            "description": forms.Textarea(attrs={"rows": 4}),
+            "kind": forms.RadioSelect,
+        }
 
 
 class ContributionForm(forms.Form):
@@ -64,7 +70,7 @@ class AddMemberForm(forms.Form):
     """An organizer adding somebody to their own organization.
 
     No organization field: it is always the organizer's own, taken from the
-    request. Offering a choice would be offering a way to get it wrong.
+    request. Posting a choice would be posting a way to get it wrong.
     """
 
     username = forms.CharField(max_length=150, label="Username they'll sign in with")
