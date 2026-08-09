@@ -26,6 +26,7 @@ MIDDLEWARE = [
     "whitenoise.middleware.WhiteNoiseMiddleware",
     # Request observability: correlation IDs, exception capture, slow requests.
     "kjerne_platform.middleware.OpsMiddleware",
+    "kjerne_platform.middleware.AnalyticsMiddleware",
     # Canonical host/scheme for search engines.
     "kjerne_platform.seo.CanonicalMiddleware",
     # Records colour drift in rendered HTML against this site's brand.json —
