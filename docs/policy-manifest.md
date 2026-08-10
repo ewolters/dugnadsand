@@ -88,6 +88,36 @@ barter-exchange statement this model is built to avoid. The safest artifact is n
 
 ---
 
+## Two claims added since, and why each needed its own
+
+The manifest started at nine. Both additions came from the same discovery: a
+new capability opens a **surface** the existing checks cannot see, and a check
+that cannot see a surface reports green across it.
+
+**`no-routing-by-record`** arrived with notifications. `no-gating` scans
+functions whose *name* contains "claim" for references to the contribution
+record — exact while claiming was the only place eligibility could hide. The
+moment the system started deciding who to tell about a need, that logic moved
+into a function called `_audience`, which `no-gating` does not look at.
+
+The feature somebody will propose is *"send needs to whoever actually turns
+up"*. It sounds like good engineering and it is gating: a member who has given
+nothing hears about fewer needs, so the record has begun deciding what reaches
+whom. Withholding the chance to help is a softer denial than refusing a claim,
+and it is still a denial.
+
+**`no-material-valuation`** arrived with the warehouse. `flat-hours` is about
+hours and `no-tax-artifact` scans for per-member statements; neither could see
+a price on a pallet. It forbids two conversions — a value on material, and an
+equivalence between material and hours — and it fails on a database relation to
+the contribution ledger as readily as on a field called `value`, because that
+conversion arrives as a foreign key at least as often as a number.
+
+**The rule this gives us:** when a capability opens a new surface, ask which
+existing check covers it. If the honest answer is *none, because they scan
+somewhere else*, that is a new invariant rather than a widened old one. Widening
+a check to cover a second surface tends to make it vaguer at the first.
+
 ## How it runs
 
 **Daily.** Tempora POSTs to `/attestation/run/` at 09:00 UTC via

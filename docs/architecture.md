@@ -124,11 +124,12 @@ model Transfer {
 A transfer has two parties and an amount. Value leaves one balance and arrives in
 another. It is a *movement*.
 
-### Dugnadsand's unit of record (proposed)
+### Dugnadsand's unit of record (built — `Posting`, since renamed from `Offering`)
 
 ```python
-# site_app/models.py — PROPOSED, not yet built
-class Offering(models.Model):
+# site_app/models.py — BUILT. `Offering` became `Posting` in migration 0006:
+# a board runs in both directions, and the roles flip between them.
+class Posting(TenantScoped):
     """Something a member is putting up. Free text on purpose — see design-rules.md §3."""
     member      = models.ForeignKey(Member, on_delete=models.PROTECT, related_name="offerings")
     description = models.TextField()                  # no category, no SKU, no rate
@@ -178,7 +179,8 @@ The claim above — *nothing gates on your record* — is worth exactly as much 
 enforcement. So it is a test, not a policy:
 
 ```python
-# site_app/tests/test_no_gating.py — PROPOSED
+# site_app/tests/test_app.py — BUILT, and joined by policy/checks.py::no_gating,
+# which asserts the same property statically across every claim path
 from django.test.utils import CaptureQueriesContext
 from django.db import connection
 

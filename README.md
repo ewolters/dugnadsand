@@ -13,9 +13,14 @@ invisible to the others. Sponsored by [SVEND](https://svend.ai).
 
 ## What it is, and what it deliberately is not
 
-It keeps one record: hours given. That record is not a currency. It cannot be spent, it
-is not owed to anyone by anyone, and **nothing in the system gates on it** — you can
-receive having given nothing, ever.
+It keeps records of what people gave — hours, and material — and none of them is a
+currency. Nothing can be spent, nothing is owed by anyone to anyone, and **nothing in
+the system gates on any of it**: you can receive having given nothing, ever.
+
+The records are also kept apart. Hours and material sit in separate logs that are never
+added together and never converted into one another, because an exchange rate between
+timber and time would put a price on both. Material is described and counted; it is
+never valued. See [design rules 9–11](docs/design-rules.md).
 
 That last property is the whole design. It is what keeps this a gift rather than an
 exchange, and it is what lets the organization keep offering help without eligibility
@@ -29,8 +34,11 @@ requirements. If you are reading this because you are about to add a feature, re
 | [docs/board-case.md](docs/board-case.md) | The proposal a prospective organization's board would read |
 | [docs/komunitin-comparison.md](docs/komunitin-comparison.md) | Why we did not adopt Komunitin, and what we kept from it |
 | [docs/architecture.md](docs/architecture.md) | Code-level comparison with Komunitin: where the gate lives, and what replaces it |
-| [docs/design-rules.md](docs/design-rules.md) | The eight constraints that hold the model up |
+| [docs/design-rules.md](docs/design-rules.md) | The eleven constraints that hold the model up |
 | [docs/policy-manifest.md](docs/policy-manifest.md) | The claims that are enforced by code, and why INCOMPLETE is not a soft pass |
+| [docs/how-it-works.md](docs/how-it-works.md) | What the system does, for somebody deciding whether to use it |
+| [docs/warehouse.md](docs/warehouse.md) | The virtual warehouse and bills of material, and why neither carries a value |
+| [docs/reuse.md](docs/reuse.md) | What was reused from the wider estate, and what could not be |
 
 ## License
 
