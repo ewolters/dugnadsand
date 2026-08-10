@@ -78,6 +78,32 @@ makes stopping cost something, even socially.
 
 ---
 
+### Stopping has to be operable, and it has to leave nothing
+
+"You can stop whenever" was a sentence in this document with no button behind it
+for as long as there was no way to step off a claim. There is one now, and the
+important half is the second one: stepping off **deletes the row**.
+
+The responsible-looking implementation is a `withdrawn` flag or a
+`stepped_off_at` timestamp, because keeping history is normally the correct
+instinct. Here it is the harmful one. A stored record of stopping is a record of
+not following through; anything stored can be counted; "Ada has stepped off four
+times" is a reliability score; a reliability score is standing. `no-obligation`
+forbids those field names outright and
+`test_no_field_anywhere_could_record_that_somebody_stopped` asserts it.
+
+Hours already given survive, because a `Contribution` points at the posting and
+never at the claim. Work that happened is a fact about the world rather than a
+commitment anybody made.
+
+The poster is told — silence would be its own harm if your driver quietly
+stepped off — but only when the **last** person leaves, and as a state rather
+than an event: "nobody is on this at the moment", never "somebody stepped off".
+An event has a subject, and a notice whose subject is a person who stopped is a
+notice that they let you down.
+
+---
+
 ## 5. Recognition, not advertising
 
 **Rule:** a business that contributes is acknowledged by name and logo only. No

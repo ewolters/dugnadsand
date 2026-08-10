@@ -46,6 +46,34 @@ def claim_posting(*, posting, member):
     )
 
 
+def step_off(*, posting, member):
+    """Stop being the one on this. Returns how many people are still on it.
+
+    A HARD DELETE, and that is the whole design. The obvious implementation is
+    a `withdrawn` flag or a `stepped_off_at` timestamp, because keeping history
+    is normally the responsible choice. Here it is the harmful one: a stored
+    record of stepping off is a record of not following through, and once that
+    exists somebody can count it. "Ada has stepped off four times" is a
+    reliability score, a reliability score is standing, and standing is the one
+    thing this system exists not to have — see no-gating and no-obligation,
+    which forbids the field name outright.
+
+    "You can stop whenever, and nothing is recorded" was a design rule with no
+    button for as long as this function did not exist. Now it is operable, and
+    the second half of the sentence is true because the row is gone.
+
+    Hours already recorded are untouched. A Contribution points at the posting,
+    never at the claim, so work that actually happened survives — that is a
+    fact about the world rather than a commitment anybody made.
+    """
+    claim = Claim.objects.filter(posting=posting, member=member).first()
+    if claim is None:
+        raise ValueError("You are not on that posting.")
+
+    claim.delete()
+    return Claim.objects.filter(posting=posting).count()
+
+
 def record_contribution(*, member, posting, hours, note="", recorded_at=None):
     """Write down hours that were given, chained to the entry before them.
 

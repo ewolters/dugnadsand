@@ -224,12 +224,37 @@ def board(request):
         .prefetch_related("claims__member")
         .order_by("-created_at")
     )
+    # Claims are already prefetched, so this costs no query. Done here rather
+    # than in the template because "am I on this" is a fact the view knows and
+    # a template would have to loop to rediscover.
+    open_postings = list(open_postings)
+    for p in open_postings:
+        p.i_am_on = any(c.member_id == member.id for c in p.claims.all())
+
     needs = [p for p in open_postings if p.kind == Posting.NEED]
     # Dated needs first, soonest at the top; undated ones keep their place at
     # the bottom in recency order. A need with no date is not less important,
     # it just has nothing to sort on, and inventing a position for it would be
     # inventing information.
-    needs.sort(key=lambda p: (p.needed_by is None,
+    # Three bands, in this order: dated and still live, soonest first; then
+    # past their date; then undated.
+    #
+    # Overdue used to sort FIRST, because ascending by needed_by puts the
+    # oldest date at the top. That turned the most prominent position on the
+    # board into a graveyard, and it got worse the longer the site ran — a
+    # defect the timing feature could not show until something expired.
+    #
+    # They are not hidden. A date slipping does not mean the ride stopped being
+    # wanted, and quietly dropping a real need would be worse than listing it
+    # late. Their poster is asked about them instead.
+    today = date.today()
+
+    def band(p):
+        if p.needed_by is None:
+            return 2
+        return 1 if p.needed_by < today else 0
+
+    needs.sort(key=lambda p: (band(p),
                               p.needed_by or date.max,
                               -p.created_at.timestamp()))
     return render(request, "site_app/board.html", {
@@ -264,13 +289,43 @@ def posting_new(request):
 
 @login_required
 @require_POST
+def step_off(request, posting_id):
+    """Stop being the one on a posting. Only your own claim, ever.
+
+    Deliberately not available to the poster. Letting whoever asked remove
+    whoever answered would make the poster a manager of the people helping
+    them, and there is no role like that here.
+    """
+    from .models import Posting
+    from .notifications import announce_uncovered
+    from .services import step_off as do_step_off
+
+    member = _member(request)
+    if member is None:
+        return HttpResponseForbidden("Not a member of any organization.")
+
+    posting = get_object_or_404(Posting, pk=posting_id)
+    try:
+        remaining = do_step_off(posting=posting, member=member)
+    except ValueError as exc:
+        return HttpResponseBadRequest(str(exc))
+
+    # Only when the last person leaves. Still covered is not news.
+    if remaining == 0:
+        announce_uncovered(posting)
+    return redirect(request.POST.get("back") or "/board/")
+
+
+@login_required
+@require_POST
 def posting_close(request, posting_id):
     from .models import Posting
 
     member = _member(request)
     posting = get_object_or_404(Posting, pk=posting_id)
     if member is None or posting.member_id != member.id:
-        return HttpResponseForbidden("Only the person who offered it can close it.")
+        return HttpResponseForbidden(
+            "Only the person who posted it can take it down.")
 
     posting.open = False
     posting.save(update_fields=["open"])
@@ -380,10 +435,15 @@ def project_detail(request, project_id):
         return HttpResponseForbidden("Not a member of any organization.")
 
     project = get_object_or_404(Project, pk=project_id)
+    open_postings = list(
+        Posting.objects.filter(project=project, open=True)
+        .select_related("member").prefetch_related("claims"))
+    for p in open_postings:
+        p.i_am_on = any(c.member_id == member.id for c in p.claims.all())
+
     return render(request, "site_app/project_detail.html", {
         "member": member, "section": "projects", "project": project,
-        "open_postings": Posting.objects.filter(project=project, open=True)
-                                        .select_related("member"),
+        "open_postings": open_postings,
         "went_in": Contribution.objects.filter(posting__project=project)
                                        .select_related("member", "posting")[:200],
     })

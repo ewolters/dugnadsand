@@ -182,6 +182,35 @@ def announce_posting(posting):
     return sent
 
 
+def announce_uncovered(posting):
+    """Tell the poster nobody is on their posting any more.
+
+    Sent only when the last person steps off, and phrased as a STATE rather
+    than an event: "nobody is on this at the moment", never "somebody stepped
+    off". The difference is not politeness. An event has a subject, and a
+    notice whose subject is a person who stopped is a notice that somebody let
+    you down — which puts the obligation back that step_off() exists to remove.
+
+    Silence would be worse than either. If you asked for a ride on Thursday and
+    your driver quietly stepped off, not being told is a real harm, and it is
+    the poster's own posting rather than anyone else's business.
+
+    Only fires at zero. Two people on a need, one steps off, it is still
+    covered and there is nothing to say.
+    """
+    poster = posting.member.user
+    email = poster.email if poster else ""
+    if not email:
+        return 0
+
+    if posting.kind == posting.NEED:
+        message = "Nobody is on what you asked for at the moment."
+    else:
+        message = "Nobody is on what you offered at the moment."
+
+    return 1 if _send(email, "uncovered", message, "/board/") else 0
+
+
 def announce_project(project):
     """Tell the organization something ongoing has started.
 

@@ -16,9 +16,15 @@
     </p>
     <p>{{ p.description|linebreaksbr }}</p>
     <div class="row">
-      {% if p.member_id != member.id %}
+      {% if p.member_id != member.id and not p.i_am_on %}
         <form method="post" action="/board/{{ p.id }}/claim/">{% csrf_token %}
           <button type="submit" class="act">{% if p.is_need %}I'll do this{% else %}I'll take this{% endif %}</button>
+        </form>
+      {% endif %}
+      {% if p.i_am_on %}
+        <form method="post" action="/board/{{ p.id }}/step-off/">{% csrf_token %}
+          <input type="hidden" name="back" value="/projects/{{ project.id }}/">
+          <button type="submit" class="act quiet">Step off</button>
         </form>
       {% endif %}
       <a class="act quiet" href="/board/{{ p.id }}/hours/">Record hours given</a>

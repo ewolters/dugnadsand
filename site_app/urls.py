@@ -11,6 +11,7 @@ urlpatterns = [
     path("board/", views.board, name="board"),
     path("board/new/", views.posting_new, name="posting_new"),
     path("board/<uuid:posting_id>/claim/", views.claim_posting, name="claim_posting"),
+    path("board/<uuid:posting_id>/step-off/", views.step_off, name="step_off"),
     path("board/<uuid:posting_id>/close/", views.posting_close, name="posting_close"),
     path("board/<uuid:posting_id>/hours/", views.contribution_new, name="contribution_new"),
     path("ledger/", views.ledger, name="ledger"),
