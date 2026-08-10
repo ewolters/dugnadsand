@@ -16,14 +16,12 @@
     "text_muted": "#6B7F74",
     "background": "#EBEEE9",
     "surface": "#FAFBF9",
-
     "birch": "#EBEEE9",
     "paper": "#FAFBF9",
     "ink": "#17211E",
     "spruce": "#22403A",
     "ochre": "#C1832B",
     "moss": "#6B7F74",
-
     "spruce_hover": "#2C534B",
     "quiet_hover": "#E2E7E1",
     "table_head": "#EAEEE9",
@@ -31,18 +29,25 @@
     "white": "#FFFFFF",
     "plate": "#22403A",
     "error": "#8C3A2B",
-
     "ok": "#1F6F5C",
     "ok_wash": "#E8F0E9",
     "warn": "#8A6410",
     "warn_wash": "#F7F0E1",
     "alert": "#A32B1E",
     "alert_wash": "#F7E9E7",
-
     "text_soft": "#38443F",
     "on_primary": "#CBD6D0",
     "rule": "rgba(23,33,30,.14)",
-    "rule_strong": "rgba(23,33,30,.22)"
+    "rule_strong": "rgba(23,33,30,.22)",
+    "banned": {
+      "#2c2c2c": "create-site scaffold grey; use --brand-ink",
+      "#555555": "create-site scaffold grey; use --brand-text-body",
+      "#888888": "create-site scaffold grey; use --brand-moss",
+      "#1a1a1a": "create-site scaffold grey; use --brand-ink",
+      "#333333": "create-site scaffold grey; use --brand-text-body",
+      "#666666": "create-site scaffold grey; use --brand-moss",
+      "#f8f7f4": "create-site scaffold cream; use --brand-birch"
+    }
   },
   "tokens": {
     "font_sans": "Optima, Candara, 'Gill Sans', 'Gill Sans MT', 'Trebuchet MS', 'Segoe UI', sans-serif",
