@@ -34,6 +34,13 @@ PALETTE = ("spruce", "ochre", "moss", "slate", "heather", "rust")
 SIZE = 5          # cells across, mirrored about the centre column
 CELL = 12         # user units per cell; the viewBox scales to any rendered size
 
+# How many of the fifteen source positions fill — a band, not a probability.
+# The floor exists because a sparse mark reads as noise rather than as anybody;
+# the ceiling because a near-solid one reads as a smudge. Of 15 positions,
+# mirroring makes 9 render as 15 cells and 12 as 20 of the 25.
+FEWEST = 9
+MOST = 12
+
 
 def _digest(member_id):
     return hashlib.sha256(str(member_id).encode()).digest()
@@ -60,22 +67,37 @@ def cells(member_id):
     The lighter weight is .62 rather than something subtler because these are
     drawn at 22px beside a name far more often than at 96px on their own, and
     at that size a delicate second tone simply disappears.
+
+    HOW MANY CELLS IS DECIDED FIRST, then which. Deciding per cell — a coin
+    flip, or a threshold on a byte — gives a distribution rather than a bound,
+    so however the probability is tuned some ids still land on four scattered
+    squares and others on a solid block. Both fail: one reads as noise, the
+    other as a smudge, and neither reads as a particular person.
+
+    So a count is drawn from the digest and clamped to a band, and the cells
+    with the highest scores fill. Same determinism, same variety, consistent
+    visual weight across the whole set — which is most of what makes a group
+    of generated marks look designed rather than merely random.
     """
     digest = _digest(member_id)
     half = SIZE // 2 + 1
-    for column in range(half):
-        for row in range(SIZE):
-            byte = digest[(column * SIZE + row) % len(digest)]
-            # Roughly two cells in five left empty. A straight coin flip on one
-            # bit gave marks that ranged from a near-solid block to four
-            # scattered squares, and the sparse end read as noise rather than
-            # as anybody in particular.
-            if byte % 5 < 2:
-                continue
-            heavy = bool(byte & 2)
-            yield column, row, heavy
-            if column < SIZE - 1 - column:    # mirror, never the centre twice
-                yield SIZE - 1 - column, row, heavy
+    positions = [(column, row) for column in range(half) for row in range(SIZE)]
+
+    # Score every position, then take the densest `count` of them. Index breaks
+    # ties so the ordering is total and stable across Python versions.
+    scored = sorted(
+        ((digest[(c * SIZE + r) % len(digest)], i, c, r)
+         for i, (c, r) in enumerate(positions)),
+        key=lambda s: (-s[0], s[1]))
+
+    span = MOST - FEWEST + 1
+    count = FEWEST + (digest[-1] % span)
+
+    for byte, _index, column, row in scored[:count]:
+        heavy = bool(byte & 2)
+        yield column, row, heavy
+        if column < SIZE - 1 - column:        # mirror, never the centre twice
+            yield SIZE - 1 - column, row, heavy
 
 
 def svg(member, size=32, colour=None):

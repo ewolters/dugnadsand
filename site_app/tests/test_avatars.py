@@ -75,6 +75,32 @@ class TheMarkIsStable(AvatarBase):
             self.ada.save(update_fields=["display_name"])
             self.assertEqual(avatars.svg(self.ada), before)
 
+    def test_no_mark_is_ever_sparse_or_solid(self):
+        """A floor and a ceiling, not a probability.
+
+        Deciding per cell gives a distribution, so however the odds are tuned
+        some ids still land on four scattered squares and others on a block.
+        Both fail — one reads as noise, the other as a smudge — and neither
+        reads as a particular person. Checked across many ids because the
+        failure only ever showed up on a few.
+        """
+        import uuid
+
+        widest = avatars.SIZE * avatars.SIZE
+        for i in range(300):
+            drawn = len(list(avatars.cells(uuid.UUID(int=i * 7919 + 13))))
+            self.assertGreaterEqual(drawn, avatars.FEWEST + 4, i)
+            self.assertLessEqual(drawn, widest - 2, i)
+
+    def test_the_band_still_leaves_room_to_differ(self):
+        """A floor that pinned every mark to one weight would trade noise for
+        uniformity, which is the same failure from the other side."""
+        import uuid
+
+        seen = {len(list(avatars.cells(uuid.UUID(int=i * 7919 + 13))))
+                for i in range(300)}
+        self.assertGreater(len(seen), 3)
+
     def test_the_grid_is_mirrored(self):
         """What makes an arrangement of squares read as a thing rather than
         as noise."""
