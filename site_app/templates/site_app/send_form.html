@@ -10,6 +10,7 @@
 
 <form method="post" class="stack">
   {% csrf_token %}
+  {% if form.non_field_errors %}<p class="err">{{ form.non_field_errors.0 }}</p>{% endif %}
   {% for field in form %}
     <div>
       <label for="{{ field.id_for_label }}">{{ field.label }}</label>
@@ -18,6 +19,9 @@
       {% if field.errors %}<p class="err">{{ field.errors.0 }}</p>{% endif %}
     </div>
   {% endfor %}
+  <p class="help">Pick a project's list and the manifest and the project record the same
+     movement — only lists counted in {{ line.unit }} are offered, because that is the
+     only match worth trusting. Otherwise write where it is going.</p>
   <p class="help">This produces paperwork with a code the receiver can scan to sign for
      it. They do not need an account here.</p>
   <div class="row">

@@ -43,7 +43,9 @@
         {{ l.freshness }}){% if not forloop.last %}; {% endif %}{% endfor %}
     </p>
     <div class="row">
-      <a class="act" href="/warehouse/">Go and look</a>
+      {% for l in lines %}
+        <a class="act" href="/warehouse/line/{{ l.id }}/send/?need={{ need.id }}">Send from {{ l.warehouse.name }}</a>
+      {% endfor %}
       <a class="act quiet" href="/projects/{{ need.project_id }}/">The project</a>
     </div>
   </div>

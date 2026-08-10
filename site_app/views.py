@@ -681,19 +681,28 @@ def stock_confirm(request, line_id):
 def stock_send(request, line_id):
     from .forms import SendMaterialForm
     from .models import StockLine
-    from .services_warehouse import send_material
+    from .services_warehouse import send_material, send_material_to_need
 
     member = _member(request)
     if member is None:
         return HttpResponseForbidden("Not a member of any organization.")
 
     line = get_object_or_404(StockLine, pk=line_id)
-    form = SendMaterialForm(request.POST or None)
+    form = SendMaterialForm(request.POST or None, line=line,
+                            initial={"need": request.GET.get("need") or None})
     if request.method == "POST" and form.is_valid():
+        need = form.cleaned_data.get("need")
         try:
-            manifest = send_material(
-                line=line, quantity=form.cleaned_data["quantity"],
-                destination=form.cleaned_data["destination"], member=member)
+            if need is not None:
+                # One story: the manifest records the movement and the project's
+                # list records the arrival, joined by the manifest itself.
+                manifest = send_material_to_need(
+                    line=line, need=need, quantity=form.cleaned_data["quantity"],
+                    member=member)
+            else:
+                manifest = send_material(
+                    line=line, quantity=form.cleaned_data["quantity"],
+                    destination=form.cleaned_data["destination"], member=member)
         except ValueError as exc:
             form.add_error("quantity", str(exc))
         else:

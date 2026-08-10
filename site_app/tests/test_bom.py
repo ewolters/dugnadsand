@@ -319,3 +319,107 @@ class NoCatalogHere(BomBase):
 
         self.assertIsInstance(MaterialNeedForm().fields["unit"],
                               django_forms.CharField)
+
+
+class SendingStraightOntoAList(BomBase):
+    """The payoff of one system rather than two.
+
+    send_material_to_need has worked and been tested since the bill of
+    materials shipped, and nothing on any page could reach it — the manifest
+    and the project had to be reconciled by hand, which is the reconciliation
+    having both was supposed to remove.
+    """
+
+    def setUp(self):
+        super().setUp()
+        from django.utils import timezone
+
+        from site_app.models import StockLine, Warehouse
+
+        with tenant_context(self.alpha):
+            self.barn = Warehouse.objects.create(
+                organization=self.alpha, holder=self.ada, name="North barn",
+                address="Gate 4412")
+            self.lumber = StockLine.objects.create(
+                organization=self.alpha, warehouse=self.barn,
+                description="Reclaimed oak", quantity=Decimal("300.00"),
+                unit="board-feet", confirmed_at=timezone.now(),
+                confirmed_by=self.ada)
+            self.pallets = MaterialNeed.objects.create(
+                organization=self.alpha, project=self.homes,
+                description="Roof tiles", quantity=Decimal("5.00"),
+                unit="pallets", added_by=self.ada)
+
+    def form(self):
+        from site_app.forms import SendMaterialForm
+
+        with tenant_context(self.alpha):
+            return SendMaterialForm(line=self.lumber)
+
+    def test_only_lists_counted_in_the_same_unit_are_offered(self):
+        """Offering every open need would invite booking 200 board-feet
+        against a line measured in pallets, and the arithmetic underneath
+        would be nonsense nobody could see."""
+        with tenant_context(self.alpha):
+            offered = {n.pk for n in self.form().fields["need"].queryset}
+
+        self.assertIn(self.timber.pk, offered)      # board-feet, like the stock
+        self.assertNotIn(self.pallets.pk, offered)  # pallets
+
+    def test_a_satisfied_list_is_not_offered(self):
+        with tenant_context(self.alpha):
+            MaterialGiven.objects.create(
+                organization=self.alpha, need=self.timber, member=self.ola,
+                quantity=Decimal("200.00"))
+            offered = {n.pk for n in self.form().fields["need"].queryset}
+
+        self.assertNotIn(self.timber.pk, offered)
+
+    def test_picking_one_records_the_movement_and_the_arrival(self):
+        self.sign_in(self.ada_user)
+        response = self.client.post(
+            f"/warehouse/line/{self.lumber.id}/send/",
+            {"need": str(self.timber.id), "quantity": "120.00", "destination": ""})
+
+        self.assertEqual(response.status_code, 302)
+        with tenant_context(self.alpha):
+            self.lumber.refresh_from_db()
+            self.timber.refresh_from_db()
+            given = MaterialGiven.objects.get(need=self.timber)
+
+            self.assertEqual(self.lumber.quantity, Decimal("180.00"))
+            self.assertEqual(self.timber.remaining, Decimal("80.00"))
+            self.assertIsNotNone(given.manifest_id)
+
+    def test_free_text_still_works_for_material_going_anywhere_else(self):
+        from site_app.models import Manifest
+
+        self.sign_in(self.ada_user)
+        response = self.client.post(
+            f"/warehouse/line/{self.lumber.id}/send/",
+            {"need": "", "quantity": "10.00", "destination": "A neighbour on Third"})
+
+        self.assertEqual(response.status_code, 302)
+        with tenant_context(self.alpha):
+            doc = Manifest.objects.get(destination__contains="Third")
+            self.assertEqual(MaterialGiven.objects.count(), 0)
+            self.assertIsNotNone(doc.id)
+
+    def test_neither_a_list_nor_a_destination_is_refused(self):
+        """Silently sending material nowhere would produce paperwork nobody
+        could deliver."""
+        self.sign_in(self.ada_user)
+        response = self.client.post(
+            f"/warehouse/line/{self.lumber.id}/send/",
+            {"need": "", "quantity": "10.00", "destination": "   "})
+
+        self.assertEqual(response.status_code, 200)   # redisplayed, not saved
+        self.assertContains(response, "pick a project")
+
+    def test_the_pairing_page_links_straight_to_sending(self):
+        """The pairing page is where the match is visible, so it is where
+        acting on it should start."""
+        self.sign_in(self.ada_user)
+        body = self.client.get("/pairings/").content.decode()
+        self.assertIn(f"/warehouse/line/{self.lumber.id}/send/?need={self.timber.id}",
+                      body)

@@ -175,14 +175,59 @@ class StockLineForm(forms.Form):
 
 
 class SendMaterialForm(forms.Form):
+    """Where material is going: onto a project's list, or somewhere written down.
+
+    The need picker is the payoff of having a warehouse and bills of material
+    in the same system — pick one and the manifest and the project tell a
+    single story instead of two that have to be reconciled by hand.
+    """
+
+    need = forms.ModelChoiceField(
+        queryset=None, required=False, label="Against a project's list (optional)",
+        empty_label="Somewhere else \u2014 write it below")
     quantity = forms.DecimalField(
         max_digits=12, decimal_places=2, min_value=Decimal("0.01"),
         label="How much is going")
     destination = forms.CharField(
-        max_length=2000, widget=forms.Textarea(attrs={"rows": 2}),
+        max_length=2000, required=False, widget=forms.Textarea(attrs={"rows": 2}),
         label="Where it is going",
         help_text="A person, a site, an organization \u2014 whatever will make sense "
-                  "to whoever signs for it.")
+                  "to whoever signs for it. Leave blank if you picked a list above.")
+
+    def __init__(self, *args, line=None, **kwargs):
+        """Offer only needs counted in the SAME UNIT as this stock.
+
+        The same rule the pairing page runs on, and for the same reason: a unit
+        is a word a member typed, so matching equal ones compares two facts.
+        Offering every open need regardless of unit would invite somebody to
+        book 200 board-feet against a line measured in pallets, and the
+        arithmetic underneath would be nonsense nobody could see.
+        """
+        super().__init__(*args, **kwargs)
+        from .models import MaterialNeed
+
+        field = self.fields["need"]
+        if line is None:
+            field.queryset = MaterialNeed.objects.none()
+            return
+
+        candidates = (MaterialNeed.objects
+                      .filter(project__open=True, unit__iexact=line.unit.strip())
+                      .select_related("project").prefetch_related("given"))
+        # remaining is a property, so the outstanding filter happens here.
+        field.queryset = MaterialNeed.objects.filter(
+            pk__in=[n.pk for n in candidates if n.remaining > 0])
+        field.label_from_instance = (
+            lambda n: f"{n.project.name} — {n.description[:60]} "
+                      f"({n.remaining} {n.unit} still needed)")
+
+    def clean(self):
+        cleaned = super().clean()
+        if not cleaned.get("need") and not (cleaned.get("destination") or "").strip():
+            self.add_error(
+                "destination",
+                "Say where it is going, or pick a project's list above.")
+        return cleaned
 
 
 class MaterialNeedForm(forms.Form):
