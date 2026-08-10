@@ -558,3 +558,58 @@ class TheNavigationStaysGrouped(SignedIn, TestCase):
             self.assertIn('class="subnav"', body, path)
             self.assertIn("/manifests/", body, path)
             self.assertIn("/warehouse/", body, path)
+
+
+class NoTemplateCommentReachesThePage(SignedIn, TestCase):
+    """Django's {# #} is SINGLE-LINE ONLY. A multi-line one is not a comment.
+
+    It renders as literal text, and it shipped: a three-line note about how the
+    navigation is ordered sat visible in the nav bar of every signed-in page
+    from 7832bfe until somebody read it on screen. Nothing caught it, because
+    every test asserted what SHOULD be on a page and none asserted what should
+    not.
+
+    This checks the rendered output rather than the source, because a
+    single-line {# #} in a template is correct and common — the defect is only
+    ever visible after rendering.
+    """
+
+    PUBLIC = ["/", "/how-it-works/", "/attestation/", "/login/"]
+    MEMBER = ["/board/", "/board/new/", "/projects/", "/warehouse/",
+              "/manifests/", "/pairings/", "/pinned/", "/you/", "/notices/",
+              "/ledger/", "/password/"]
+
+    def setUp(self):
+        self.org = Organization.objects.create(slug="alpha", name="Alpha")
+        self.user = User.objects.create_user(
+            "ada", email="ada@example.test", password="dugnad-test-pw")
+        with tenant_context(self.org):
+            Member.objects.create(organization=self.org, display_name="Ada",
+                                  user=self.user)
+
+    def leaks(self, paths):
+        found = []
+        for path in paths:
+            body = self.client.get(path).content.decode()
+            if "{#" in body or "{%" in body:
+                found.append(path)
+        return found
+
+    def test_no_public_page_shows_template_syntax(self):
+        self.assertEqual(self.leaks(self.PUBLIC), [])
+
+    def test_no_member_page_shows_template_syntax(self):
+        self.sign_in(self.user)
+        self.assertEqual(self.leaks(self.MEMBER), [])
+
+    def test_the_nav_itself_is_clean(self):
+        """Where it actually happened, asserted on its own so a future failure
+        names the nav rather than a list of eleven pages."""
+        import re
+
+        self.sign_in(self.user)
+        body = self.client.get("/board/").content.decode()
+        header = re.search(r"<header.*?</header>", body, re.S).group(0)
+
+        self.assertNotIn("{#", header)
+        self.assertNotIn("{%", header)

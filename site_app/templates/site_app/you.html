@@ -13,8 +13,10 @@
 <h2>Pick a colour</h2>
 <form method="post" class="swatches">
   {% csrf_token %}
-  {# Each option draws YOUR mark rather than a square of colour. A swatch
-     shows the paint; this shows the thing you will actually be. #}
+  {% comment %}
+    Each option draws YOUR mark rather than a square of colour. A swatch
+    shows the paint; this shows the thing you will actually be.
+  {% endcomment %}
   {% for colour in palette %}
     <button type="submit" name="colour" value="{{ colour }}"
             class="swatch{% if colour == current %} on{% endif %}"
