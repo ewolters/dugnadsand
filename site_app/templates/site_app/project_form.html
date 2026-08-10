@@ -1,0 +1,31 @@
+{% extends "app_base.html" %}
+{% block title %}Start something ongoing — Dugnadsand{% endblock %}
+{% block content %}
+<h1>Start something ongoing</h1>
+<p class="lede">Give it a name people can say out loud and describe what it is. There is
+   no owner to name, no date to hit and nothing to approve — writing this down does not
+   make it yours.</p>
+
+<form method="post" class="stack">
+  {% csrf_token %}
+  {% if form.non_field_errors %}<p class="err">{{ form.non_field_errors.0 }}</p>{% endif %}
+
+  <div>
+    <label for="{{ form.name.id_for_label }}">{{ form.name.label }}</label>
+    {{ form.name }}
+    {% if form.name.errors %}<p class="err">{{ form.name.errors.0 }}</p>{% endif %}
+  </div>
+
+  <div>
+    <label for="{{ form.description.id_for_label }}">{{ form.description.label }}</label>
+    {{ form.description }}
+    <p class="help">{{ form.description.help_text }}</p>
+    {% if form.description.errors %}<p class="err">{{ form.description.errors.0 }}</p>{% endif %}
+  </div>
+
+  <div class="row">
+    <button type="submit" class="act">Start it</button>
+    <a class="act quiet" href="/projects/">Cancel</a>
+  </div>
+</form>
+{% endblock %}

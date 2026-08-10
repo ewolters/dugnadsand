@@ -8,6 +8,7 @@ has given.
 import re
 from decimal import Decimal
 
+from django import forms
 from django.contrib.auth.models import User
 from django.test import TestCase
 
@@ -114,19 +115,50 @@ class Postings(AppBase):
         """
         from site_app.forms import PostingForm
 
-        # needed_by is allowed here: a date is a fact about the NEED. What
-        # stays forbidden is anything describing the WORK — service type,
-        # skill, rate — because those create comparables and comparables
-        # create ascertainable value.
+        # Two additions, both allowed, for the same reason: neither describes
+        # the WORK. needed_by is a fact about the need. project is a pointer to
+        # one specific, member-written, organization-scoped effort.
+        #
+        # project is the one worth arguing about, because it renders as a
+        # dropdown and a dropdown is what a catalog looks like. The difference
+        # is that a catalog is a fixed vocabulary of service TYPES — "Plumbing",
+        # "Childcare" — which makes two postings comparable and comparable work
+        # has an ascertainable value. Project names are prose somebody typed
+        # about one job, and two postings under "Repairing homes on the east
+        # side" are not comparable as services. The safeguard is that no
+        # project list is ever shipped with the software; if one starts looking
+        # like a taxonomy, that is the drift to catch.
         self.assertEqual(set(PostingForm().fields),
-                         {"kind", "description", "needed_by", "hours_cap"})
+                         {"kind", "description", "project", "needed_by", "hours_cap"})
 
         self.sign_in(self.ada_user)
         body = self.client.get("/board/new/").content.decode().lower()
-        self.assertNotIn("<select", body, "the posting form has a dropdown")
-        posted = set(re.findall(r'<(?:input|textarea)[^>]*name="([^"]+)"', body))
+
+        # This assertion used to be `assertNotIn("<select", body)` — no
+        # dropdowns at all. That was a good proxy while it held, and the
+        # project picker breaks it, so it is replaced with the thing it was
+        # standing in for rather than loosened.
+        #
+        # A catalog is a fixed vocabulary SHIPPED WITH THE SOFTWARE. So: the
+        # only dropdown may be project, and its options must come from rows
+        # somebody wrote, never from choices= in code. A ModelChoiceField reads
+        # the database; a ChoiceField carries its vocabulary in the source. The
+        # category field this test exists to prevent would be the second kind.
+        selects = set(re.findall(r'<select[^>]*name="([^"]+)"', body))
+        self.assertEqual(selects, {"project"}, "an unexpected dropdown appeared")
+        self.assertIsInstance(PostingForm().fields["project"],
+                              forms.ModelChoiceField)
+
+        # Nothing on the model may carry a vocabulary except kind, which is a
+        # direction — offer or need — and not a description of the work.
+        with_choices = {f.name for f in Posting._meta.get_fields()
+                        if getattr(f, "choices", None)}
+        self.assertEqual(with_choices, {"kind"})
+
+        posted = set(re.findall(
+            r'<(?:input|textarea|select)[^>]*name="([^"]+)"', body))
         self.assertEqual(posted - {"csrfmiddlewaretoken"},
-                         {"kind", "description", "needed_by", "hours_cap"})
+                         {"kind", "description", "project", "needed_by", "hours_cap"})
 
     def test_only_the_offerer_can_close_it(self):
         self.sign_in(self.ada_user)
@@ -333,9 +365,18 @@ class Needs(AppBase):
 
         choices = dict(PostingForm().fields["kind"].choices)
         self.assertEqual(set(choices), {"offer", "need"})
-        # needed_by is allowed here: a date is a fact about the NEED. What
-        # stays forbidden is anything describing the WORK — service type,
-        # skill, rate — because those create comparables and comparables
-        # create ascertainable value.
+        # Two additions, both allowed, for the same reason: neither describes
+        # the WORK. needed_by is a fact about the need. project is a pointer to
+        # one specific, member-written, organization-scoped effort.
+        #
+        # project is the one worth arguing about, because it renders as a
+        # dropdown and a dropdown is what a catalog looks like. The difference
+        # is that a catalog is a fixed vocabulary of service TYPES — "Plumbing",
+        # "Childcare" — which makes two postings comparable and comparable work
+        # has an ascertainable value. Project names are prose somebody typed
+        # about one job, and two postings under "Repairing homes on the east
+        # side" are not comparable as services. The safeguard is that no
+        # project list is ever shipped with the software; if one starts looking
+        # like a taxonomy, that is the drift to catch.
         self.assertEqual(set(PostingForm().fields),
-                         {"kind", "description", "needed_by", "hours_cap"})
+                         {"kind", "description", "project", "needed_by", "hours_cap"})

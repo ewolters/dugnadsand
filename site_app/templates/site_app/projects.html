@@ -1,0 +1,32 @@
+{% extends "app_base.html" %}
+{% block title %}Ongoing work — Dugnadsand{% endblock %}
+{% block content %}
+<h1>Ongoing work</h1>
+<p class="lede">Things that run longer than one afternoon. A project gathers related
+   postings together — it does not put anybody in charge of them, and joining one is
+   just posting under it.</p>
+
+<p><a class="act" href="/projects/new/">Start something</a></p>
+
+{% for p in open_projects %}
+  <div class="card">
+    <p class="who">Written down by {{ p.started_by.display_name }} · {{ p.created_at|date:"j M Y" }}</p>
+    <h2 class="proj"><a href="/projects/{{ p.id }}/">{{ p.name }}</a></h2>
+    <p>{{ p.description|linebreaksbr|truncatewords:45 }}</p>
+    <p class="cap">{{ p.postings.count }} posting{{ p.postings.count|pluralize }} under it</p>
+  </div>
+{% empty %}
+  <p class="empty">Nothing ongoing yet. Most help does not need a project — start one
+     when the same work keeps coming back.</p>
+{% endfor %}
+
+{% if finished %}
+  <h2>Finished</h2>
+  {% for p in finished %}
+    <div class="card done">
+      <p class="who">{{ p.created_at|date:"j M Y" }}</p>
+      <h3 class="proj"><a href="/projects/{{ p.id }}/">{{ p.name }}</a></h3>
+    </div>
+  {% endfor %}
+{% endif %}
+{% endblock %}

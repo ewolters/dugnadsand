@@ -24,6 +24,13 @@
   </div>
 
   <div>
+    <label for="{{ form.project.id_for_label }}">{{ form.project.label }}</label>
+    {{ form.project }}
+    <p class="help">{{ form.project.help_text }}</p>
+    {% if form.project.errors %}<p class="err">{{ form.project.errors.0 }}</p>{% endif %}
+  </div>
+
+  <div>
     <label for="{{ form.needed_by.id_for_label }}">{{ form.needed_by.label }}</label>
     {{ form.needed_by }}
     <p class="help">{{ form.needed_by.help_text }}</p>

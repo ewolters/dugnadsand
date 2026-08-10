@@ -87,6 +87,17 @@
 
     .ordering { color:var(--brand-moss); font-size:.875rem; margin:0 0 1rem; }
 
+    .crumb { font-family:var(--brand-font-mono); font-size:.6875rem; letter-spacing:.1em;
+      text-transform:uppercase; margin:0 0 .6rem; }
+    .crumb a { color:var(--brand-moss); text-decoration:none; }
+    .crumb a:hover { color:var(--brand-ink); }
+    h2.proj, h3.proj { margin:.1rem 0 .5rem; }
+    h2.proj a, h3.proj a { color:var(--brand-ink); text-decoration:none; }
+    h2.proj a:hover, h3.proj a:hover { color:var(--brand-spruce); }
+    .card.done { opacity:.72; }
+    form.finish { margin-top:2rem; }
+    td.num { font-variant-numeric:tabular-nums; text-align:right; }
+
     .notice { border-bottom:1px solid var(--brand-rule); padding:.85rem 0; }
     .notice:last-of-type { border-bottom:0; }
     .notice .msg { margin:0 0 .2rem; }
@@ -128,6 +139,7 @@
       {% if user.is_authenticated %}
       <nav>
         <a href="/board/" {% if section == "board" %}aria-current="page"{% endif %}>The board</a>
+        <a href="/projects/" {% if section == "projects" %}aria-current="page"{% endif %}>Ongoing</a>
         <a href="/notices/" {% if section == "notices" %}aria-current="page"{% endif %}>What's happened{% if notifications_unread %} <span class="badge">{{ notifications_unread }}</span>{% endif %}</a>
         <a href="/ledger/" {% if section == "ledger" %}aria-current="page"{% endif %}>Ledger</a>
         {% if user.member.is_organizer %}<a href="/members/">Members</a>{% endif %}

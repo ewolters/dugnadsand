@@ -349,6 +349,86 @@ def ledger(request):
 
 
 @login_required
+def projects(request):
+    """Everything ongoing here. No totals, no progress, no owner column."""
+    from .models import Project
+
+    member = _member(request)
+    if member is None:
+        return HttpResponseForbidden("Not a member of any organization.")
+
+    return render(request, "site_app/projects.html", {
+        "member": member, "section": "projects",
+        "open_projects": Project.objects.filter(open=True).select_related("started_by"),
+        "finished": Project.objects.filter(open=False).select_related("started_by"),
+    })
+
+
+@login_required
+def project_detail(request, project_id):
+    """One project: what it is, what is open under it, what has gone into it.
+
+    The last of those is a LOG in time order, deliberately not a sum. A project
+    total is safe-looking — it describes work rather than a person — but with
+    one contributor it IS that person's total, and with two it is close enough
+    to subtract. See no-aggregate-display.
+    """
+    from .models import Contribution, Posting, Project
+
+    member = _member(request)
+    if member is None:
+        return HttpResponseForbidden("Not a member of any organization.")
+
+    project = get_object_or_404(Project, pk=project_id)
+    return render(request, "site_app/project_detail.html", {
+        "member": member, "section": "projects", "project": project,
+        "open_postings": Posting.objects.filter(project=project, open=True)
+                                        .select_related("member"),
+        "went_in": Contribution.objects.filter(posting__project=project)
+                                       .select_related("member", "posting")[:200],
+    })
+
+
+@login_required
+def project_new(request):
+    from .forms import ProjectForm
+    from .notifications import announce_project
+
+    member = _member(request)
+    if member is None:
+        return HttpResponseForbidden("Not a member of any organization.")
+
+    form = ProjectForm(request.POST or None)
+    if request.method == "POST" and form.is_valid():
+        project = form.save(commit=False)
+        project.started_by = member
+        project.organization_id = member.organization_id
+        project.save()
+        announce_project(project)
+        return redirect(f"/projects/{project.id}/")
+
+    return render(request, "site_app/project_form.html",
+                  {"form": form, "section": "projects"})
+
+
+@login_required
+@require_POST
+def project_close(request, project_id):
+    """Mark it finished. Anyone in the organization may, including someone who
+    never worked on it — there is no owner to ask, by design."""
+    from .models import Project
+
+    member = _member(request)
+    if member is None:
+        return HttpResponseForbidden("Not a member of any organization.")
+
+    project = get_object_or_404(Project, pk=project_id)
+    project.open = False
+    project.save(update_fields=["open"])
+    return redirect("/projects/")
+
+
+@login_required
 def notices(request):
     """What has happened here lately, and nothing about who did it.
 

@@ -72,6 +72,51 @@ class Member(TenantScoped):
         return self.display_name
 
 
+class Project(TenantScoped):
+    """Something ongoing that people give time to. A container, and nothing more.
+
+    Every other project model in this federation is accountability machinery,
+    and that is the right design where it lives. hoshined's Project carries
+    benefit_type (Operational/Capex Savings), gl_account, financial_category,
+    assurance, needs_approval and approved_by, because it exists to prove a
+    saving to a plant controller. svend's ActionItem carries owner_name, a
+    status running to Completed and Blocked, due_date, progress and depends_on,
+    because it exists to run a Gantt chart.
+
+    Both answer "who owes what by when, and what was it worth". This system is
+    built so that question cannot be asked, so none of those fields may appear
+    here:
+
+      owner / owner_name  — assignment is obligation (no-obligation)
+      status / progress   — recording a completion is recording a duty owed
+      benefit / savings   — valuation (flat-hours, no-tax-artifact)
+      needs_approval      — a gate, and gates are what this system removes
+      depends_on          — a dependency is a promise somebody else is holding
+
+    What is left is a name, a description in somebody's own words, and whether
+    it is still going. Postings hang off it; hours are recorded against those
+    postings and are readable as a log, never summed into a figure for the
+    project or for any person in it — see no-aggregate-display.
+    """
+
+    name = models.CharField(max_length=200)
+    description = models.TextField()
+
+    # Who wrote it down. Not who is responsible for it — nobody is, and there
+    # is deliberately no field that could be read as saying otherwise.
+    started_by = models.ForeignKey(
+        Member, on_delete=models.PROTECT, related_name="projects_started")
+
+    open = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ("-created_at",)
+
+    def __str__(self):
+        return self.name
+
+
 class Posting(TenantScoped):
     """Something on the board, in either direction.
 
@@ -102,6 +147,14 @@ class Posting(TenantScoped):
     KINDS = [(OFFER, "Offering"), (NEED, "Need")]
 
     member = models.ForeignKey(Member, on_delete=models.PROTECT, related_name="postings")
+
+    # Optional throughout. A posting that belongs to nothing is the normal
+    # case, and a project is only ever a place to gather related ones — never
+    # a requirement, an approval step, or somewhere a posting must be filed.
+    project = models.ForeignKey(
+        "Project", on_delete=models.PROTECT, null=True, blank=True,
+        related_name="postings")
+
     kind = models.CharField(max_length=8, choices=KINDS, default=OFFER)
     description = models.TextField()
     hours_cap = models.PositiveIntegerField(null=True, blank=True)

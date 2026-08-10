@@ -182,6 +182,28 @@ def announce_posting(posting):
     return sent
 
 
+def announce_project(project):
+    """Tell the organization something ongoing has started.
+
+    The name is NOT carried, and the argument for carrying it is worth writing
+    down because it is a good one and it is wrong. A project name is the handle
+    people use to talk about the work out loud, so a notice without it is
+    thinner than it could be. But "Rebuilding the Hendersons' roof after the
+    fire" is a project name, and it is exactly as much somebody's circumstances
+    as any posting description. There is no test that can tell the two apart,
+    which means the exception could not be enforced even if it were right.
+
+    A rule with no exceptions is a rule nobody has to argue about at review
+    time. The link resolves the name under the reader's own session.
+    """
+    message = "Something ongoing started here."
+    sent = 0
+    for member in _audience(project.organization_id, project.started_by_id):
+        if _send(member.user.email, "project", message, f"/projects/{project.id}/"):
+            sent += 1
+    return sent
+
+
 def announce_claim(claim):
     """Tell the poster that somebody is on it.
 

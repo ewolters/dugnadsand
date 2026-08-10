@@ -34,20 +34,36 @@ class PostingForm(forms.ModelForm):
     forbids.
     """
 
+    def __init__(self, *args, **kwargs):
+        """Limit the project list to open projects in this organization.
+
+        RLS already scopes the queryset to the tenant. This narrows it further
+        to projects still running, so a form cannot quietly file new work under
+        something that finished.
+        """
+        super().__init__(*args, **kwargs)
+        from .models import Project
+
+        self.fields["project"].queryset = Project.objects.filter(open=True)
+        self.fields["project"].empty_label = "Not part of anything"
+
     class Meta:
         from .models import Posting
 
         model = Posting
-        fields = ("kind", "description", "needed_by", "hours_cap")
+        fields = ("kind", "description", "project", "needed_by", "hours_cap")
         labels = {
             "kind": "Are you offering something, or asking for something",
             "description": "In your own words",
+            "project": "Part of something ongoing (optional)",
             "needed_by": "Is there a date it stops being useful (optional)",
             "hours_cap": "Roughly how many hours (optional)",
         }
         help_texts = {
             "kind": "Asking costs nothing and proves nothing. Nobody can see "
                     "what you have or have not contributed.",
+            "project": "Only a place to gather related postings. Leaving it "
+                       "blank is the normal case.",
             "needed_by": "A ride on Thursday and a fence sometime this year are "
                          "different things. Leave it blank if there's no rush.",
             "hours_cap": "A ceiling, never a floor. Whoever takes this on can "
@@ -58,6 +74,30 @@ class PostingForm(forms.ModelForm):
             "needed_by": forms.DateInput(attrs={"type": "date"}),
             "kind": forms.RadioSelect,
         }
+
+
+class ProjectForm(forms.ModelForm):
+    """A name and a description. The absences are the design — see the model.
+
+    No owner field, no status, no target date, no budget, no approval. If a
+    field is being added here, check it is a fact about the WORK and not a duty
+    somebody now owes.
+    """
+
+    class Meta:
+        from .models import Project
+
+        model = Project
+        fields = ("name", "description")
+        labels = {
+            "name": "What is it called",
+            "description": "What is it, in your own words",
+        }
+        help_texts = {
+            "description": "Who it is for, what it needs, how long it might run. "
+                           "Nobody is put in charge of it by writing this down.",
+        }
+        widgets = {"description": forms.Textarea(attrs={"rows": 5})}
 
 
 class ContributionForm(forms.Form):
