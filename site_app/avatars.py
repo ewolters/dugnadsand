@@ -78,16 +78,22 @@ def cells(member_id):
                 yield SIZE - 1 - column, row, heavy
 
 
-def svg(member, size=32):
+def svg(member, size=32, colour=None):
     """The mark as inline SVG. No user text goes into it, at any point.
 
     Inline rather than an <img> to a generated endpoint: the mark is cheap to
     compute, and a separate request per avatar would put a member id in an
     access log for every row on a page.
+
+    `colour` overrides the member's own, for the picker — where seeing your own
+    mark in each colour is the entire question a swatch of paint cannot answer.
+    Anything not in PALETTE falls back, so nothing a caller invents reaches the
+    class attribute.
     """
     extent = SIZE * CELL
+    name = colour if colour in PALETTE else colour_of(member)
     parts = [
-        f'<svg class="avatar av-{colour_of(member)}" width="{int(size)}" '
+        f'<svg class="avatar av-{name}" width="{int(size)}" '
         f'height="{int(size)}" viewBox="0 0 {extent} {extent}" '
         f'role="img" aria-hidden="true" focusable="false">'
     ]
