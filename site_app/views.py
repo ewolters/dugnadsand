@@ -279,6 +279,7 @@ def board(request):
                               p.needed_by or date.max,
                               -p.created_at.timestamp()))
     return render(request, "site_app/board.html", {
+        "section": "board",
         "member": member, "others": others,
         "needs": needs,
         "offers": [p for p in open_postings if p.kind == Posting.OFFER],
@@ -305,7 +306,8 @@ def posting_new(request):
         announce_posting(posting)
         return redirect("/board/")
 
-    return render(request, "site_app/posting_form.html", {"form": form})
+    return render(request, "site_app/posting_form.html", {
+        "section": "board","form": form})
 
 
 @login_required
@@ -410,6 +412,7 @@ def ledger(request):
     report = verify_contributions(member.organization)
 
     return render(request, "site_app/ledger.html", {
+        "section": "ledger",
         "entries": entries,
         "chain_ok": getattr(report, "ok", None),
     })
@@ -1049,6 +1052,7 @@ def members(request):
         return HttpResponseForbidden("Only organizers can see the member list.")
 
     return render(request, "site_app/members.html", {
+        "section": "members",
         "member": member,
         "members": Member.objects.order_by("display_name"),
     })
@@ -1085,4 +1089,5 @@ def member_new(request):
                        "password": password}
             form = AddMemberForm()
 
-    return render(request, "site_app/member_form.html", {"form": form, "created": created})
+    return render(request, "site_app/member_form.html", {
+        "section": "members","form": form, "created": created})

@@ -1,5 +1,11 @@
 {% extends "app_base.html" %}
 {% block title %}{{ warehouse.name }} — Dugnadsand{% endblock %}
+{% block subnav %}
+<div class="subnav"><div>
+  <a href="/warehouse/" aria-current="page">What's on hand</a>
+  <a href="/manifests/">Paperwork</a>
+</div></div>
+{% endblock %}
 {% block content %}
 <p class="crumb"><a href="/warehouse/">What's on hand</a></p>
 <h1>{{ warehouse.name }}</h1>

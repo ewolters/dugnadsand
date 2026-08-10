@@ -1,5 +1,11 @@
 {% extends "app_base.html" %}
 {% block title %}Paperwork — Dugnadsand{% endblock %}
+{% block subnav %}
+<div class="subnav"><div>
+  <a href="/warehouse/">What's on hand</a>
+  <a href="/manifests/" aria-current="page">Paperwork</a>
+</div></div>
+{% endblock %}
 {% block content %}
 <h1>Paperwork</h1>
 <p class="lede">Everything that has left a warehouse here. Outstanding first, because

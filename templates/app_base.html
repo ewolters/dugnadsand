@@ -21,12 +21,40 @@
       display:flex; align-items:baseline; gap:1.5rem; flex-wrap:wrap; }
     header.app .brand { font-family:var(--brand-font-sans); font-weight:600; letter-spacing:.07em;
       text-transform:uppercase; text-decoration:none; font-size:1rem; }
-    header.app nav { display:flex; gap:1.25rem; margin-left:auto; align-items:baseline; }
-    header.app nav a, header.app nav button {
+    header.app nav.areas { display:flex; gap:1.25rem; margin-left:auto; align-items:baseline;
+      flex-wrap:wrap; }
+    header.app .you { display:flex; gap:1.25rem; align-items:baseline;
+      padding-left:1.25rem; border-left:1px solid var(--brand-rule); }
+    header.app nav a, header.app nav button,
+    header.app .you > a, header.app .you summary, header.app .sheet a,
+    header.app .sheet button {
       font-family:var(--brand-font-mono); font-size:.75rem; letter-spacing:.08em; text-transform:uppercase;
       color:var(--brand-moss); text-decoration:none; background:none; border:0; padding:0; cursor:pointer; }
-    header.app nav a:hover, header.app nav button:hover { color:var(--brand-ink); }
-    header.app nav a[aria-current="page"] { color:var(--brand-ochre); }
+    header.app nav a:hover, header.app nav button:hover,
+    header.app .you > a:hover, header.app .sheet a:hover { color:var(--brand-ink); }
+    header.app a[aria-current="page"] { color:var(--brand-ochre); }
+
+    /* The account menu. A <details> because it is keyboard-operable and
+       needs no script — if the JS never arrives the menu is simply open. */
+    header.app .menu summary { list-style:none; cursor:pointer; }
+    header.app .menu summary::-webkit-details-marker { display:none; }
+    header.app .menu summary::after { content:" \25BE"; }
+    header.app .menu { position:relative; }
+    header.app .sheet { position:absolute; right:0; top:1.6rem; z-index:20;
+      background:var(--brand-paper); border:1px solid var(--brand-rule);
+      border-radius:2px; padding:.6rem .9rem; display:grid; gap:.5rem;
+      min-width:9rem; text-align:right; }
+    header.app .sheet form { margin:0; }
+
+    /* Where a system has more than one page, the pages say so together. */
+    .subnav { border-bottom:1px solid var(--brand-rule); background:var(--brand-paper); }
+    .subnav div { max-width:60rem; margin-inline:auto;
+      padding:.55rem var(--brand-gutter); display:flex; gap:1.1rem; flex-wrap:wrap; }
+    .subnav a { font-family:var(--brand-font-mono); font-size:.6875rem;
+      letter-spacing:.08em; text-transform:uppercase; color:var(--brand-moss);
+      text-decoration:none; }
+    .subnav a:hover { color:var(--brand-ink); }
+    .subnav a[aria-current="page"] { color:var(--brand-ochre); }
 
     main { max-width:60rem; margin-inline:auto; padding:2.5rem var(--brand-gutter) 4rem; }
     h1 { font-family:var(--brand-font-sans); font-weight:600; font-size:clamp(1.7rem,4vw,2.2rem);
@@ -197,23 +225,36 @@
     <div class="bar">
       <a class="brand" href="/"><img class="mark" src="{% static 'img/tally.svg' %}" alt="" width="52" height="11">Dugnadsand</a>
       {% if user.is_authenticated %}
-      <nav>
-        <a href="/board/" {% if section == "board" %}aria-current="page"{% endif %}>The board</a>
+      <nav class="areas">
+        {# The three places things live, then the two surfaces that cross all
+           three. Ordered by how often a member opens them, not by when they
+           were built. #}
+        <a href="/board/" {% if section == "board" %}aria-current="page"{% endif %}>Board</a>
+        <a href="/pairings/" {% if section == "pairings" %}aria-current="page"{% endif %}>Worth a look</a>
         <a href="/projects/" {% if section == "projects" %}aria-current="page"{% endif %}>Ongoing</a>
         <a href="/warehouse/" {% if section == "warehouse" %}aria-current="page"{% endif %}>On hand</a>
-        <a href="/pairings/" {% if section == "pairings" %}aria-current="page"{% endif %}>Worth a look</a>
-        <a href="/pinned/" {% if section == "pinned" %}aria-current="page"{% endif %}>Kept</a>
-        <a href="/notices/" {% if section == "notices" %}aria-current="page"{% endif %}>What's happened{% if notifications_unread %} <span class="badge">{{ notifications_unread }}</span>{% endif %}</a>
         <a href="/ledger/" {% if section == "ledger" %}aria-current="page"{% endif %}>Ledger</a>
-        {% if user.member.is_organizer %}<a href="/members/">Members</a>{% endif %}
-        <a href="/password/">Password</a>
-        <form method="post" action="/logout/" style="display:inline">{% csrf_token %}
-          <button type="submit">Sign out</button>
-        </form>
       </nav>
+
+      <div class="you">
+        <a href="/notices/" {% if section == "notices" %}aria-current="page"{% endif %}>What's happened{% if notifications_unread %} <span class="badge">{{ notifications_unread }}</span>{% endif %}</a>
+        {# Yours rather than the organization's, so it folds away. #}
+        <details class="menu">
+          <summary>{{ member.display_name|default:"You" }}</summary>
+          <div class="sheet">
+            <a href="/pinned/">Kept</a>
+            {% if user.member.is_organizer %}<a href="/members/">Members</a>{% endif %}
+            <a href="/password/">Password</a>
+            <form method="post" action="/logout/">{% csrf_token %}
+              <button type="submit">Sign out</button>
+            </form>
+          </div>
+        </details>
+      </div>
       {% endif %}
     </div>
   </header>
+  {% block subnav %}{% endblock %}
   <main>{% block content %}{% endblock %}</main>
 </body>
 </html>

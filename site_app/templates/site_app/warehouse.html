@@ -1,5 +1,11 @@
 {% extends "app_base.html" %}
 {% block title %}What's on hand — Dugnadsand{% endblock %}
+{% block subnav %}
+<div class="subnav"><div>
+  <a href="/warehouse/" aria-current="page">What's on hand</a>
+  <a href="/manifests/">Paperwork</a>
+</div></div>
+{% endblock %}
 {% block content %}
 <h1>What's on hand</h1>
 <p class="lede">Material somebody nearby already has. It stays where they keep it — this

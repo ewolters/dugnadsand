@@ -1,5 +1,11 @@
 {% extends "app_base.html" %}
 {% block title %}Manifest — Dugnadsand{% endblock %}
+{% block subnav %}
+<div class="subnav"><div>
+  <a href="/warehouse/">What's on hand</a>
+  <a href="/manifests/" aria-current="page">Paperwork</a>
+</div></div>
+{% endblock %}
 {% block content %}
 <p class="crumb no-print"><a href="/manifests/">Paperwork</a> · <a href="/warehouse/{{ manifest.stock_line.warehouse_id }}/">{{ manifest.stock_line.warehouse.name }}</a></p>
 

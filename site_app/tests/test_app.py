@@ -225,9 +225,22 @@ class Ledger(AppBase):
                 member=self.bo, posting=self.b_offering, hours=Decimal("9"))
 
         self.sign_in(self.ada_user)
+        # Scoped to the ledger TABLE, not the whole document. Scanning the
+        # page for "Bo" passed until the nav label became "Board", which
+        # contains it — a two-letter substring against a full HTML response
+        # tests the surrounding copy as much as the isolation. The leak, if
+        # there were one, would be a row.
+        import re
+
         body = self.client.get("/ledger/").content.decode()
-        self.assertNotIn("Bo", body)
-        self.assertNotIn("9.00", body)
+        rows = re.search(r"<tbody>(.*?)</tbody>", body, re.S).group(1)
+
+        self.assertNotIn("Bo", rows)
+        self.assertNotIn("9.00", rows)
+        # And the isolation itself, independent of any rendering.
+        with tenant_context(self.alpha):
+            from site_app.models import Contribution
+            self.assertEqual(Contribution.objects.count(), 0)
 
 
 class WayIn(SignedIn, TestCase):
@@ -478,3 +491,70 @@ class TheTaglineIsOnThePage(SignedIn, TestCase):
             (Path(__file__).resolve().parents[2] / "brand.json").read_text())
         body = self.client.get("/").content.decode()
         self.assertIn(brand["tagline"], body)
+
+
+class TheNavigationStaysGrouped(SignedIn, TestCase):
+    """The nav decayed to ten flat items, ordered by when things were built.
+
+    That is the default outcome: every feature adds a link, nobody removes
+    one, and a member ends up reading a list of features instead of seeing
+    where things live. These tests hold the shape — three subject systems,
+    two surfaces across them, and personal things folded away.
+    """
+
+    AREAS = ["/board/", "/pairings/", "/projects/", "/warehouse/", "/ledger/"]
+
+    def setUp(self):
+        self.org = Organization.objects.create(slug="alpha", name="Alpha")
+        self.user = User.objects.create_user(
+            "ada", email="ada@example.test", password="dugnad-test-pw")
+        with tenant_context(self.org):
+            Member.objects.create(organization=self.org, display_name="Ada",
+                                  user=self.user)
+        self.sign_in(self.user)
+
+    def nav(self):
+        import re
+
+        body = self.client.get("/board/").content.decode()
+        return re.search(r'<nav class="areas">(.*?)</nav>', body, re.S).group(1)
+
+    def test_the_top_row_holds_the_areas_and_only_the_areas(self):
+        import re
+
+        hrefs = re.findall(r'href="([^"]+)"', self.nav())
+        self.assertEqual(hrefs, self.AREAS)
+
+    def test_personal_things_are_folded_away_rather_than_in_the_row(self):
+        """Kept, Password and Sign out are yours, not the organization's."""
+        nav = self.nav()
+        for personal in ("/pinned/", "/password/", "/logout/"):
+            self.assertNotIn(personal, nav)
+
+    def test_they_are_still_reachable(self):
+        """Folded away is not the same as gone, and the difference is the
+        whole risk of tidying a menu."""
+        body = self.client.get("/board/").content.decode()
+        for personal in ("/pinned/", "/password/", "/logout/"):
+            self.assertIn(personal, body)
+
+    def test_every_area_link_actually_resolves(self):
+        """A nav entry pointing at a 404 is worse than no nav entry."""
+        for path in self.AREAS:
+            self.assertEqual(self.client.get(path).status_code, 200, path)
+
+    def test_the_current_area_is_marked_on_each_of_its_pages(self):
+        for path, section in (("/board/", "Board"), ("/warehouse/", "On hand"),
+                              ("/projects/", "Ongoing"), ("/ledger/", "Ledger")):
+            body = self.client.get(path).content.decode()
+            self.assertRegex(body, rf'aria-current="page"[^>]*>{section}<',
+                             msg=path)
+
+    def test_the_warehouse_pages_carry_one_strip_between_them(self):
+        """Two pages of one system should say so, rather than being two
+        unrelated destinations that happen to share a word."""
+        for path in ("/warehouse/", "/manifests/"):
+            body = self.client.get(path).content.decode()
+            self.assertIn('class="subnav"', body, path)
+            self.assertIn("/manifests/", body, path)
+            self.assertIn("/warehouse/", body, path)

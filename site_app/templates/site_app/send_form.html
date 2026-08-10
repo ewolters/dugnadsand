@@ -1,5 +1,11 @@
 {% extends "app_base.html" %}
 {% block title %}Send material — Dugnadsand{% endblock %}
+{% block subnav %}
+<div class="subnav"><div>
+  <a href="/warehouse/" aria-current="page">What's on hand</a>
+  <a href="/manifests/">Paperwork</a>
+</div></div>
+{% endblock %}
 {% block content %}
 <p class="crumb"><a href="/warehouse/{{ line.warehouse_id }}/">{{ line.warehouse.name }}</a></p>
 <h1>Send material</h1>
