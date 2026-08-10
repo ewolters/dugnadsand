@@ -1,7 +1,7 @@
 {% extends "app_base.html" %}
 {% block title %}Manifest — Dugnadsand{% endblock %}
 {% block content %}
-<p class="crumb no-print"><a href="/warehouse/{{ manifest.stock_line.warehouse_id }}/">{{ manifest.stock_line.warehouse.name }}</a></p>
+<p class="crumb no-print"><a href="/manifests/">Paperwork</a> · <a href="/warehouse/{{ manifest.stock_line.warehouse_id }}/">{{ manifest.stock_line.warehouse.name }}</a></p>
 
 <div class="manifest">
   <h1>Manifest</h1>

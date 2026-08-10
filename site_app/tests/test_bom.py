@@ -126,6 +126,15 @@ class NothingConvertsMaterialToHours(BomBase):
 
 
 class TwoLogsSideBySide(BomBase):
+    def rendered_text(self, url):
+        """Visible text only — no tags, no attributes, no ids."""
+        import html
+        import re
+
+        body = self.client.get(url).content.decode()
+        body = re.sub(r"<(script|style)\b.*?</\1>", " ", body, flags=re.S | re.I)
+        return html.unescape(re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", body)))
+
     def test_the_project_page_shows_both_and_says_they_are_not_added(self):
         from site_app.services import record_contribution
 
@@ -140,13 +149,18 @@ class TwoLogsSideBySide(BomBase):
                 quantity=Decimal("120.00"))
 
         self.sign_in(self.ada_user)
-        body = self.client.get(f"/projects/{self.homes.id}/").content.decode()
+        text = self.rendered_text(f"/projects/{self.homes.id}/")
 
-        self.assertIn("6.00", body)            # the hours log
-        self.assertIn("120", body)             # the material log
-        self.assertIn("never added together", body)
-        # And no combined figure of any kind.
-        self.assertNotIn("126", body)
+        self.assertIn("6.00", text)            # the hours log
+        self.assertIn("120", text)             # the material log
+        self.assertIn("never added together", text)
+        # And no combined figure of any kind. Checked against rendered TEXT and
+        # as a standalone number: the first version scanned raw HTML for "126"
+        # and eventually failed on a UUID that happened to contain it, which
+        # was a test of the random number generator rather than of the page.
+        import re
+
+        self.assertIsNone(re.search(r"\b126(\.\d+)?\b", text))
 
     def test_no_page_computes_a_per_member_material_total(self):
         """The same rule the hours ledger lives under. Individual gifts are
@@ -158,11 +172,11 @@ class TwoLogsSideBySide(BomBase):
                     quantity=Decimal(amount))
 
         self.sign_in(self.ada_user)
-        body = self.client.get(f"/projects/{self.homes.id}/").content.decode()
+        text = self.rendered_text(f"/projects/{self.homes.id}/")
 
-        self.assertIn("40.00", body)
-        self.assertIn("30.00", body)
-        self.assertNotIn("70.00", body)   # Ola's total, nowhere
+        self.assertIn("40.00", text)
+        self.assertIn("30.00", text)
+        self.assertNotIn("70.00", text)   # Ola's total, nowhere
 
 
 class WhatIsStillNeeded(BomBase):

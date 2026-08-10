@@ -859,6 +859,85 @@ def pairings(request):
 
 
 @login_required
+def manifests(request):
+    """Paperwork, outstanding first.
+
+    "What has not been signed for yet" is the question a sender actually has,
+    and until this page existed a manifest was reachable only by URL in the
+    moment it was made. Print it, close the tab, and the document was gone.
+    """
+    from .models import Manifest
+
+    member = _member(request)
+    if member is None:
+        return HttpResponseForbidden("Not a member of any organization.")
+
+    docs = Manifest.objects.select_related(
+        "stock_line", "stock_line__warehouse", "sent_by")
+    return render(request, "site_app/manifests.html", {
+        "member": member, "section": "warehouse",
+        "outstanding": [d for d in docs if not d.received],
+        "signed": [d for d in docs if d.received][:100],
+    })
+
+
+@csrf_exempt
+@require_POST
+def warehouse_sweep(request):
+    """Housekeeping, called by Tempora. Not for browsers.
+
+    Two jobs that only happen if something runs them, and neither had anything
+    running it:
+
+    Spent and expired capabilities are deleted. A token nobody can use is a row
+    nobody should keep — it names a recipient and an item indefinitely.
+
+    Holders of stock nobody has confirmed in three weeks are asked to look. The
+    freshness clock is the honest part of this whole feature, and it only stays
+    honest if somebody is prompted to move it. Told once per sweep, never
+    chased.
+    """
+    from kjerne_platform.work import port as work_port
+    from kjerne_platform.work import tokens
+
+    from .models import Organization
+    from .notifications import _send
+    from .services_social import going_quiet
+    from .tenancy import bypass_rls, tenant_context
+
+    if not ATTEST_TOKEN:
+        logger.error("DUGNADSAND_ATTEST_TOKEN is unset; refusing to sweep.")
+        return JsonResponse({"error": "not configured"}, status=503)
+
+    supplied = request.headers.get("Authorization", "").removeprefix("Bearer ").strip()
+    if not compare_digest(supplied, ATTEST_TOKEN):
+        return JsonResponse({"error": "unauthorized"}, status=401)
+
+    purged = tokens.purge()
+
+    # Every organization, one at a time, each inside its own tenant. There is
+    # no cross-tenant query here and there must not be: the sweep runs with no
+    # session, so nothing would scope it but this loop.
+    asked = 0
+    with bypass_rls():
+        organizations = list(Organization.objects.filter(active=True))
+
+    for organization in organizations:
+        with tenant_context(organization):
+            for line in going_quiet():
+                holder = line.warehouse.holder.user
+                email = holder.email if holder else ""
+                if email and _send(
+                        email, "stale-stock",
+                        "Something you are holding has not been confirmed in a while.",
+                        "/warehouse/"):
+                    asked += 1
+
+    logger.info("warehouse sweep: %s tokens purged, %s holders asked", purged, asked)
+    return JsonResponse({"tokens_purged": purged, "holders_asked": asked})
+
+
+@login_required
 def notices(request):
     """What has happened here lately, and nothing about who did it.
 

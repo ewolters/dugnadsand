@@ -60,6 +60,12 @@ def send_material(*, line, quantity, destination, member):
         stock_line=line, quantity=quantity,
         destination=destination, sent_by=member)
 
+    # Somebody is going to turn up at their barn for this. Told, never asked —
+    # see notifications.announce_booked_out.
+    from .notifications import announce_booked_out
+
+    announce_booked_out(manifest)
+
     line.quantity = line.quantity - quantity
     line.available = line.quantity > 0
     line.save(update_fields=["quantity", "available"])

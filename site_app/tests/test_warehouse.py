@@ -402,3 +402,153 @@ class TheReceiptCodeIsStable(WarehouseBase):
             self.doc.refresh_from_db()
             self.assertTrue(self.doc.received)
             self.assertFalse(tokens.is_live(work_port.open("work.toml"), first))
+
+
+class TheHolderIsToldWhenSomethingLeaves(WarehouseBase):
+    """Somebody is going to turn up at their barn."""
+
+    def send(self, member):
+        from site_app.services_warehouse import send_material
+
+        with tenant_context(self.alpha):
+            return send_material(line=self.lumber, quantity=Decimal("50.00"),
+                                 destination="Habitat build", member=member)
+
+    def test_booking_material_out_notifies_whoever_holds_the_place(self):
+        from unittest.mock import patch
+
+        with patch("kjerne_platform.notify.send") as send:
+            self.send(self.ola)
+
+        self.assertEqual({c.args[0] for c in send.call_args_list},
+                         {"ada@example.test"})
+
+    def test_the_holder_is_not_told_about_their_own_shipment(self):
+        from unittest.mock import patch
+
+        with patch("kjerne_platform.notify.send") as send:
+            self.send(self.ada)
+        self.assertEqual(send.call_count, 0)
+
+    def test_it_is_a_notice_and_not_an_approval(self):
+        """Making a holder approve each release would put a gate in front of a
+        gift. The material moves whether or not anybody is reachable."""
+        from unittest.mock import patch
+
+        with patch("kjerne_platform.notify.send", side_effect=RuntimeError("down")):
+            manifest = self.send(self.ola)
+
+        self.assertIsNotNone(manifest.id)
+        with tenant_context(self.alpha):
+            self.lumber.refresh_from_db()
+        self.assertEqual(self.lumber.quantity, Decimal("150.00"))
+
+    def test_the_notice_names_neither_the_material_nor_the_taker(self):
+        """It goes through the shared platform table, outside this site's
+        row-level security."""
+        from unittest.mock import patch
+
+        with patch("kjerne_platform.notify.send") as send:
+            self.send(self.ola)
+
+        message = send.call_args_list[0].args[3]
+        self.assertNotIn("oak", message.lower())
+        self.assertNotIn("Ola", message)
+        self.assertNotIn("Habitat", message)
+
+
+class PaperworkStaysReachable(WarehouseBase):
+    """A manifest used to be reachable only by URL, in the moment it was made.
+
+    Print it, close the tab, and the document was gone — including the answer
+    to "what has not been signed for", which is the question a sender and a
+    donating business both actually have.
+    """
+
+    def setUp(self):
+        super().setUp()
+        with tenant_context(self.alpha):
+            self.waiting = Manifest.objects.create(
+                organization=self.alpha, stock_line=self.lumber,
+                quantity=Decimal("50.00"), destination="Habitat build",
+                sent_by=self.ada)
+            self.done = Manifest.objects.create(
+                organization=self.alpha, stock_line=self.lumber,
+                quantity=Decimal("20.00"), destination="Pantry",
+                sent_by=self.ada)
+        from site_app.services_warehouse import receive_material
+        with tenant_context(self.alpha):
+            receive_material(manifest=self.done, note="Signed")
+
+    def test_outstanding_paperwork_comes_first(self):
+        self.sign_in(self.ada_user)
+        body = self.client.get("/manifests/").content.decode()
+        self.assertLess(body.index("Habitat build"), body.index("Pantry"))
+
+    def test_both_are_reachable_from_the_warehouse(self):
+        self.sign_in(self.ada_user)
+        self.assertIn("/manifests/",
+                      self.client.get("/warehouse/").content.decode())
+
+    def test_it_is_tenant_scoped_like_everything_else(self):
+        self.sign_in(self.bo_user)
+        body = self.client.get("/manifests/").content.decode()
+        self.assertNotIn("Habitat build", body)
+
+
+class TheSweepRunsTheThingsNothingWasRunning(WarehouseBase):
+    """purge() existed and never ran; the freshness clock had no prompt."""
+
+    def url(self):
+        return "/warehouse/sweep/"
+
+    def auth(self):
+        import os
+        return {"HTTP_AUTHORIZATION": f"Bearer {os.environ['DUGNADSAND_ATTEST_TOKEN']}"}
+
+    def test_it_refuses_without_the_token(self):
+        self.assertEqual(self.client.post(self.url()).status_code, 401)
+
+    def test_it_refuses_a_wrong_token(self):
+        self.assertEqual(
+            self.client.post(self.url(), **{"HTTP_AUTHORIZATION": "Bearer nope"}
+                             ).status_code, 401)
+
+    def test_it_asks_holders_about_stock_nobody_has_confirmed(self):
+        from unittest.mock import patch
+
+        self.age(self.lumber, 40)
+        with patch("kjerne_platform.notify.send") as send:
+            response = self.client.post(self.url(), **self.auth())
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["holders_asked"], 1)
+        self.assertEqual({c.args[0] for c in send.call_args_list},
+                         {"ada@example.test"})
+
+    def test_it_leaves_fresh_stock_alone(self):
+        from unittest.mock import patch
+
+        with patch("kjerne_platform.notify.send") as send:
+            response = self.client.post(self.url(), **self.auth())
+
+        self.assertEqual(response.json()["holders_asked"], 0)
+        self.assertEqual(send.call_count, 0)
+
+    def test_the_notice_names_nothing_that_belongs_to_the_tenant(self):
+        from unittest.mock import patch
+
+        self.age(self.lumber, 40)
+        with patch("kjerne_platform.notify.send") as send:
+            self.client.post(self.url(), **self.auth())
+
+        message = send.call_args_list[0].args[3]
+        self.assertNotIn("oak", message.lower())
+        self.assertNotIn("barn", message.lower())
+
+    def test_it_reports_what_it_purged(self):
+        from unittest.mock import patch
+
+        with patch("kjerne_platform.notify.send"):
+            body = self.client.post(self.url(), **self.auth()).json()
+        self.assertIn("tokens_purged", body)

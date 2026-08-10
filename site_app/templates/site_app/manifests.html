@@ -1,0 +1,35 @@
+{% extends "app_base.html" %}
+{% block title %}Paperwork — Dugnadsand{% endblock %}
+{% block content %}
+<h1>Paperwork</h1>
+<p class="lede">Everything that has left a warehouse here. Outstanding first, because
+   "what hasn't been signed for" is the question worth having a page for.</p>
+
+<h2>Waiting to be signed for</h2>
+{% for d in outstanding %}
+  <div class="card need">
+    <p class="who">{{ d.stock_line.warehouse.name }} · sent by {{ d.sent_by.display_name }} ·
+      {{ d.sent_at|date:"j M Y" }}</p>
+    <p>{{ d.stock_line.description|truncatewords:14 }}</p>
+    <p class="qty">{{ d.quantity }} {{ d.stock_line.unit }} → {{ d.destination|truncatewords:12 }}</p>
+    <div class="row">
+      <a class="act" href="/manifest/{{ d.id }}/">Open the manifest</a>
+    </div>
+  </div>
+{% empty %}
+  <p class="empty">Everything that has gone out has been signed for.</p>
+{% endfor %}
+
+<h2>Signed for</h2>
+{% for d in signed %}
+  <div class="card done">
+    <p class="who">{{ d.stock_line.warehouse.name }} · {{ d.received_at|date:"j M Y" }}</p>
+    <p class="qty">{{ d.quantity }} {{ d.stock_line.unit }} → {{ d.destination|truncatewords:12 }}</p>
+    <div class="row">
+      <a class="act quiet" href="/manifest/{{ d.id }}/">Open the manifest</a>
+    </div>
+  </div>
+{% empty %}
+  <p class="empty">Nothing signed for yet.</p>
+{% endfor %}
+{% endblock %}

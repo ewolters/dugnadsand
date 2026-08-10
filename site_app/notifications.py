@@ -211,6 +211,37 @@ def announce_uncovered(posting):
     return 1 if _send(email, "uncovered", message, "/board/") else 0
 
 
+def announce_booked_out(manifest):
+    """Tell whoever holds a place that material has been booked out of it.
+
+    NOT an approval step. Anyone here may send material from anyone's
+    warehouse, and that is right — it is on offer, and making a holder approve
+    each release would put a gate in front of a gift. But the goods are in
+    their barn, somebody is going to turn up for them, and finding that out
+    when a van arrives is not a system anybody would trust twice.
+
+    So: told, never asked. The same shape as everything else here — the board
+    does not request permission either, it says what happened.
+
+    Nothing is sent when the holder is the one who sent it.
+    """
+    warehouse = manifest.stock_line.warehouse
+    if warehouse.holder_id == manifest.sent_by_id:
+        return 0
+
+    holder = warehouse.holder.user
+    email = holder.email if holder else ""
+    if not email:
+        return 0
+
+    # Signal only. Not what was taken, not who took it, not where it went —
+    # all three are tenant text, and the link resolves them under the reader's
+    # own session. "Something left your place" is enough to make somebody look.
+    return 1 if _send(email, "booked-out",
+                      "Material has been booked out of a place you hold.",
+                      "/warehouse/") else 0
+
+
 def announce_project(project):
     """Tell the organization something ongoing has started.
 
