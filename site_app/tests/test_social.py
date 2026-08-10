@@ -362,3 +362,103 @@ class PairingJoinsRecordsNotPeople(SocialBase):
         for phrase in ("most active", "top ", "best match", "recommended for you",
                        "suitable", "reliability"):
             self.assertNotIn(phrase, body)
+
+
+class PointingSomebodyAtSomething(SocialBase):
+    """"I thought of you" — and the sender learns nothing at all.
+
+    Rebuilt from an invitation flow that could not work: it emailed a stranger
+    two links, one of which claimed a posting, but a claim needs a Member, a
+    stranger is not one, and Member carries no email of its own. Redemption
+    raised TypeError and the page said "that link is no longer usable".
+
+    The people worth pointing at are members, and members have accounts. That
+    is a notice, not a capability.
+    """
+
+    def test_pointing_sends_one_notice_to_that_person(self):
+        from site_app.services_social import point_at
+
+        with tenant_context(self.alpha):
+            with patch("kjerne_platform.notify.send") as send:
+                point_at(posting=self.ride, to_member=self.ola,
+                         from_member=self.ada)
+
+        self.assertEqual({c.args[0] for c in send.call_args_list},
+                         {"ola@example.test"})
+
+    def test_it_returns_nothing_so_no_caller_can_show_reach(self):
+        """A count of who was reached is a delivery receipt, and a delivery
+        receipt is the first half of knowing somebody said no."""
+        from site_app.services_social import point_at
+
+        with tenant_context(self.alpha):
+            with patch("kjerne_platform.notify.send"):
+                self.assertIsNone(point_at(posting=self.ride, to_member=self.ola,
+                                           from_member=self.ada))
+
+    def test_the_notice_names_neither_the_posting_nor_the_sender(self):
+        from site_app.services_social import point_at
+
+        with tenant_context(self.alpha):
+            with patch("kjerne_platform.notify.send") as send:
+                point_at(posting=self.ride, to_member=self.ola,
+                         from_member=self.ada)
+
+        message = send.call_args_list[0].args[3]
+        self.assertNotIn("clinic", message.lower())
+        self.assertNotIn("Ada", message)
+
+    def test_you_cannot_point_at_yourself_or_at_whoever_posted_it(self):
+        from site_app.services_social import point_at
+
+        with tenant_context(self.alpha):
+            with patch("kjerne_platform.notify.send") as send:
+                point_at(posting=self.ride, to_member=self.ada,
+                         from_member=self.ada)          # yourself
+                point_at(posting=self.ride, to_member=self.ada,
+                         from_member=self.ola)          # the poster
+        self.assertEqual(send.call_count, 0)
+
+    def test_nothing_is_stored_about_who_was_pointed_at_what(self):
+        """A record of "Ada asked Ola and Ola did nothing" is the obligation
+        this system does not have. Same reasoning as thanks."""
+        from django.apps import apps
+
+        from site_app.services_social import point_at
+
+        with tenant_context(self.alpha):
+            counts = {m: m.objects.count() for m in apps.get_models()
+                      if m.__module__.startswith("site_app")}
+            with patch("kjerne_platform.notify.send"):
+                point_at(posting=self.ride, to_member=self.ola,
+                         from_member=self.ada)
+            for model, before in counts.items():
+                self.assertEqual(model.objects.count(), before,
+                                 f"{model.__name__} grew")
+
+    def test_the_board_offers_it_and_says_what_you_will_not_learn(self):
+        self.sign_in(self.ola_user)
+        body = self.client.get("/board/").content.decode()
+
+        self.assertIn(f"/board/{self.ride.id}/point/", body)
+        self.assertIn("will not be told", body.replace("\n", " "))
+
+    def test_the_picker_is_not_narrowed_by_what_anybody_has_given(self):
+        """A list of who to ask, ordered or filtered by contribution, would be
+        the ledger deciding who gets asked."""
+        import inspect
+
+        from site_app import views
+
+        source = inspect.getsource(views.board)
+        self.assertNotIn("Contribution", source)
+
+    def test_sending_it_through_the_page_works(self):
+        self.sign_in(self.ola_user)
+        with patch("kjerne_platform.notify.send") as send:
+            response = self.client.post(f"/board/{self.ride.id}/point/",
+                                        {"member": str(self.ola.id)})
+        self.assertEqual(response.status_code, 302)
+        # Ola pointing at Ola is a no-op; the route still works.
+        self.assertEqual(send.call_count, 0)

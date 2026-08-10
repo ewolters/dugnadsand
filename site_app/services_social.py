@@ -25,8 +25,8 @@ between two records, and surfacing them is coordination.
 People pair PEOPLE. Nothing here ranks a member's suitability, scores them, or
 narrows who hears about anything — the moment a pairing consults what somebody
 has given it is gating, and the moment it consults tags it has built a catalog.
-When a person should be asked, a person asks them: that is invite(), and the
-sender never learns what came of it.
+When a person should be asked, a person asks them: that is point_at(), and
+the sender never learns what came of it.
 """
 
 from datetime import date, timedelta
@@ -82,6 +82,48 @@ def say_thanks(*, to_member, from_member):
         import logging
 
         logging.getLogger(__name__).exception("thanks could not be delivered")
+
+
+def point_at(*, posting, to_member, from_member):
+    """Point somebody at a posting. "I thought of you."
+
+    Returns nothing, and that is the design. A count of who was reached is a
+    delivery receipt; a delivery receipt is the first half of knowing somebody
+    said no; and a sender who can see silence reads silence as refusal. Being
+    watched for an answer is the obligation this whole system does not have.
+    So the sender learns nothing — not delivery, not opening, not action. If
+    the person takes it on, it appears on the board like any other claim, which
+    is how anybody else would have found out too.
+
+    A NOTIFICATION, NOT A CAPABILITY, and the difference took a wrong turn to
+    find. The first version emailed a stranger two single-use links, one of
+    which claimed the posting. It could not work: a claim needs a Member, a
+    stranger is not one, and Member carries no email of its own — the address
+    lives on the user account a rostered non-user does not have. Redeeming it
+    raised TypeError and the page reported "that link is no longer usable",
+    which is a dead end wearing a polite sentence.
+
+    The people worth pointing at are members. Members have accounts. That is a
+    notice. The token path stays where it genuinely works — receipt
+    confirmation, where the recipient is at a loading dock and the address
+    comes off the manifest.
+    """
+    from .notifications import _send
+
+    if to_member.id in (from_member.id, posting.member_id):
+        return  # yourself, or the person who wrote it
+
+    user = to_member.user
+    email = user.email if user else ""
+    if not email:
+        return
+
+    # Signal only. Not the posting's words, not who thought of them — the
+    # notice travels through the shared platform table, and "somebody thought
+    # of you" is enough to make a person look.
+    _send(email, "pointed",
+          "Somebody thought you might be able to help with something.",
+          "/board/")
 
 
 # --------------------------------------------------------------------------

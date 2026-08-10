@@ -2,6 +2,7 @@ import logging
 import os
 from hmac import compare_digest
 
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.http import (HttpResponseBadRequest, HttpResponseForbidden,
                          JsonResponse)
@@ -223,7 +224,7 @@ def board(request):
     no-gating in policy/manifest.toml.
     """
     from datetime import date
-    from .models import Posting
+    from .models import Member, Posting
 
     member = _member(request)
     if member is None:
@@ -238,6 +239,12 @@ def board(request):
         .prefetch_related("claims__member")
         .order_by("-created_at")
     )
+    # Everybody else here, for the "thought of you" picker. Membership and
+    # nothing else — a list narrowed by what somebody has given would be the
+    # ledger deciding who gets asked.
+    others = list(Member.objects.exclude(pk=member.pk)
+                  .filter(user__isnull=False).exclude(user__email=""))
+
     # Claims are already prefetched, so this costs no query. Done here rather
     # than in the template because "am I on this" is a fact the view knows and
     # a template would have to loop to rediscover.
@@ -272,7 +279,7 @@ def board(request):
                               p.needed_by or date.max,
                               -p.created_at.timestamp()))
     return render(request, "site_app/board.html", {
-        "member": member,
+        "member": member, "others": others,
         "needs": needs,
         "offers": [p for p in open_postings if p.kind == Posting.OFFER],
     })
@@ -810,6 +817,31 @@ def pin_toggle(request):
         project = get_object_or_404(Project, pk=request.POST.get("project"))
 
     toggle_pin(member=member, posting=posting, project=project)
+    return redirect(request.POST.get("back") or "/board/")
+
+
+@login_required
+@require_POST
+def point_at(request, posting_id):
+    """Point somebody at a posting, and learn nothing about what came of it.
+
+    The page says nothing back except that it was sent. There is no delivery
+    state to show, no read receipt and no record of who was pointed at what —
+    a sender who could see silence would read silence as refusal.
+    """
+    from .models import Member, Posting
+    from .services_social import point_at as do_point
+
+    member = _member(request)
+    if member is None:
+        return HttpResponseForbidden("Not a member of any organization.")
+
+    posting = get_object_or_404(Posting, pk=posting_id)
+    target = get_object_or_404(Member, pk=request.POST.get("member"))
+    do_point(posting=posting, to_member=target, from_member=member)
+
+    messages.info(request, "Sent. You will not hear back through this — if they "
+                           "take it on it shows on the board like anyone else.")
     return redirect(request.POST.get("back") or "/board/")
 
 

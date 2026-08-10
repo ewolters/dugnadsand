@@ -286,3 +286,78 @@ class EnrollmentIsStable(AuthBase):
             body = self.client.get("/mfa/setup/").content.decode()
         self.assertNotIn("(&#x27;SEEKRIT&#x27;", body)
         self.assertIn("otpauth://totp/x?secret=SEEKRIT", body)
+
+
+class EveryRouteIsAccountedFor(TestCase):
+    """No route reaches a signed-out visitor unless it is meant to.
+
+    Checking this by hand catches today's routes and nothing after them. The
+    failure it prevents is dull and easy: somebody adds a view, forgets
+    @login_required, and a member-only page answers 200 to the internet. This
+    walks the URL conf, so a route added tomorrow is covered tomorrow.
+
+    Making something public requires editing the list below, which is a visible
+    decision in a diff rather than an omission nobody sees.
+    """
+
+    # Deliberately reachable without signing in, each for a stated reason.
+    PUBLIC = {
+        "": "the front page",
+        "login/": "the way in",
+        "logout/": "must work from a half-authenticated state",
+        "how-it-works/": "the mechanics, for somebody deciding whether to use this",
+        "attestation/": "the proof; publishing it privately would defeat it",
+        "act/<str:token>/": "the holder has no account — that is the whole point",
+        "setup/<str:token>/": "used before an account has a password",
+        "sso/": "the assertion IS the credential",
+        "mfa/": "reached while signed in but not yet verified",
+        "mfa/setup/": "same",
+        "password/": "reached while owing a password change",
+    }
+
+    # Token-guarded rather than session-guarded; they answer 401 to a stranger.
+    TOKEN_GUARDED = {"attestation/run/", "warehouse/sweep/"}
+
+    def urls(self):
+        from site_app import urls
+
+        return [str(p.pattern) for p in urls.urlpatterns]
+
+    def concrete(self, pattern):
+        """A fetchable path, with any converter filled in."""
+        import re
+
+        path = re.sub(r"<uuid:[^>]+>", "00000000-0000-0000-0000-000000000000",
+                      pattern)
+        return "/" + re.sub(r"<str:[^>]+>", "x", path)
+
+    def test_no_unlisted_route_answers_a_signed_out_visitor(self):
+        leaked = []
+        for pattern in self.urls():
+            if pattern in self.PUBLIC or pattern in self.TOKEN_GUARDED:
+                continue
+            response = self.client.get(self.concrete(pattern))
+            # 302 to login, 403, 404 for a missing object behind the gate, or
+            # 405 for a POST-only route. Never 200.
+            if response.status_code == 200:
+                leaked.append(pattern)
+
+        self.assertEqual(leaked, [], f"reachable without signing in: {leaked}")
+
+    def test_the_public_list_has_not_gone_stale(self):
+        """A route named public that no longer exists is a stale exemption
+        somebody will copy the next time they add one."""
+        patterns = set(self.urls())
+        gone = sorted(set(self.PUBLIC) - patterns)
+        self.assertEqual(gone, [], f"listed public but not routed: {gone}")
+
+    def test_the_pages_meant_to_be_public_actually_are(self):
+        """The other direction: an over-eager decorator would take the front
+        page off the internet, and nothing else would notice."""
+        for path in ("/", "/how-it-works/", "/attestation/", "/login/"):
+            self.assertEqual(self.client.get(path).status_code, 200, path)
+
+    def test_the_scheduled_endpoints_refuse_a_stranger(self):
+        for pattern in self.TOKEN_GUARDED:
+            response = self.client.post("/" + pattern)
+            self.assertEqual(response.status_code, 401, pattern)

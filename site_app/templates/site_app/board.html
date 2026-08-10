@@ -1,6 +1,7 @@
 {% extends "app_base.html" %}
 {% block title %}The board — Dugnadsand{% endblock %}
 {% block content %}
+{% if messages %}{% for m in messages %}<p class="said">{{ m }}</p>{% endfor %}{% endif %}
 <h1>The board</h1>
 <p class="lede">What people are asking for, and what people are offering. Take anything.
    Ask for anything. You do not need to have given first, and nobody can see whether
@@ -49,6 +50,21 @@
         </form>
       {% endif %}
     </div>
+      {% if others %}
+        <details class="point">
+          <summary>Thought of somebody?</summary>
+          <form method="post" action="/board/{{ p.id }}/point/">{% csrf_token %}
+            <input type="hidden" name="back" value="/board/">
+            <select name="member" aria-label="Who to point at this">
+              {% for o in others %}<option value="{{ o.id }}">{{ o.display_name }}</option>{% endfor %}
+            </select>
+            <button type="submit" class="act quiet">Point them at it</button>
+          </form>
+          <p class="help">They get a nudge and nothing else. You will not be told
+             whether they saw it or what they decided — if they take it on it shows
+             up here like anyone else.</p>
+        </details>
+      {% endif %}
   </div>
 {% empty %}
   <p class="empty">Nobody is asking for anything right now.</p>
@@ -86,6 +102,21 @@
         </form>
       {% endif %}
     </div>
+      {% if others %}
+        <details class="point">
+          <summary>Thought of somebody?</summary>
+          <form method="post" action="/board/{{ p.id }}/point/">{% csrf_token %}
+            <input type="hidden" name="back" value="/board/">
+            <select name="member" aria-label="Who to point at this">
+              {% for o in others %}<option value="{{ o.id }}">{{ o.display_name }}</option>{% endfor %}
+            </select>
+            <button type="submit" class="act quiet">Point them at it</button>
+          </form>
+          <p class="help">They get a nudge and nothing else. You will not be told
+             whether they saw it or what they decided — if they take it on it shows
+             up here like anyone else.</p>
+        </details>
+      {% endif %}
   </div>
 {% empty %}
   <p class="empty">Nothing on offer yet. Be the first.</p>

@@ -131,6 +131,22 @@
       font-family:var(--brand-font-mono); font-size:.6875rem; letter-spacing:.06em;
       text-transform:uppercase; color:var(--brand-ochre); }
     .thanks-btn:hover { color:var(--brand-spruce); }
+
+    /* Folded away by default. Pointing somebody at something is a considered
+       act, not a button you hit in passing. */
+    details.point { margin-top:.9rem; }
+    details.point summary { cursor:pointer; font-family:var(--brand-font-mono);
+      font-size:.6875rem; letter-spacing:.08em; text-transform:uppercase;
+      color:var(--brand-moss); }
+    details.point summary:hover { color:var(--brand-ink); }
+    details.point form { display:flex; gap:.5rem; align-items:center;
+      flex-wrap:wrap; margin-top:.6rem; }
+    details.point select { font:inherit; padding:.35rem .5rem; border-radius:2px;
+      border:1px solid var(--brand-rule-strong); background:var(--brand-white);
+      color:var(--brand-ink); }
+    .said { background:var(--brand-ok-wash); color:var(--brand-ok);
+      border-left:3px solid var(--brand-ok); padding:.6rem .85rem;
+      margin:0 0 1.25rem; font-size:.9375rem; }
     form.inline input { width:7rem; padding:.35rem .5rem; font:inherit;
       border:1px solid var(--brand-rule-strong); border-radius:2px;
       background:var(--brand-white); color:var(--brand-ink); }

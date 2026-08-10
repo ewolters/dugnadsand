@@ -89,7 +89,11 @@ link = "/board/"
 # to press it is standing somewhere with a phone and no account. It writes one
 # timestamp on one manifest and cannot be made to write anything else — the
 # payload is fixed when the QR is printed.
-verbs = ["claim", "confirm-receipt"]
+# Only confirm-receipt. `claim` was permitted here for an invitation flow that
+# could not work — a claim needs a Member and the people it emailed were not
+# ones — and a verb no code mints is surface for nothing. Pointing somebody at
+# a posting is now a notice to a member, which needs no capability at all.
+verbs = ["confirm-receipt"]
 ttl_hours = 72
 
 # THE SETTING THAT MAKES THIS SITE DIFFERENT.

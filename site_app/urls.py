@@ -33,6 +33,7 @@ urlpatterns = [
     path("comment/", views.comment_new, name="comment_new"),
     path("pin/", views.pin_toggle, name="pin_toggle"),
     path("pinned/", views.pinned, name="pinned"),
+    path("board/<uuid:posting_id>/point/", views.point_at, name="point_at"),
     path("thanks/<uuid:member_id>/", views.thanks, name="thanks"),
     path("pairings/", views.pairings, name="pairings"),
     path("notices/", views.notices, name="notices"),

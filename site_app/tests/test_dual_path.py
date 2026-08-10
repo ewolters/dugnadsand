@@ -1,4 +1,16 @@
-"""Asking somebody who has no account, and the one setting that inverts it.
+"""Acting without an account, and the one setting that inverts it.
+
+Retargeted from an invitation flow that could not work. That version emailed a
+stranger two links, one of which claimed a posting — but a claim needs a
+Member, a stranger is not one, and Member carries no email of its own, so
+redemption raised TypeError and the page said "that link is no longer usable".
+Pointing somebody at a posting is now a notice to a member, which needs no
+capability at all; see services_social.point_at.
+
+What is left is the case the token path was always right for: somebody at a
+loading dock signing for goods, whose address comes off the manifest and who
+should not need an account to say the pallet arrived.
+
 
 kjerne's version of this records a decline and tells the requester, correctly:
 somebody planned around that person and needs to replan. Here a recorded
@@ -15,7 +27,12 @@ from django.test import TestCase
 from kjerne_platform.work import port as work_port
 from kjerne_platform.work import tokens
 
-from site_app.models import Claim, Member, Organization, Posting
+from decimal import Decimal
+
+from django.utils import timezone
+
+from site_app.models import (Manifest, Member, Organization, Posting,
+                             StockLine, Warehouse)
 from site_app.tenancy import tenant_context
 
 from .helpers import CleansPlatformTokens, SignedIn
@@ -43,36 +60,44 @@ class DualPathBase(CleansPlatformTokens, SignedIn, TestCase):
             self.ride = Posting.objects.create(
                 organization=self.alpha, member=self.ada, kind=Posting.NEED,
                 description=SENSITIVE)
+            self.barn = Warehouse.objects.create(
+                organization=self.alpha, holder=self.ada, name="North barn",
+                address="Gate 4412")
+            self.lumber = StockLine.objects.create(
+                organization=self.alpha, warehouse=self.barn,
+                description=SENSITIVE, quantity=Decimal("200.00"),
+                unit="board-feet", confirmed_at=timezone.now(),
+                confirmed_by=self.ada)
+            self.doc = Manifest.objects.create(
+                organization=self.alpha, stock_line=self.lumber,
+                quantity=Decimal("50.00"), destination="Habitat build",
+                sent_by=self.ada)
 
-        self.minted = []
 
-    def mint(self, side=tokens.CONFIRM, verb="claim"):
-        token = tokens.issue(
-            self.port, verb=verb, recipient="neighbour@example.test", side=side,
-            tenant=self.alpha.id,
-            payload={"item": str(self.ride.id), "party": str(self.ola.id)})
-        self.minted.append(token)
-        return token
+    def mint(self, side=tokens.CONFIRM, verb="confirm-receipt"):
+        return tokens.issue(
+            self.port, verb=verb, recipient="yard@example.test", side=side,
+            tenant=self.alpha.id, payload={"manifest": str(self.doc.id)})
 
 
 class SayingYes(DualPathBase):
-    def test_a_confirm_link_claims_through_the_sites_service_layer(self):
+    def test_a_confirm_link_records_receipt_through_the_service_layer(self):
         token = self.mint()
         with tenant_context(self.alpha):
             side, _ = tokens.redeem(self.port, token)
+            self.doc.refresh_from_db()
             self.assertEqual(side, tokens.CONFIRM)
-            self.assertEqual(Claim.objects.filter(posting=self.ride).count(), 1)
+            self.assertTrue(self.doc.received)
 
     def test_the_same_link_cannot_be_spent_twice(self):
-        """A mail forwards. Two clicks must not mean two people believing they
-        are the one on it — which is why the claim and the marking are a single
-        UPDATE rather than a read, a check and a write."""
+        """A QR is photographed and forwarded. Two scans must not both act —
+        which is why the claim and the marking are a single UPDATE rather than
+        a read, a check and a write."""
         token = self.mint()
         with tenant_context(self.alpha):
             tokens.redeem(self.port, token)
             with self.assertRaises(tokens.TokenRefused):
                 tokens.redeem(self.port, token)
-            self.assertEqual(Claim.objects.filter(posting=self.ride).count(), 1)
 
 
 class SayingNo(DualPathBase):
@@ -85,18 +110,21 @@ class SayingNo(DualPathBase):
 
             self.assertEqual(side, tokens.DECLINE)
             self.assertIsNone(result)
-            self.assertEqual(Claim.objects.filter(posting=self.ride).count(), 0)
+            self.doc.refresh_from_db()
+            self.assertFalse(self.doc.received)
 
     def test_declining_leaves_the_system_where_ignoring_would_have(self):
         """The real claim. Saying no and never opening the mail must be
         indistinguishable in every table this site owns."""
         with tenant_context(self.alpha):
-            before = (Claim.objects.count(), Posting.objects.filter(open=True).count())
+            before = (Manifest.objects.filter(received_at__isnull=False).count(),
+                      Posting.objects.filter(open=True).count())
 
         token = self.mint(side=tokens.DECLINE)
         with tenant_context(self.alpha):
             tokens.redeem(self.port, token)
-            after = (Claim.objects.count(), Posting.objects.filter(open=True).count())
+            after = (Manifest.objects.filter(received_at__isnull=False).count(),
+                     Posting.objects.filter(open=True).count())
 
         self.assertEqual(before, after)
 
@@ -121,6 +149,13 @@ class SayingNo(DualPathBase):
 
 
 class WhatATokenMayNotDo(DualPathBase):
+    def test_claiming_is_no_longer_reachable_by_token_at_all(self):
+        """It was permitted for an invitation flow that could not work, and a
+        verb no code mints is surface for nothing."""
+        with self.assertRaises(ValueError):
+            tokens.issue(self.port, verb="claim", payload={},
+                         recipient="x@example.test")
+
     def test_a_verb_the_settings_do_not_permit_cannot_be_minted(self):
         """record-entry would let a forwarded mail write arbitrary hours."""
         with self.assertRaises(ValueError) as caught:
@@ -184,7 +219,8 @@ class TheEndpointNeedsNoAccount(DualPathBase):
 
         self.assertEqual(response.status_code, 200)
         with tenant_context(self.alpha):
-            self.assertEqual(Claim.objects.filter(posting=self.ride).count(), 1)
+            self.doc.refresh_from_db()
+            self.assertTrue(self.doc.received)
 
     def test_the_page_carries_nothing_about_the_posting(self):
         """Whoever holds this link is outside the tenant until they sign in.
@@ -194,33 +230,3 @@ class TheEndpointNeedsNoAccount(DualPathBase):
 
         self.assertNotIn("dialysis", body)
         self.assertNotIn("Henderson", body)
-
-
-class TheInvitationItself(DualPathBase):
-    def test_the_mail_names_neither_the_need_nor_the_person(self):
-        from unittest.mock import patch
-
-        from site_app.work_actions import invite
-
-        with patch("kjerne_platform.email.send") as send:
-            with tenant_context(self.alpha):
-                invite(posting=self.ride, email="neighbour@example.test",
-                       member=self.ola)
-
-        body = " ".join(str(v) for v in send.call_args.kwargs.values())
-        self.assertNotIn("dialysis", body)
-        self.assertNotIn("Henderson", body)
-        self.assertIn("/act/", body)
-
-    def test_inviting_returns_nothing_so_no_caller_can_show_reach(self):
-        """A count of who was reached is a delivery receipt, and a delivery
-        receipt is the first half of knowing somebody said no."""
-        from unittest.mock import patch
-
-        from site_app.work_actions import invite
-
-        with patch("kjerne_platform.email.send"):
-            with tenant_context(self.alpha):
-                self.assertIsNone(
-                    invite(posting=self.ride, email="n@example.test",
-                           member=self.ola))
