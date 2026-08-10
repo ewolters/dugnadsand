@@ -8,6 +8,7 @@ is not stored, the link dies when used, and it dies on its own after a week.
 from datetime import timedelta
 from unittest import mock
 
+from django.contrib.auth.models import User
 from django.test import TestCase
 from django.utils import timezone
 
@@ -16,6 +17,8 @@ from site_app.services_members import create_member
 from site_app.services_setup import (LinkUnusable, issue_setup_link,
                                      resolve_setup_link)
 from site_app.tenancy import bypass_rls, set_tenant, tenant_context
+
+from .helpers import SignedIn
 
 
 class SetupLinkBase(TestCase):
@@ -122,7 +125,14 @@ class FollowingTheLink(SetupLinkBase):
 
 
 class SendCommand(SetupLinkBase):
-    def test_a_dry_run_sends_nothing(self):
+    def test_a_dry_run_sends_nothing_and_prints_no_url(self):
+        """This test used to require the URL, which required minting it.
+
+        It checked the one thing that was fine — no mail went out — and then
+        pinned the defect as the contract, because a dry run cannot print a
+        link without creating one. Removing the bug broke this test, which is
+        how a test can hold a bug in place more firmly than no test would.
+        """
         from io import StringIO
 
         from django.core.management import call_command
@@ -131,7 +141,7 @@ class SendCommand(SetupLinkBase):
         with mock.patch("kjerne_platform.email.send") as send:
             call_command("send_setup_link", "ada", dry_run=True, stdout=out)
         send.assert_not_called()
-        self.assertIn("/setup/", out.getvalue())
+        self.assertNotIn("/setup/", out.getvalue())
 
     def test_it_queues_one_email_to_the_members_address(self):
         from io import StringIO
@@ -157,3 +167,86 @@ class SendCommand(SetupLinkBase):
         self.member.user.save(update_fields=["email"])
         with self.assertRaises(CommandError):
             call_command("send_setup_link", "ada", stdout=StringIO())
+
+
+class ADryRunMintsNothing(SignedIn, TestCase):
+    """A rehearsal that leaves a working credential behind is not a rehearsal.
+
+    The first version called issue_setup_link() and THEN checked the flag, so
+    --dry-run persisted a live single-use link and printed it to a terminal.
+    It went unnoticed because the command's output looked exactly like what
+    somebody running a dry run wanted to see.
+    """
+
+    def setUp(self):
+        self.org = Organization.objects.create(slug="alpha", name="Alpha")
+        self.user = User.objects.create_user(
+            "ada", email="ada@example.test", password="dugnad-test-pw")
+        with tenant_context(self.org):
+            self.member = Member.objects.create(
+                organization=self.org, display_name="Ada", user=self.user)
+
+    def run_command(self, *args):
+        from io import StringIO
+
+        from django.core.management import call_command
+
+        out = StringIO()
+        call_command("send_setup_link", "ada", *args, stdout=out)
+        return out.getvalue()
+
+    def links(self):
+        from site_app.models import SetupLink
+        from site_app.tenancy import bypass_rls
+
+        with bypass_rls():
+            return SetupLink.objects.count()
+
+    def test_a_dry_run_creates_no_link(self):
+        before = self.links()
+        self.run_command("--dry-run")
+        self.assertEqual(self.links(), before)
+
+    def test_a_dry_run_prints_no_url(self):
+        """It cannot print one honestly: there is no URL until a link exists,
+        and printing one would mean having minted it."""
+        output = self.run_command("--dry-run")
+        self.assertNotIn("/setup/", output)
+
+    def test_a_dry_run_still_says_who_it_would_reach(self):
+        """Otherwise it checks nothing worth checking."""
+        output = self.run_command("--dry-run")
+        self.assertIn("ada@example.test", output)
+        self.assertIn("Alpha", output)
+
+    def test_a_dry_run_still_refuses_what_a_real_run_would(self):
+        from django.core.management import call_command
+        from django.core.management.base import CommandError
+
+        self.user.email = ""
+        self.user.save(update_fields=["email"])
+        with self.assertRaises(CommandError):
+            call_command("send_setup_link", "ada", "--dry-run")
+
+    def test_a_real_run_does_create_one(self):
+        from unittest.mock import patch
+
+        before = self.links()
+        with patch("kjerne_platform.email.send", return_value=1):
+            output = self.run_command()
+
+        self.assertEqual(self.links(), before + 1)
+        self.assertIn("sent", output.lower())
+
+    def test_the_mail_does_not_repeat_the_stale_one_record_claim(self):
+        """The same sentence the front page carried after material shipped.
+        This one goes to a person's inbox, where nothing renders it visible to
+        anybody who might notice."""
+        from unittest.mock import patch
+
+        with patch("kjerne_platform.email.send", return_value=1) as send:
+            self.run_command()
+
+        body = send.call_args.kwargs["body"].lower()
+        self.assertNotIn("one record", body)
+        self.assertIn("never what it was worth", body)

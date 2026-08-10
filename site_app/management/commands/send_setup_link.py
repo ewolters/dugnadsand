@@ -23,7 +23,7 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument("username")
         parser.add_argument("--dry-run", action="store_true",
-                            help="Print the link instead of sending it.")
+                            help="Check who it would reach. Mints nothing.")
 
     def handle(self, *args, **options):
         user = User.objects.filter(username=options["username"]).first()
@@ -39,13 +39,22 @@ class Command(BaseCommand):
         if member is None:
             raise CommandError(f"{user.username} is not a member of any organization.")
 
+        if options["dry_run"]:
+            # Every check above has run; the one thing that does not happen is
+            # minting. The first version issued the link and THEN checked this
+            # flag, so a rehearsal left a working credential in the database
+            # and printed it to a terminal — the opposite of what the flag
+            # promises. It cannot print a URL for the same reason: there is no
+            # URL until a link exists.
+            self.stdout.write(self.style.WARNING("Dry run — nothing minted, nothing sent."))
+            self.stdout.write(f"  would email:  {user.email}")
+            self.stdout.write(f"  for:          {member.display_name} "
+                              f"({user.username}) in {member.organization.name}")
+            self.stdout.write("  link:         not created — run without --dry-run")
+            return
+
         token = issue_setup_link(member)
         link = f"{BASE_URL}/setup/{token}/"
-
-        if options["dry_run"]:
-            self.stdout.write(self.style.WARNING("Dry run — nothing sent."))
-            self.stdout.write(f"  {link}")
-            return
 
         body = (
             f"Hello {member.display_name},\n\n"
@@ -54,9 +63,11 @@ class Command(BaseCommand):
             f"    {link}\n\n"
             f"The link works once and expires in seven days. Your username is "
             f"{user.username}.\n\n"
-            f"Dugnadsand keeps one record: hours given. It is not a currency — nothing "
-            f"is bought, sold or owed, and nothing you do or don't contribute changes "
-            f"what you can ask for.\n\n"
+            f"Dugnadsand writes down what happened and never what it was worth. "
+            f"Hours given, material brought — kept in separate records, never added "
+            f"together and never priced. None of it is a currency: nothing is bought, "
+            f"sold or owed, and nothing you do or don't contribute changes what you "
+            f"can ask for.\n\n"
             f"{BASE_URL}\n"
         )
 
