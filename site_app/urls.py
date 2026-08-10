@@ -19,6 +19,7 @@ urlpatterns = [
     path("projects/new/", views.project_new, name="project_new"),
     path("projects/<uuid:project_id>/", views.project_detail, name="project_detail"),
     path("projects/<uuid:project_id>/close/", views.project_close, name="project_close"),
+    path("act/<str:token>/", views.act, name="act"),
     path("notices/", views.notices, name="notices"),
     path("password/", views.change_password, name="change_password"),
     path("mfa/", auth_views.mfa_challenge, name="mfa_challenge"),

@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}{% if refused %}Link no longer usable{% else %}Thank you{% endif %} — Dugnadsand{% endblock %}
+{% block content %}
+<main style="max-width:34rem;margin-inline:auto;padding:4rem var(--brand-gutter)">
+{% if refused %}
+  <h1>That link is no longer usable</h1>
+  <p>Links work once, and they do not last forever. If somebody still needs a hand
+     they will say so again.</p>
+{% elif side == "confirm" %}
+  <h1>Thank you</h1>
+  <p>You are on it. Whoever posted it can see that somebody stepped up, and you can
+     stop whenever you like — nothing is recorded either way.</p>
+{% else %}
+  <h1>Understood</h1>
+  <p>Nothing has been recorded and nobody has been told. That is the whole of it.</p>
+{% endif %}
+</main>
+{% endblock %}

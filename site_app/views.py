@@ -14,6 +14,9 @@ from .forms import ContactForm
 
 logger = logging.getLogger(__name__)
 
+WORK_TOML = os.path.join(os.path.dirname(os.path.dirname(
+    os.path.abspath(__file__))), "work.toml")
+
 SITE = "dugnadsand"
 # Set per deployment; deliberately absent from the repo so no inbox is published.
 INBOX = os.environ.get("DUGNADSAND_CONTACT_EMAIL")
@@ -486,6 +489,33 @@ def project_close(request, project_id):
     project.open = False
     project.save(update_fields=["open"])
     return redirect("/projects/")
+
+
+def act(request, token):
+    """Spend a link somebody was emailed. No login, no session, one action.
+
+    Deliberately not @login_required: the entire point is that the person
+    holding this has no account. What protects it is the token itself — single
+    use, time limited, and scoped to one verb with a payload fixed when it was
+    issued, so nothing the holder sends can change what it does.
+
+    Every refusal is byte-identical. "That link has expired" would tell a
+    stranger that a link once existed, which is more than guessing should buy.
+    """
+    from kjerne_platform.work import port as work_port, tokens
+
+    p = work_port.open(WORK_TOML)
+    try:
+        side, _ = tokens.redeem(p, token)
+    except tokens.TokenRefused:
+        return render(request, "site_app/act.html",
+                      {"refused": True}, status=404)
+    except Exception:
+        logger.exception("token redemption failed")
+        return render(request, "site_app/act.html",
+                      {"refused": True}, status=404)
+
+    return render(request, "site_app/act.html", {"side": side})
 
 
 @login_required

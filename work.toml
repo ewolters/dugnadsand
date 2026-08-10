@@ -63,7 +63,7 @@ model = "site_app.Member"
 id = "id"
 tenant = "organization"
 
-[egress]
+[settings.egress]
 # What an adapter OUTSIDE this tenant may be handed. Slack is outside. So is a
 # webhook and a digest email. Row-level security stops at the process
 # boundary, so anything handed over has left the organization for good.
@@ -75,3 +75,27 @@ tenant = "organization"
 # the blast radius is larger.
 policy = "signal-only"
 link = "/board/"
+
+[settings.tokens]
+# Acting without an account: someone with no login gets an email with two
+# links. kjerne uses this to ask a contractor to confirm a commitment.
+#
+# Only `claim` may be reached this way. Not record-entry, which would let a
+# forwarded mail write arbitrary hours into the ledger; not close-item, which
+# would let it take somebody else's posting off the board. A token lives in an
+# inbox and forwards trivially, so the question is never what it should be
+# stopped from doing but what is safe enough to put in a mail.
+verbs = ["claim"]
+ttl_hours = 72
+
+# THE SETTING THAT MAKES THIS SITE DIFFERENT.
+#
+# kjerne records a decline and tells the requester, correctly: somebody planned
+# around that person and needs to replan. Here a recorded refusal is the
+# obligation this whole system exists to remove. Declining consumes the link
+# and does nothing else — no row, nobody told — so saying no and never opening
+# the mail leave the system in exactly the same state.
+#
+# The decline link still exists and is still single-use. If it 404'd instead,
+# declining would be distinguishable from ignoring by which button worked.
+decline = "silent"
