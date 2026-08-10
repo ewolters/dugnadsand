@@ -150,6 +150,12 @@
     .comment { border-left:2px solid var(--brand-rule); padding:.15rem 0 .15rem .9rem;
       margin:0 0 1rem; }
     .comment p { margin:0 0 .3rem; }
+    /* A mention is a reference, not a badge. Enough weight to be seen as one
+       word, none of the pill-shaped decoration that makes people collect them. */
+    .mention { font-family:var(--brand-font-mono); font-size:.9em; }
+    .mention.person { color:var(--brand-spruce); }
+    .mention.resource { color:var(--brand-ochre); text-decoration:none; }
+    .mention.resource:hover { text-decoration:underline; }
     form.say { max-width:34rem; margin-top:1.25rem; }
     form.inline-thanks { display:inline; }
     /* Deliberately not a button that lights up or counts. Saying thanks sends

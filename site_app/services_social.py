@@ -50,9 +50,16 @@ def add_comment(*, member, body, posting=None, project=None):
     if not body:
         raise ValueError("Say something.")
 
-    return Comment.objects.create(
+    comment = Comment.objects.create(
         organization_id=member.organization_id, member=member,
         posting=posting, project=project, body=body)
+
+    # Whoever was named gets a notice. Nothing about who was named is stored —
+    # see site_app/mentions.py, which resolves them from the body every time.
+    from .mentions import announce_mentions
+
+    announce_mentions(comment)
+    return comment
 
 
 def say_thanks(*, to_member, from_member):

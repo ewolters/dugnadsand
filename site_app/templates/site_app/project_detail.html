@@ -1,4 +1,5 @@
 {% extends "app_base.html" %}
+{% load mentions %}
 {% block title %}{{ project.name }} — Dugnadsand{% endblock %}
 {% block content %}
 <p class="crumb"><a href="/projects/">Ongoing work</a></p>
@@ -55,7 +56,7 @@
         </form>
       {% endif %}
     </p>
-    <p>{{ c.body|linebreaksbr }}</p>
+    <p>{{ c.body|mentions }}</p>
   </div>
 {% empty %}
   <p class="empty">Nothing said yet.</p>
@@ -67,6 +68,10 @@
   <div>
     <label for="id_body">Say something</label>
     <textarea name="body" id="id_body" rows="2" required></textarea>
+    <p class="help">Write <b>@</b> and somebody's name to point them at this — they get a
+       nudge and you are told nothing about what they do with it. Write <b>$</b> and a
+       word to link something on the shelf, like <b>$oak</b>. Either one that does not
+       match exactly one thing simply stays as you typed it.</p>
   </div>
   <div><button type="submit" class="act quiet">Post it</button></div>
 </form>
