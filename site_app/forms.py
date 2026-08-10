@@ -183,3 +183,29 @@ class SendMaterialForm(forms.Form):
         label="Where it is going",
         help_text="A person, a site, an organization \u2014 whatever will make sense "
                   "to whoever signs for it.")
+
+
+class MaterialNeedForm(forms.Form):
+    """A line on a bill of materials. What, and how much.
+
+    No value field, and none may be added: an estimate of donated property is
+    a §170 appraisal produced by a platform about a donor. No hours field
+    either — an equivalence between material and labour is an exchange rate.
+    """
+
+    description = forms.CharField(
+        max_length=2000, widget=forms.Textarea(attrs={"rows": 2}),
+        label="What is needed")
+    quantity = forms.DecimalField(
+        max_digits=12, decimal_places=2, min_value=Decimal("0.01"),
+        label="How much")
+    unit = forms.CharField(max_length=40, label="Counted in what")
+
+
+class MaterialGivenForm(forms.Form):
+    quantity = forms.DecimalField(
+        max_digits=12, decimal_places=2, min_value=Decimal("0.01"),
+        label="How much arrived")
+    note = forms.CharField(
+        max_length=2000, required=False, widget=forms.Textarea(attrs={"rows": 2}),
+        label="Anything worth remembering (optional)")

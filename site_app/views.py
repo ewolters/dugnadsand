@@ -431,6 +431,7 @@ def project_detail(request, project_id):
     one contributor it IS that person's total, and with two it is close enough
     to subtract. See no-aggregate-display.
     """
+    from .forms import MaterialNeedForm
     from .models import Contribution, Posting, Project
 
     member = _member(request)
@@ -438,6 +439,8 @@ def project_detail(request, project_id):
         return HttpResponseForbidden("Not a member of any organization.")
 
     project = get_object_or_404(Project, pk=project_id)
+    needs = list(project.needs.prefetch_related("given__member")
+                             .select_related("added_by"))
     open_postings = list(
         Posting.objects.filter(project=project, open=True)
         .select_related("member").prefetch_related("claims"))
@@ -449,6 +452,10 @@ def project_detail(request, project_id):
         "open_postings": open_postings,
         "went_in": Contribution.objects.filter(posting__project=project)
                                        .select_related("member", "posting")[:200],
+        # Beside the hours, never added to them. The template says so out loud
+        # rather than leaving the separation to be inferred.
+        "needs": needs,
+        "need_form": MaterialNeedForm(),
     })
 
 
@@ -472,6 +479,51 @@ def project_new(request):
 
     return render(request, "site_app/project_form.html",
                   {"form": form, "section": "projects"})
+
+
+@login_required
+@require_POST
+def need_new(request, project_id):
+    """Add a line to a project's bill of materials."""
+    from .forms import MaterialNeedForm
+    from .models import MaterialNeed, Project
+
+    member = _member(request)
+    if member is None:
+        return HttpResponseForbidden("Not a member of any organization.")
+
+    project = get_object_or_404(Project, pk=project_id)
+    form = MaterialNeedForm(request.POST)
+    if form.is_valid():
+        MaterialNeed.objects.create(
+            organization_id=member.organization_id, project=project,
+            description=form.cleaned_data["description"],
+            quantity=form.cleaned_data["quantity"],
+            unit=form.cleaned_data["unit"], added_by=member)
+    return redirect(f"/projects/{project.id}/")
+
+
+@login_required
+def need_given(request, need_id):
+    """Record material that arrived against a line."""
+    from .forms import MaterialGivenForm
+    from .models import MaterialNeed
+    from .services_warehouse import record_material
+
+    member = _member(request)
+    if member is None:
+        return HttpResponseForbidden("Not a member of any organization.")
+
+    need = get_object_or_404(MaterialNeed, pk=need_id)
+    form = MaterialGivenForm(request.POST or None)
+    if request.method == "POST" and form.is_valid():
+        record_material(need=need, member=member,
+                        quantity=form.cleaned_data["quantity"],
+                        note=form.cleaned_data["note"])
+        return redirect(f"/projects/{need.project_id}/")
+
+    return render(request, "site_app/material_given_form.html",
+                  {"form": form, "need": need, "section": "projects"})
 
 
 @login_required

@@ -94,3 +94,49 @@ def available_lines(organization_id=None):
     if organization_id is not None:
         lines = lines.filter(organization_id=organization_id)
     return lines.order_by("-confirmed_at")
+
+
+# --------------------------------------------------------------------------
+# Bills of material
+#
+# Two logs on a project — hours and material — adjacent and never summed. The
+# conversion between them is what would turn both into a price, so there is no
+# function here that takes one and returns the other, and there never may be.
+# --------------------------------------------------------------------------
+
+
+def record_material(*, need, member, quantity, note="", manifest=None):
+    """Material that actually arrived against a line on a bill of materials.
+
+    No valuation, no hour equivalence, and no arithmetic against the hours
+    ledger — see no-material-valuation, which fails on a relation to
+    Contribution as readily as on a field called `value`.
+
+    Over-delivery is allowed. Somebody turning up with more than was asked for
+    is a good day, and refusing to record it would mean the log stopped
+    describing what happened in order to keep a number tidy.
+    """
+    from .models import MaterialGiven
+
+    quantity = Decimal(str(quantity))
+    if quantity <= 0:
+        raise ValueError("Record an amount greater than zero.")
+
+    return MaterialGiven.objects.create(
+        organization_id=need.organization_id, need=need, member=member,
+        quantity=quantity, note=note or "", manifest=manifest)
+
+
+def send_material_to_need(*, line, need, quantity, member, note=""):
+    """Ship from a warehouse straight onto a project's bill of materials.
+
+    The payoff of having both: the manifest and the project tell one story
+    instead of two, and the receipt QR still proves the goods moved. Neither
+    record gains a value by being joined to the other.
+    """
+    manifest = send_material(
+        line=line, quantity=quantity, member=member,
+        destination=f"{need.project.name} — {need.description[:120]}")
+    record_material(need=need, member=member, quantity=quantity,
+                    note=note, manifest=manifest)
+    return manifest

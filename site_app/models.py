@@ -1,4 +1,5 @@
 import uuid
+from decimal import Decimal
 
 from django.conf import settings
 from django.db import models
@@ -475,3 +476,111 @@ class Manifest(TenantScoped):
 
     def __str__(self):
         return f"{self.quantity} {self.stock_line.unit} to {self.destination[:40]}"
+
+
+# --------------------------------------------------------------------------
+# Bills of material
+#
+# A big project needs things as well as hands. This lists what, so people and
+# businesses can bring it — and records what arrived, in a log of its own.
+#
+# THE CONVERSION IS THE DANGER, NOT THE LIST. "200 board-feet became 40 hours"
+# reads as bookkeeping and is an exchange rate; a rate is ascertainable value
+# however it is denominated, and once material and labour are commensurable the
+# gift framing is gone. So there are two logs on a project, adjacent and never
+# summed, and the page says so out loud rather than leaving it to be noticed.
+#
+# Nothing here carries a value either — see no-material-valuation. An estimate
+# of donated property is a §170 appraisal produced by a platform about a donor,
+# which is the one document this system must never generate.
+# --------------------------------------------------------------------------
+
+
+class MaterialNeed(TenantScoped):
+    """A line on a project's bill of materials: what is wanted, and how much.
+
+    Free text like every other description here. A shipped taxonomy of
+    materials would make two donations comparable, and comparables have a
+    price — see no-catalog.
+    """
+
+    project = models.ForeignKey(
+        Project, on_delete=models.PROTECT, related_name="needs")
+
+    description = models.TextField()
+    quantity = models.DecimalField(max_digits=12, decimal_places=2)
+    unit = models.CharField(max_length=40)
+
+    added_by = models.ForeignKey(
+        Member, on_delete=models.PROTECT, related_name="material_needs")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ("created_at",)
+
+    @property
+    def brought(self):
+        """How much has arrived.
+
+        Summed in Python rather than with Django's .aggregate(), which
+        no-aggregate-display matches unconditionally. The check is blunt on
+        purpose and working around it is better than loosening it — a guard
+        that gets relaxed to fit a feature stops being a guard.
+
+        This is an aggregate over the NEED, never over a person. What is
+        forbidden is a figure describing what somebody has given; what is
+        required here is a figure describing what the project still wants,
+        because material cannot be coordinated without it.
+
+        READ THIS INSIDE A TENANT CONTEXT. It queries when accessed, not when
+        the row is loaded, so outside one row-level security hides the material
+        and it reports the full amount as still needed — plausible, and wrong
+        in the direction that sends somebody shopping for timber that is
+        already in the barn.
+        """
+        return sum((g.quantity for g in self.given.all()), Decimal("0.00"))
+
+    @property
+    def remaining(self):
+        left = self.quantity - self.brought
+        return left if left > 0 else Decimal("0.00")
+
+    @property
+    def met(self):
+        return self.remaining <= 0
+
+    def __str__(self):
+        return f"{self.quantity} {self.unit} — {self.description[:40]}"
+
+
+class MaterialGiven(TenantScoped):
+    """Material that actually arrived. Its own log, beside the hours log.
+
+    Deliberately absent: any value, any hour equivalence, any link to
+    Contribution. The two logs on a project are incommensurable and stay that
+    way — see no-material-valuation, which fails on a relation to the hours
+    ledger as readily as on a field called `value`.
+    """
+
+    need = models.ForeignKey(
+        MaterialNeed, on_delete=models.PROTECT, related_name="given")
+    member = models.ForeignKey(
+        Member, on_delete=models.PROTECT, related_name="material_given")
+
+    quantity = models.DecimalField(max_digits=12, decimal_places=2)
+    note = models.TextField(blank=True)
+
+    # Set when it came out of a warehouse here, so the manifest and the project
+    # tell the same story. Null is the normal case: most material is bought,
+    # found or spare, and requiring a manifest would mean requiring a warehouse.
+    manifest = models.ForeignKey(
+        "Manifest", on_delete=models.PROTECT, null=True, blank=True,
+        related_name="material_given")
+
+    recorded_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ("-recorded_at",)
+
+    def __str__(self):
+        return f"{self.quantity} {self.need.unit} by {self.member}"

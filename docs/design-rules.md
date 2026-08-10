@@ -182,7 +182,34 @@ number.
 
 ---
 
-## 10. We never take custody
+## 10. Two logs, never summed
+
+**Rule:** a project records hours and material in separate logs, and nothing
+converts between them.
+
+**Why:** the sentence that always follows "let's attach a bill of materials" is
+*"and the material just becomes the hours that went into making it, or an
+estimate."* Both halves end the model.
+
+An **estimate** of donated property is a §170 appraisal — produced by a
+platform, about a donor. An **equivalence in hours** is an exchange rate
+however it is denominated, and once material and labour are commensurable there
+is a price on both, which is rule 1 and rule 9 gone together.
+
+**How to hold it:** `no-material-valuation` fails on a relation to
+`Contribution` as readily as on a field called `value`, because the conversion
+arrives as a foreign key at least as often as a number. The project page states
+the separation in words rather than leaving it to be inferred.
+
+**What is allowed:** *what is still needed.* That is an aggregate over the
+**need**, not over a person — 80 board-feet still wanted is a fact about the
+project's requirement. Material cannot be coordinated without it. A per-member
+material total is the forbidden one, for the same reason a per-member hours
+total is.
+
+---
+
+## 11. We never take custody
 
 **Rule:** goods stay where their holder keeps them. The system records a
 location, a description and a count.

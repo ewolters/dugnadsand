@@ -35,6 +35,50 @@
      <a href="/board/new/">Post something</a> and file it here.</p>
 {% endfor %}
 
+<h2>What it needs</h2>
+<p class="ordering">Material, not hands. These are two separate records and they are
+   never added together — an amount of timber and an amount of time are not the same
+   kind of thing, and treating them as though they were would put a price on both.</p>
+
+{% for n in needs %}
+  <div class="card{% if n.met %} done{% endif %}">
+    <p>{{ n.description|linebreaksbr }}</p>
+    <p class="qty">
+      {% if n.met %}
+        <span class="freshness">all here</span> {{ n.quantity }} {{ n.unit }}
+      {% else %}
+        {{ n.remaining }} {{ n.unit }} still needed
+        <span class="by">of {{ n.quantity }}</span>
+      {% endif %}
+    </p>
+    {% if n.given.all %}
+      <p class="on">Brought so far:
+        {% for g in n.given.all %}{{ g.member.display_name }} ({{ g.quantity }} {{ n.unit }}){% if not forloop.last %}, {% endif %}{% endfor %}
+      </p>
+    {% endif %}
+    <div class="row">
+      <a class="act quiet" href="/needs/{{ n.id }}/given/">I brought some of this</a>
+    </div>
+  </div>
+{% empty %}
+  <p class="empty">No materials listed. If this project needs things as well as hands,
+     say what.</p>
+{% endfor %}
+
+<form method="post" action="/projects/{{ project.id }}/needs/new/" class="stack">
+  {% csrf_token %}
+  {% for field in need_form %}
+    <div>
+      <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+      {{ field }}
+      {% if field.errors %}<p class="err">{{ field.errors.0 }}</p>{% endif %}
+    </div>
+  {% endfor %}
+  <p class="help">There is nowhere to put a value and nowhere to say what it is worth in
+     hours. Both would turn a gift into a transaction — see the design rules.</p>
+  <div><button type="submit" class="act quiet">Add to the list</button></div>
+</form>
+
 <h2>What has gone into it</h2>
 <p class="ordering">In the order it happened. There is no total here, for this project or
    for anybody in it — a project with one contributor is that person's total, and one

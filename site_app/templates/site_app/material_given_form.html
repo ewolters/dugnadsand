@@ -1,0 +1,26 @@
+{% extends "app_base.html" %}
+{% block title %}Record what arrived — Dugnadsand{% endblock %}
+{% block content %}
+<p class="crumb"><a href="/projects/{{ need.project_id }}/">{{ need.project.name }}</a></p>
+<h1>Record what arrived</h1>
+<p class="lede">{{ need.description|linebreaksbr }}</p>
+<p class="qty">{{ need.remaining }} {{ need.unit }} still needed
+  <span class="by">of {{ need.quantity }}</span></p>
+
+<form method="post" class="stack">
+  {% csrf_token %}
+  {% for field in form %}
+    <div>
+      <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+      {{ field }}
+      {% if field.errors %}<p class="err">{{ field.errors.0 }}</p>{% endif %}
+    </div>
+  {% endfor %}
+  <p class="help">Bringing more than was asked for is fine and gets recorded as what it
+     was. Nothing here is valued, and nothing is converted into hours.</p>
+  <div class="row">
+    <button type="submit" class="act">Record it</button>
+    <a class="act quiet" href="/projects/{{ need.project_id }}/">Cancel</a>
+  </div>
+</form>
+{% endblock %}

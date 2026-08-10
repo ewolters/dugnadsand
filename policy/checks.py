@@ -190,7 +190,8 @@ def no_routing_by_record():
         f"({', '.join(present)}).")
 
 
-MATERIAL_MODELS = ("Warehouse", "StockLine", "Manifest")
+MATERIAL_MODELS = ("Warehouse", "StockLine", "Manifest",
+                   "MaterialNeed", "MaterialGiven")
 
 # Field names that would put a value on material, or make it commensurable with
 # hours. Deliberately broad: this is the one place where a plausible-sounding
@@ -420,6 +421,47 @@ _AGGREGATION = re.compile(
 )
 
 
+def _prose_lines(path, text):
+    """Line numbers that are comment or docstring, for a Python source file.
+
+    A text-scanning check cannot tell code from PROSE ABOUT CODE, and the
+    difference matters: a docstring explaining why .aggregate() is avoided here
+    contains the literal string it warns against. Without this, the check
+    reports a breach on its own documentation, and the only way to a green
+    build is to stop explaining the rule — which is how a guard quietly trades
+    away the thing that makes it survivable.
+
+    Comments and docstrings only. Ordinary string literals are still scanned,
+    because a dict key of "total_hours" is a real hit rather than a discussion
+    of one. Returns an empty set for anything that will not parse: unreadable
+    source is scanned in full rather than skipped, which is the safe direction.
+    """
+    lines = set()
+    for i, raw in enumerate(text.splitlines(), 1):
+        if raw.lstrip().startswith("#"):
+            lines.add(i)
+
+    try:
+        tree = ast.parse(text)
+    except SyntaxError:
+        return lines
+
+    for node in ast.walk(tree):
+        if not isinstance(node, (ast.Module, ast.ClassDef,
+                                 ast.FunctionDef, ast.AsyncFunctionDef)):
+            continue
+        body = getattr(node, "body", None)
+        if not body:
+            continue
+        first = body[0]
+        if (isinstance(first, ast.Expr)
+                and isinstance(first.value, ast.Constant)
+                and isinstance(first.value.value, str)):
+            end = getattr(first, "end_lineno", first.lineno)
+            lines.update(range(first.lineno, end + 1))
+    return lines
+
+
 def no_aggregate_display():
     """Enforceable today: nothing totals a member's hours, anywhere.
 
@@ -435,8 +477,11 @@ def no_aggregate_display():
     ]
     for path in targets:
         text = path.read_text(errors="ignore")
+        prose = _prose_lines(path, text) if path.suffix == ".py" else set()
         for m in _AGGREGATION.finditer(text):
             line = text[: m.start()].count("\n") + 1
+            if line in prose:
+                continue
             hits.append(f"{path.relative_to(BASE_DIR)}:{line} '{m.group(0).strip()}'")
 
     if hits:
