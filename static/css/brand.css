@@ -8,13 +8,19 @@
   --brand-text-muted: #6B7F74;
   --brand-background: #EBEEE9;
   --brand-surface: #FAFBF9;
+  --brand-birch: #EBEEE9;
+  --brand-paper: #FAFBF9;
+  --brand-ink: #17211E;
+  --brand-spruce: #22403A;
+  --brand-ochre: #C1832B;
+  --brand-moss: #6B7F74;
   --brand-spruce-hover: #2C534B;
   --brand-quiet-hover: #E2E7E1;
   --brand-table-head: #EAEEE9;
-  --brand-error: #8C3A2B;
+  --brand-field: #FBFCFA;
+  --brand-white: #FFFFFF;
   --brand-plate: #22403A;
-  --brand-rule: rgba(23,33,30,.14);
-  --brand-rule-strong: rgba(23,33,30,.22);
+  --brand-error: #8C3A2B;
   --brand-ok: #1F6F5C;
   --brand-ok-wash: #E8F0E9;
   --brand-warn: #8A6410;
@@ -23,7 +29,8 @@
   --brand-alert-wash: #F7E9E7;
   --brand-text-soft: #38443F;
   --brand-on-primary: #CBD6D0;
-  --brand-field: #FBFCFA;
+  --brand-rule: rgba(23,33,30,.14);
+  --brand-rule-strong: rgba(23,33,30,.22);
   --brand-font-heading: 'Optima', sans-serif;
   --brand-font-body: 'Charter', sans-serif;
 }
@@ -46,3 +53,18 @@ a {
 }
 
 /* END generated from brand.json — hand-maintained CSS may follow */
+
+/* ---- hand-maintained below this line ----------------------------------
+   generate-brand-css emits `colors` only, so the non-colour tokens declared
+   in brand.json ("tokens": font stacks, radius, gutter, measures) live here.
+   Same arrangement as kjerne-services. Keep the two in sync: brand.json is
+   what the linter reads, this is what the browser reads. */
+:root {
+  --brand-font-sans: Optima, Candara, "Gill Sans", "Gill Sans MT", "Trebuchet MS", "Segoe UI", sans-serif;
+  --brand-font-serif: Charter, "Iowan Old Style", Constantia, "Palatino Linotype", Georgia, serif;
+  --brand-font-mono: ui-monospace, "SF Mono", Menlo, Consolas, "DejaVu Sans Mono", monospace;
+  --brand-radius: 2px;
+  --brand-gutter: clamp(1.25rem, 5vw, 2.5rem);
+  --brand-measure: 40rem;
+  --brand-measure-wide: 68rem;
+}

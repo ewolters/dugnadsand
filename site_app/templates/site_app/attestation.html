@@ -4,62 +4,54 @@
 
 {% block extra_css %}
 <style>
-  :root {
-    --birch: var(--brand-background); --ink: var(--brand-text-dark); --spruce: var(--brand-primary); --ochre: var(--brand-secondary);
-    --moss: var(--brand-tertiary); --rule: var(--brand-rule);
-    --sans: Optima, Candara, "Gill Sans", "Gill Sans MT", "Trebuchet MS", "Segoe UI", sans-serif;
-    --serif: Charter, "Iowan Old Style", Constantia, "Palatino Linotype", Georgia, serif;
-    --mono: ui-monospace, "SF Mono", Menlo, Consolas, "DejaVu Sans Mono", monospace;
-    --gut: clamp(1.25rem, 5vw, 3rem);
-  }
-  body { margin:0; background:var(--birch); color:var(--ink); font-family:var(--serif); line-height:1.6; }
-  body > header { border-bottom:1px solid var(--rule); }
-  body > header nav { max-width:52rem; margin-inline:auto; padding:1.1rem var(--gut);
+  body { margin:0; background:var(--brand-birch); color:var(--brand-ink); font-family:var(--brand-font-serif); line-height:1.6; }
+  body > header { border-bottom:1px solid var(--brand-rule); }
+  body > header nav { max-width:52rem; margin-inline:auto; padding:1.1rem var(--brand-gutter);
     display:flex; align-items:baseline; justify-content:space-between; gap:1rem; }
   body > header .nav-right { display:flex; align-items:baseline; gap:1.25rem; }
   body > header .place, body > header .signin {
-    font-family:var(--mono); font-size:.6875rem; letter-spacing:.1em;
-    text-transform:uppercase; color:var(--moss); }
-  body > header .signin { color:var(--ochre); text-decoration:none; }
-  body > header .brand-name { font-family:var(--sans); font-weight:600; letter-spacing:.07em;
+    font-family:var(--brand-font-mono); font-size:.6875rem; letter-spacing:.1em;
+    text-transform:uppercase; color:var(--brand-moss); }
+  body > header .signin { color:var(--brand-ochre); text-decoration:none; }
+  body > header .brand-name { font-family:var(--brand-font-sans); font-weight:600; letter-spacing:.07em;
     text-transform:uppercase; text-decoration:none; }
-  body > footer { border-top:1px solid var(--rule); margin-top:4rem; font-family:var(--mono);
-    font-size:.75rem; color:var(--moss); }
-  body > footer p { max-width:52rem; margin:0 auto; padding:1.5rem var(--gut); }
-  main { max-width:52rem; margin-inline:auto; padding:0 var(--gut); }
+  body > footer { border-top:1px solid var(--brand-rule); margin-top:4rem; font-family:var(--brand-font-mono);
+    font-size:.75rem; color:var(--brand-moss); }
+  body > footer p { max-width:52rem; margin:0 auto; padding:1.5rem var(--brand-gutter); }
+  main { max-width:52rem; margin-inline:auto; padding:0 var(--brand-gutter); }
 
-  h1 { color:var(--ink); font-family:var(--sans); font-weight:600; font-size:clamp(1.9rem,5vw,2.6rem);
+  h1 { color:var(--brand-ink); font-family:var(--brand-font-sans); font-weight:600; font-size:clamp(1.9rem,5vw,2.6rem);
        line-height:1.1; letter-spacing:-.02em; margin:3.5rem 0 .5rem; }
-  .sub { color:var(--moss); margin:0 0 2rem; }
+  .sub { color:var(--brand-moss); margin:0 0 2rem; }
 
-  .disclaimer { border:1px solid var(--ochre); background:var(--brand-warn-wash); padding:1rem 1.15rem;
+  .disclaimer { border:1px solid var(--brand-ochre); background:var(--brand-warn-wash); padding:1rem 1.15rem;
     margin:0 0 2.5rem; font-size:.9375rem; line-height:1.6; }
-  .disclaimer b { font-family:var(--mono); font-size:.75rem; letter-spacing:.1em;
+  .disclaimer b { font-family:var(--brand-font-mono); font-size:.75rem; letter-spacing:.1em;
     text-transform:uppercase; color:var(--brand-warn); display:block; margin-bottom:.4rem; }
 
-  .status { display:inline-block; font-family:var(--mono); font-size:.8125rem; letter-spacing:.1em;
+  .status { display:inline-block; font-family:var(--brand-font-mono); font-size:.8125rem; letter-spacing:.1em;
     padding:.35rem .75rem; border:1px solid currentColor; border-radius:2px; }
   .UPHELD { color:var(--brand-ok); background:var(--brand-ok-wash); }
   .INCOMPLETE { color:var(--brand-warn); background:var(--brand-warn-wash); }
   .BREACHED { color:var(--brand-alert); background:var(--brand-alert-wash); }
 
-  .scroll { overflow-x:auto; border:1px solid var(--rule); background:var(--brand-surface); margin:1.5rem 0; }
+  .scroll { overflow-x:auto; border:1px solid var(--brand-rule); background:var(--brand-surface); margin:1.5rem 0; }
   table { border-collapse:collapse; width:100%; min-width:34rem; font-size:.875rem; }
-  th,td { text-align:left; padding:.6rem .8rem; border-bottom:1px solid var(--rule); vertical-align:top; }
-  thead th { font-family:var(--mono); font-size:.6875rem; letter-spacing:.11em; text-transform:uppercase;
-    color:var(--moss); font-weight:400; background:var(--brand-table-head); white-space:nowrap; }
+  th,td { text-align:left; padding:.6rem .8rem; border-bottom:1px solid var(--brand-rule); vertical-align:top; }
+  thead th { font-family:var(--brand-font-mono); font-size:.6875rem; letter-spacing:.11em; text-transform:uppercase;
+    color:var(--brand-moss); font-weight:400; background:var(--brand-table-head); white-space:nowrap; }
   tbody tr:last-child td { border-bottom:0; }
-  td.id { font-family:var(--mono); white-space:nowrap; }
+  td.id { font-family:var(--brand-font-mono); white-space:nowrap; }
   .upheld { color:var(--brand-ok); } .not_enforceable { color:var(--brand-warn); } .breached { color:var(--brand-alert); }
-  .ev { font-family:var(--mono); font-size:.75rem; color:var(--moss); display:block; margin-top:.3rem; }
+  .ev { font-family:var(--brand-font-mono); font-size:.75rem; color:var(--brand-moss); display:block; margin-top:.3rem; }
 
-  h2 { color:var(--ink); font-family:var(--sans); font-weight:600; font-size:1.3rem;
+  h2 { color:var(--brand-ink); font-family:var(--brand-font-sans); font-weight:600; font-size:1.3rem;
        margin:2.75rem 0 .6rem; }
   dl.meta { display:grid; grid-template-columns:minmax(9rem,14ch) 1fr; gap:.3rem 1rem;
-    font-family:var(--mono); font-size:.8125rem; margin:0; }
-  dl.meta dt { color:var(--moss); } dl.meta dd { margin:0; word-break:break-all; }
+    font-family:var(--brand-font-mono); font-size:.8125rem; margin:0; }
+  dl.meta dt { color:var(--brand-moss); } dl.meta dd { margin:0; word-break:break-all; }
   p.note { font-size:.9375rem; color:var(--brand-text-soft); }
-  a { color:var(--spruce); }
+  a { color:var(--brand-spruce); }
 </style>
 {% endblock %}
 

@@ -5,60 +5,45 @@
 
 {% block extra_css %}
 <style>
-  :root {
-    --birch:  var(--brand-background);
-    --paper:  var(--brand-surface);
-    --ink:    var(--brand-text-dark);
-    --spruce: var(--brand-primary);
-    --ochre:  var(--brand-secondary);
-    --moss:   var(--brand-tertiary);
-    --rule:   var(--brand-rule);
-
-    --sans: Optima, Candara, "Gill Sans", "Gill Sans MT", "Trebuchet MS", "Segoe UI", sans-serif;
-    --serif: Charter, "Iowan Old Style", Constantia, "Palatino Linotype", Palatino, Georgia, serif;
-    --mono: ui-monospace, "SF Mono", Menlo, Consolas, "DejaVu Sans Mono", monospace;
-
-    --gut: clamp(1.25rem, 5vw, 3rem);
-    --col: 40rem;
-  }
-
-  html { -webkit-text-size-adjust: 100%; }
+    html { -webkit-text-size-adjust: 100%; }
   body {
     margin: 0;
-    background: var(--birch);
-    color: var(--ink);
-    font-family: var(--serif);
+    background: var(--brand-birch);
+    color: var(--brand-ink);
+    font-family: var(--brand-font-serif);
     font-size: clamp(1.0625rem, .4vw + 1rem, 1.1875rem);
     line-height: 1.62;
     -webkit-font-smoothing: antialiased;
   }
-  ::selection { background: var(--ochre); color: #fff; }
+  ::selection { background: var(--brand-ochre); color: var(--brand-white); }
   a { color: inherit; }
-  :focus-visible { outline: 2px solid var(--ochre); outline-offset: 3px; }
+  :focus-visible { outline: 2px solid var(--brand-ochre); outline-offset: 3px; }
 
-  .wrap { max-width: var(--col); margin-inline: auto; padding-inline: var(--gut); }
-  .wide { max-width: 68rem; margin-inline: auto; padding-inline: var(--gut); }
+  .wrap { max-width: var(--brand-measure); margin-inline: auto; padding-inline: var(--brand-gutter); }
+  .wide { max-width: 68rem; margin-inline: auto; padding-inline: var(--brand-gutter); }
 
   /* ---- base.html chrome ---- */
-  body > header { border-bottom: 1px solid var(--rule); }
+  body > header { border-bottom: 1px solid var(--brand-rule); }
   body > header nav {
-    max-width: 68rem; margin-inline: auto; padding: 1.1rem var(--gut);
+    max-width: 68rem; margin-inline: auto; padding: 1.1rem var(--brand-gutter);
     display: flex; align-items: baseline; justify-content: space-between; gap: 1rem;
   }
   body > header .brand-name {
-    font-family: var(--sans); font-weight: 600; font-size: 1.0625rem;
+    font-family: var(--brand-font-sans); font-weight: 600; font-size: 1.0625rem;
     letter-spacing: .07em; text-transform: uppercase; text-decoration: none;
   }
+  .mark { height: .7em; width: auto; margin-right: .55rem; vertical-align: baseline;
+          opacity: .75; }
   /* The place used to be a ::after on the nav. It became real markup so a
      sign-in link could sit beside it — a member arriving at the front page had
      no way in and had to know to type /login/. */
   body > header .nav-right { display: flex; align-items: baseline; gap: 1.25rem; }
   body > header .place,
   body > header .signin {
-    font-family: var(--mono); font-size: .6875rem; letter-spacing: .1em;
-    text-transform: uppercase; color: var(--moss);
+    font-family: var(--brand-font-mono); font-size: .6875rem; letter-spacing: .1em;
+    text-transform: uppercase; color: var(--brand-moss);
   }
-  body > header .signin { color: var(--ochre); text-decoration: none; }
+  body > header .signin { color: var(--brand-ochre); text-decoration: none; }
   body > header .signin:hover { text-decoration: underline; text-underline-offset: 3px; }
 
   @media (max-width: 30rem) {
@@ -67,22 +52,22 @@
   }
   body > main { display: block; }
   body > footer {
-    border-top: 1px solid var(--rule); margin-top: 5rem;
-    font-family: var(--mono); font-size: .75rem; line-height: 1.7; color: var(--moss);
+    border-top: 1px solid var(--brand-rule); margin-top: 5rem;
+    font-family: var(--brand-font-mono); font-size: .75rem; line-height: 1.7; color: var(--brand-moss);
   }
-  body > footer p { max-width: 68rem; margin: 0 auto; padding: 1.75rem var(--gut) .5rem; }
+  body > footer p { max-width: 68rem; margin: 0 auto; padding: 1.75rem var(--brand-gutter) .5rem; }
 
   /* ---- hero ---- */
   .hero { padding-block: clamp(3.5rem, 9vw, 7rem) clamp(2rem, 5vw, 3.5rem); }
   .eyebrow {
-    font-family: var(--mono); font-size: .6875rem; letter-spacing: .18em;
-    text-transform: uppercase; color: var(--ochre); margin: 0 0 1.4rem;
+    font-family: var(--brand-font-mono); font-size: .6875rem; letter-spacing: .18em;
+    text-transform: uppercase; color: var(--brand-ochre); margin: 0 0 1.4rem;
   }
   /* brand.css carries a plain `h1,h2,h3...` colour rule. An element selector beats an
      inherited value, so every heading below states its own colour explicitly. */
   .hero h1 {
-    color: var(--ink);
-    font-family: var(--sans); font-weight: 600;
+    color: var(--brand-ink);
+    font-family: var(--brand-font-sans); font-weight: 600;
     font-size: clamp(2.5rem, 7.5vw, 4.25rem); line-height: 1.02;
     letter-spacing: -.02em; margin: 0; text-wrap: balance;
   }
@@ -94,29 +79,29 @@
   /* ---- figures ---- */
   figure { margin: 0; }
   figure img { display: block; width: 100%; height: auto; }
-  .plate { background: var(--spruce); padding: .5rem; }
+  .plate { background: var(--brand-spruce); padding: .5rem; }
   figcaption {
-    font-family: var(--mono); font-size: .75rem; line-height: 1.65;
-    color: var(--moss); margin-top: .8rem; max-width: 34rem;
+    font-family: var(--brand-font-mono); font-size: .75rem; line-height: 1.65;
+    color: var(--brand-moss); margin-top: .8rem; max-width: 34rem;
   }
 
   /* ---- tally band (signature) ---- */
-  .band { background: var(--spruce); color: var(--paper); margin-top: clamp(3rem, 7vw, 5rem); }
+  .band { background: var(--brand-spruce); color: var(--brand-paper); margin-top: clamp(3rem, 7vw, 5rem); }
   .band-inner { padding-block: clamp(3rem, 8vw, 5.5rem); }
   .band h2 {
-    color: var(--paper);
-    font-family: var(--sans); font-weight: 600; font-size: clamp(1.5rem, 3.5vw, 2.125rem);
+    color: var(--brand-paper);
+    font-family: var(--brand-font-sans); font-weight: 600; font-size: clamp(1.5rem, 3.5vw, 2.125rem);
     line-height: 1.15; letter-spacing: -.015em; margin: 0; text-wrap: balance;
   }
   .band p { margin: 1.15rem 0 0; color: var(--brand-on-primary); }
   .band .hours {
-    font-family: var(--mono); font-size: .75rem; letter-spacing: .14em;
-    text-transform: uppercase; color: var(--ochre); margin: 0 0 1.25rem;
+    font-family: var(--brand-font-mono); font-size: .75rem; letter-spacing: .14em;
+    text-transform: uppercase; color: var(--brand-ochre); margin: 0 0 1.25rem;
   }
   .tally { margin: 2.25rem 0 2rem; }
   .tally svg { width: 100%; max-width: 27rem; height: auto; display: block; }
   /* Visible baseline: the marks never depend on script or animation to appear. */
-  .tally line { stroke: var(--ochre); stroke-width: 5; stroke-linecap: round; }
+  .tally line { stroke: var(--brand-ochre); stroke-width: 5; stroke-linecap: round; }
 
   /* Script opts in to the reveal; without it the marks are simply already cut. */
   .tally.is-cut line { stroke-dasharray: 90; stroke-dashoffset: 90; animation: cut .45s ease-out forwards; }
@@ -125,8 +110,8 @@
   /* ---- plain statements ---- */
   .terms { padding-block: clamp(3.5rem, 8vw, 5.5rem) 0; display: grid; gap: 2.5rem; }
   .terms h3 {
-    color: var(--ink);
-    font-family: var(--sans); font-weight: 600; font-size: 1.3125rem;
+    color: var(--brand-ink);
+    font-family: var(--brand-font-sans); font-weight: 600; font-size: 1.3125rem;
     line-height: 1.25; margin: 0 0 .4rem; letter-spacing: -.01em;
   }
   .terms p { margin: 0; color: var(--brand-text-soft); }
@@ -134,48 +119,48 @@
   /* ---- closing ---- */
   .closing { padding-block: clamp(3.5rem, 8vw, 5rem) 0; }
   .closing h2 {
-    color: var(--ink);
-    font-family: var(--sans); font-weight: 600; font-size: clamp(1.5rem, 3.5vw, 2rem);
+    color: var(--brand-ink);
+    font-family: var(--brand-font-sans); font-weight: 600; font-size: clamp(1.5rem, 3.5vw, 2rem);
     line-height: 1.15; letter-spacing: -.015em; margin: 0 0 1rem; text-wrap: balance;
   }
   .closing p { margin: 0 0 1.05rem; }
   .closing .mail {
-    font-family: var(--mono); font-size: .9375rem;
+    font-family: var(--brand-font-mono); font-size: .9375rem;
     text-decoration-thickness: 1px; text-underline-offset: 3px;
   }
   .figure-gap { margin-top: clamp(2.5rem, 6vw, 4rem); }
   .closing .credits {
-    font-family: var(--mono); font-size: .75rem; line-height: 1.7;
-    color: var(--moss); margin-top: 3.5rem;
+    font-family: var(--brand-font-mono); font-size: .75rem; line-height: 1.7;
+    color: var(--brand-moss); margin-top: 3.5rem;
   }
-  .closing .credits a { color: var(--moss); text-underline-offset: 2px; }
+  .closing .credits a { color: var(--brand-moss); text-underline-offset: 2px; }
 
   /* ---- contact ---- */
   .contact { display: grid; gap: 1.25rem; margin-top: 1.75rem; max-width: 30rem; }
   .field { display: grid; gap: .4rem; }
   .field label {
-    font-family: var(--mono); font-size: .6875rem; letter-spacing: .12em;
-    text-transform: uppercase; color: var(--moss);
+    font-family: var(--brand-font-mono); font-size: .6875rem; letter-spacing: .12em;
+    text-transform: uppercase; color: var(--brand-moss);
   }
   .contact input, .contact textarea {
-    font: inherit; font-size: 1rem; color: var(--ink);
+    font: inherit; font-size: 1rem; color: var(--brand-ink);
     background: var(--brand-field); border: 1px solid var(--brand-rule-strong); border-radius: 2px;
     padding: .6rem .7rem; width: 100%; box-sizing: border-box;
   }
   .contact textarea { resize: vertical; line-height: 1.55; }
   .contact input:focus, .contact textarea:focus {
-    border-color: var(--spruce); outline: 2px solid var(--ochre); outline-offset: 1px;
+    border-color: var(--brand-spruce); outline: 2px solid var(--brand-ochre); outline-offset: 1px;
   }
   .contact button {
-    font-family: var(--sans); font-size: .9375rem; font-weight: 600; letter-spacing: .02em;
-    color: var(--paper); background: var(--spruce); border: 0; border-radius: 2px;
+    font-family: var(--brand-font-sans); font-size: .9375rem; font-weight: 600; letter-spacing: .02em;
+    color: var(--brand-paper); background: var(--brand-spruce); border: 0; border-radius: 2px;
     padding: .7rem 1.5rem; cursor: pointer; justify-self: start;
   }
   .contact button:hover { background: var(--brand-spruce-hover); }
   .err { color: var(--brand-error); font-size: .875rem; margin: 0; }
   .hp { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
   .note-sent {
-    border-left: 2px solid var(--ochre); padding-left: 1rem;
+    border-left: 2px solid var(--brand-ochre); padding-left: 1rem;
     margin-top: 1.75rem; color: var(--brand-text-soft);
   }
 </style>

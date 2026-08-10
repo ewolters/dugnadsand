@@ -1,6 +1,8 @@
 {
   "name": "Dugnadsand",
+  "short_name": "Dugnadsand",
   "domain": "dugnadsand.org",
+  "tagline": "The work we do together",
   "fonts": {
     "heading": "Optima",
     "body": "Charter"
@@ -14,21 +16,49 @@
     "text_muted": "#6B7F74",
     "background": "#EBEEE9",
     "surface": "#FAFBF9",
+
+    "birch": "#EBEEE9",
+    "paper": "#FAFBF9",
+    "ink": "#17211E",
+    "spruce": "#22403A",
+    "ochre": "#C1832B",
+    "moss": "#6B7F74",
+
     "spruce_hover": "#2C534B",
     "quiet_hover": "#E2E7E1",
     "table_head": "#EAEEE9",
-    "error": "#8C3A2B",
+    "field": "#FBFCFA",
+    "white": "#FFFFFF",
     "plate": "#22403A",
-    "rule": "rgba(23,33,30,.14)",
-    "rule_strong": "rgba(23,33,30,.22)",
+    "error": "#8C3A2B",
+
     "ok": "#1F6F5C",
     "ok_wash": "#E8F0E9",
     "warn": "#8A6410",
     "warn_wash": "#F7F0E1",
     "alert": "#A32B1E",
     "alert_wash": "#F7E9E7",
+
     "text_soft": "#38443F",
     "on_primary": "#CBD6D0",
-    "field": "#FBFCFA"
+    "rule": "rgba(23,33,30,.14)",
+    "rule_strong": "rgba(23,33,30,.22)"
+  },
+  "tokens": {
+    "font_sans": "Optima, Candara, 'Gill Sans', 'Gill Sans MT', 'Trebuchet MS', 'Segoe UI', sans-serif",
+    "font_serif": "Charter, 'Iowan Old Style', Constantia, 'Palatino Linotype', Georgia, serif",
+    "font_mono": "ui-monospace, 'SF Mono', Menlo, Consolas, 'DejaVu Sans Mono', monospace",
+    "radius": "2px",
+    "gutter": "clamp(1.25rem, 5vw, 2.5rem)",
+    "measure": "40rem",
+    "measure_wide": "68rem"
+  },
+  "logo": {
+    "mark": "img/tally.svg",
+    "meaning": "Thirteen tally marks. The oldest way to count labour, cut into wood. A tally is a record and not a balance, which is the whole model in one image."
+  },
+  "lint": {
+    "exclude": [],
+    "retired_classes": []
   }
 }
