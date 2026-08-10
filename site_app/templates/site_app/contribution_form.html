@@ -2,7 +2,7 @@
 {% block title %}Record hours — Dugnadsand{% endblock %}
 {% block content %}
 <h1>Record hours given</h1>
-<p class="lede">For: {{ offering.description|truncatechars:120 }}</p>
+<p class="lede">For: {{ posting.description|truncatechars:120 }}</p>
 
 <form method="post" class="stack">
   {% csrf_token %}

@@ -60,8 +60,8 @@ class PostingForm(forms.ModelForm):
             "hours_cap": "Roughly how many hours (optional)",
         }
         help_texts = {
-            "kind": "Asking costs nothing and proves nothing. Nobody can see "
-                    "what you have or have not contributed.",
+            "kind": "Asking costs nothing and proves nothing. Nothing here "
+                    "totals what you have given, and nothing consults it.",
             "project": "Only a place to gather related postings. Leaving it "
                        "blank is the normal case.",
             "needed_by": "A ride on Thursday and a fence sometime this year are "

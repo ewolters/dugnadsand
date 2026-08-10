@@ -409,10 +409,19 @@ def ledger(request):
         Contribution.objects.select_related("member", "posting")
         .order_by("-recorded_at")[:200]
     )
+    # Beside the hours, never added to them. The page said "work that was
+    # done" and showed only one of the two records, which is the same
+    # half-truth the front page told before material shipped.
+    from .models import MaterialGiven
+
+    material = (
+        MaterialGiven.objects.select_related("member", "need", "need__project")
+        .order_by("-recorded_at")[:200]
+    )
     report = verify_contributions(member.organization)
 
     return render(request, "site_app/ledger.html", {
-        "section": "ledger",
+        "section": "ledger", "material": material,
         "entries": entries,
         "chain_ok": getattr(report, "ok", None),
     })

@@ -66,6 +66,9 @@ TEMPLATES = [
                 # the whole federation, which would show a member another
                 # product's notices here. Fails open.
                 "site_app.notifications.badge",
+                # The header shows a member's mark and name, so every app page
+                # needs it — not just the views that remembered to pass it.
+                "site_app.context.member",
             ],
         },
     },

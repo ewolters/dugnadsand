@@ -10,7 +10,8 @@ from decimal import Decimal
 
 from django import forms
 from django.contrib.auth.models import User
-from django.test import TestCase
+from django.conf import settings
+from django.test import TestCase, override_settings
 
 from .helpers import SignedIn
 
@@ -613,3 +614,122 @@ class NoTemplateCommentReachesThePage(SignedIn, TestCase):
 
         self.assertNotIn("{#", header)
         self.assertNotIn("{%", header)
+
+
+@override_settings(TEMPLATES=[{
+    **settings.TEMPLATES[0],
+    "OPTIONS": {**settings.TEMPLATES[0]["OPTIONS"],
+                "string_if_invalid": "!!MISSING(%s)!!"},
+}])
+class NoTemplateVariableSilentlyFails(SignedIn, TestCase):
+    """Django resolves a missing template variable to the empty string.
+
+    So {{ e.offering.description }} rendered as nothing for months after
+    Offering was renamed to Posting in 0006 — the ledger's "Toward" column was
+    blank on every row and the page looked fine. The record-hours page had the
+    same thing in its "For:" line.
+
+    Nothing catches this by reading the code, because the template is valid and
+    the view is correct. It only shows up by rendering with a marker in place
+    of the silence.
+    """
+
+    PAGES = ["/board/", "/board/new/", "/projects/", "/warehouse/",
+             "/manifests/", "/pairings/", "/pinned/", "/you/", "/notices/",
+             "/ledger/", "/password/", "/members/"]
+
+    def setUp(self):
+        """EVERY LIST MUST HAVE A ROW IN IT.
+
+        The first version of this created only a posting, and the guard passed
+        with the original bug reinstated — the ledger's tables were empty, so
+        the loop body never rendered and the missing variable inside it never
+        had the chance to fail. A page that renders nothing proves nothing.
+        """
+        from datetime import date
+        from decimal import Decimal
+
+        from django.utils import timezone
+
+        from site_app.models import (Manifest, MaterialGiven, MaterialNeed,
+                                     Project, StockLine, Warehouse)
+        from site_app.services import claim_posting, record_contribution
+        from site_app.services_social import add_comment, toggle_pin
+
+        self.org = Organization.objects.create(slug="alpha", name="Alpha")
+        self.user = User.objects.create_user(
+            "ada", email="ada@example.test", password="dugnad-test-pw")
+        other = User.objects.create_user(
+            "ola", email="ola@example.test", password="dugnad-test-pw")
+
+        with tenant_context(self.org):
+            self.member = Member.objects.create(
+                organization=self.org, display_name="Ada", user=self.user,
+                is_organizer=True)
+            ola = Member.objects.create(
+                organization=self.org, display_name="Ola", user=other)
+
+            project = Project.objects.create(
+                organization=self.org, started_by=self.member,
+                name="Repairing homes", description="Roofs.")
+            self.posting = Posting.objects.create(
+                organization=self.org, member=self.member, kind=Posting.NEED,
+                project=project, description="A ride to the clinic.",
+                needed_by=date.today())
+            claim_posting(posting=self.posting, member=ola)
+            record_contribution(posting=self.posting, member=ola,
+                                hours=Decimal("3.00"), note="Drove.")
+            add_comment(member=ola, project=project, body="I have a truck.")
+            toggle_pin(member=self.member, posting=self.posting)
+
+            need = MaterialNeed.objects.create(
+                organization=self.org, project=project, description="Oak",
+                quantity=Decimal("200.00"), unit="board-feet",
+                added_by=self.member)
+            MaterialGiven.objects.create(
+                organization=self.org, need=need, member=ola,
+                quantity=Decimal("50.00"), note="Dropped off.")
+
+            barn = Warehouse.objects.create(
+                organization=self.org, holder=self.member, name="North barn",
+                address="Gate 4412")
+            line = StockLine.objects.create(
+                organization=self.org, warehouse=barn, description="Oak",
+                quantity=Decimal("300.00"), unit="board-feet",
+                confirmed_at=timezone.now(), confirmed_by=self.member)
+            self.manifest = Manifest.objects.create(
+                organization=self.org, stock_line=line,
+                quantity=Decimal("20.00"), destination="Habitat build",
+                sent_by=self.member)
+            self.project, self.line, self.need = project, line, need
+
+        self.sign_in(self.user)
+
+    def missing(self, path):
+        import re
+
+        body = self.client.get(path, follow=True).content.decode()
+        return sorted(set(re.findall(r"!!MISSING\(([^)]*)\)!!", body)))
+
+    def test_no_app_page_renders_a_missing_variable(self):
+        broken = {p: self.missing(p) for p in self.PAGES}
+        broken = {p: v for p, v in broken.items() if v}
+        self.assertEqual(broken, {})
+
+    def test_every_page_actually_rendered_something(self):
+        """The guard is worthless on an empty page, so this checks the pages
+        it relies on are not empty."""
+        for path, marker in (("/ledger/", "3.00"),
+                             ("/warehouse/", "board-feet"),
+                             ("/manifests/", "Habitat build"),
+                             ("/projects/", "Repairing homes"),
+                             ("/pinned/", "clinic")):
+            self.assertIn(marker, self.client.get(path).content.decode(), path)
+
+    def test_the_two_that_were_broken_stay_fixed(self):
+        """Named on their own so a regression says which page, not which list."""
+        self.assertEqual(self.missing("/ledger/"), [])
+        self.assertEqual(
+            self.missing(f"/board/{self.posting.id}/hours/"), [])
+        self.assertEqual(self.missing(f"/projects/{self.project.id}/"), [])
+        self.assertEqual(self.missing(f"/manifest/{self.manifest.id}/"), [])
