@@ -1,0 +1,61 @@
+# dugnadsand against the work contract — kjerne_platform/work/spec.toml
+#
+# The interesting entry in the estate: this site is conformant by declaring
+# almost nothing. Every extension it omits is omitted on purpose, and the
+# invariants below are why. If a future change adds `owner` to Posting, the
+# undeclared check fails before anybody has to notice it in review.
+
+site = "dugnadsand"
+
+# needed_by is the only meaning this site carries, and it is a fact about the
+# work rather than a claim about a person — the one extension in the spec that
+# contradicts nothing.
+extensions = ["scheduling"]
+
+# From policy/manifest.toml. Named here so the contract can prove that no
+# extension this site declares contradicts what the site promises.
+invariants = [
+    "no-balance", "no-gating", "no-routing-by-record", "no-exchange",
+    "flat-hours", "no-money-rails", "no-tax-artifact", "no-catalog",
+    "no-obligation", "no-aggregate-display",
+]
+
+# Everything below is a table. Bare keys must stay ABOVE this line: TOML
+# assigns them to whichever table was opened last, so an `extensions` line
+# written after [map.party] silently becomes map.party.extensions and the site
+# reads as declaring nothing. That is how this file was written the first time,
+# and the contract reported it as drift — the right answer, because a misfiled
+# declaration and a genuinely undeclared field mean the same thing.
+
+[map.container]
+model = "site_app.Project"
+id = "id"
+tenant = "organization"
+name = "name"
+description = "description"
+state = "open"              # a boolean is a lifecycle; the contract asks for a slot, not a type
+created_at = "created_at"
+created_by = "started_by"   # who wrote it down. NOT an owner — see the model docstring.
+
+[map.item]
+model = "site_app.Posting"
+id = "id"
+tenant = "organization"
+title = "description"       # there is no separate title. The words are the posting.
+state = "open"
+created_at = "created_at"
+created_by = "member"
+container = "project"
+
+[map.entry]
+model = "site_app.Contribution"
+id = "id"
+tenant = "organization"
+item = "posting"
+party = "member"
+occurred_at = "recorded_at"
+
+[map.party]
+model = "site_app.Member"
+id = "id"
+tenant = "organization"
