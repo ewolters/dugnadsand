@@ -1,4 +1,5 @@
 {% extends "app_base.html" %}
+{% load avatars %}
 {% load mentions %}
 {% block title %}{{ project.name }} — Dugnadsand{% endblock %}
 {% block content %}
@@ -47,7 +48,7 @@
 <h2>Talk about it</h2>
 {% for c in project.comments.all %}
   <div class="comment">
-    <p class="who">{{ c.member.display_name }} · {{ c.created_at|date:"j M, H:i" }}
+    <p class="who">{% avatar c.member 22 %}{{ c.member.display_name }} · {{ c.created_at|date:"j M, H:i" }}
       {% if c.member_id != member.id %}
         <form method="post" action="/thanks/{{ c.member_id }}/" class="inline-thanks">
           {% csrf_token %}

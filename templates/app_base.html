@@ -1,4 +1,4 @@
-{% load static %}
+{% load static %}{% load avatars %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -152,6 +152,26 @@
     .comment p { margin:0 0 .3rem; }
     /* A mention is a reference, not a badge. Enough weight to be seen as one
        word, none of the pill-shaped decoration that makes people collect them. */
+    /* Colour arrives through currentColor, so the SVG carries no literal and
+       brand-lint still governs every value drawn on the page. */
+    .avatar { vertical-align:middle; margin-right:.45rem; flex:none; }
+    .av-spruce  { color:var(--brand-avatar-spruce); }
+    .av-ochre   { color:var(--brand-avatar-ochre); }
+    .av-moss    { color:var(--brand-avatar-moss); }
+    .av-slate   { color:var(--brand-avatar-slate); }
+    .av-heather { color:var(--brand-avatar-heather); }
+    .av-rust    { color:var(--brand-avatar-rust); }
+
+    .mark-large { margin:1.5rem 0 .5rem; }
+    .mark-large .avatar { margin:0; }
+    .swatches { display:flex; gap:.6rem; flex-wrap:wrap; margin:.5rem 0 1rem; }
+    .swatch { background:none; border:1px solid var(--brand-rule); border-radius:2px;
+      padding:.35rem; cursor:pointer; line-height:0; }
+    .swatch span { display:block; width:1.6rem; height:1.6rem; border-radius:2px;
+      background:currentColor; }
+    .swatch.on { border-color:var(--brand-ink); }
+    .swatch:hover { border-color:var(--brand-ink); }
+
     .mention { font-family:var(--brand-font-mono); font-size:.9em; }
     .mention.person { color:var(--brand-spruce); }
     .mention.resource { color:var(--brand-ochre); text-decoration:none; }
@@ -246,8 +266,9 @@
         <a href="/notices/" {% if section == "notices" %}aria-current="page"{% endif %}>What's happened{% if notifications_unread %} <span class="badge">{{ notifications_unread }}</span>{% endif %}</a>
         {# Yours rather than the organization's, so it folds away. #}
         <details class="menu">
-          <summary>{{ member.display_name|default:"You" }}</summary>
+          <summary>{% if member %}{% avatar member 18 %}{% endif %}{{ member.display_name|default:"You" }}</summary>
           <div class="sheet">
+            <a href="/you/">Your mark</a>
             <a href="/pinned/">Kept</a>
             {% if user.member.is_organizer %}<a href="/members/">Members</a>{% endif %}
             <a href="/password/">Password</a>

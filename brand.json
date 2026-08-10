@@ -47,7 +47,13 @@
       "#333333": "create-site scaffold grey; use --brand-text-body",
       "#666666": "create-site scaffold grey; use --brand-moss",
       "#f8f7f4": "create-site scaffold cream; use --brand-birch"
-    }
+    },
+    "avatar_spruce": "#22403A",
+    "avatar_ochre": "#9A6A22",
+    "avatar_moss": "#5C6F64",
+    "avatar_slate": "#3E5A68",
+    "avatar_heather": "#6A5670",
+    "avatar_rust": "#8A4A32"
   },
   "tokens": {
     "font_sans": "Optima, Candara, 'Gill Sans', 'Gill Sans MT', 'Trebuchet MS', 'Segoe UI', sans-serif",

@@ -1,0 +1,26 @@
+{% extends "app_base.html" %}
+{% load avatars %}
+{% block title %}Your mark — Dugnadsand{% endblock %}
+{% block content %}
+<h1>Your mark</h1>
+<p class="lede">Everybody gets one, drawn from their own name in the system rather than
+   uploaded. There are no photographs here and there will not be — a face is a thing
+   people judge, and this is built so nobody gets judged by anything.</p>
+
+<div class="mark-large">{% avatar member 96 %}</div>
+<p class="note">{{ member.display_name }}</p>
+
+<h2>Pick a colour</h2>
+<form method="post" class="swatches">
+  {% csrf_token %}
+  {% for colour in palette %}
+    <button type="submit" name="colour" value="{{ colour }}"
+            class="swatch av-{{ colour }}{% if colour == current %} on{% endif %}"
+            aria-label="{{ colour }}"{% if colour == current %} aria-current="true"{% endif %}>
+      <span></span>
+    </button>
+  {% endfor %}
+</form>
+<p class="help">The pattern stays the same whichever you pick — it is yours, and changing
+   colour should not make you look like somebody else.</p>
+{% endblock %}

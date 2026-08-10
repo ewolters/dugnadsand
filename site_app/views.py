@@ -1013,6 +1013,35 @@ def notices(request):
 
 
 @login_required
+def you(request):
+    """Your mark, and the colour of it. The only preference there is.
+
+    There is deliberately nothing else on this page — no bio, no headline, no
+    place to say what you are good at. A profile that describes what somebody
+    offers becomes a directory of people ranked by what they offer, which is
+    the catalog problem with faces attached.
+    """
+    from . import avatars
+
+    member = _member(request)
+    if member is None:
+        return HttpResponseForbidden("Not a member of any organization.")
+
+    if request.method == "POST":
+        chosen = request.POST.get("colour", "").strip()
+        # Anything unrecognised clears the preference rather than storing it,
+        # so the mark falls back to the colour derived from the id.
+        member.avatar_colour = chosen if chosen in avatars.PALETTE else ""
+        member.save(update_fields=["avatar_colour"])
+        return redirect("/you/")
+
+    return render(request, "site_app/you.html", {
+        "member": member, "section": "you", "palette": avatars.PALETTE,
+        "current": avatars.colour_of(member),
+    })
+
+
+@login_required
 def change_password(request):
     from django.contrib.auth import update_session_auth_hash
     from django.contrib.auth.forms import PasswordChangeForm

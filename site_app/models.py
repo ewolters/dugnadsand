@@ -60,6 +60,13 @@ class Member(TenantScoped):
     # Organizers can add other members. That is the whole privilege — they get
     # no extra visibility into the ledger and no say over who may claim what,
     # because there is nothing to have a say over.
+    # A colour name from site_app.avatars.PALETTE, or blank for one derived
+    # from the id. Deliberately NOT choices= on the field: a choices edit needs
+    # a migration, and the palette is a design decision that should not need
+    # one. The form validates against PALETTE, and anything unrecognised falls
+    # back to the derived colour rather than rendering nothing.
+    avatar_colour = models.CharField(max_length=20, blank=True)
+
     is_organizer = models.BooleanField(default=False)
 
     # New members arrive with a password somebody else typed and read aloud.

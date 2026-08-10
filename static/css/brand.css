@@ -31,6 +31,12 @@
   --brand-on-primary: #CBD6D0;
   --brand-rule: rgba(23,33,30,.14);
   --brand-rule-strong: rgba(23,33,30,.22);
+  --brand-avatar-spruce: #22403A;
+  --brand-avatar-ochre: #9A6A22;
+  --brand-avatar-moss: #5C6F64;
+  --brand-avatar-slate: #3E5A68;
+  --brand-avatar-heather: #6A5670;
+  --brand-avatar-rust: #8A4A32;
   --brand-font-heading: 'Optima', sans-serif;
   --brand-font-body: 'Charter', sans-serif;
 }

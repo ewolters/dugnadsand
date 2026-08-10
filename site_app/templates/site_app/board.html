@@ -1,4 +1,5 @@
 {% extends "app_base.html" %}
+{% load avatars %}
 {% block title %}The board — Dugnadsand{% endblock %}
 {% block content %}
 {% if messages %}{% for m in messages %}<p class="said">{{ m }}</p>{% endfor %}{% endif %}
@@ -14,7 +15,7 @@
    because it matters less, but because there is nothing to sort it by.</p>
 {% for p in needs %}
   <div class="card need">
-    <p class="who">{{ p.member.display_name }} · {{ p.created_at|date:"j M" }}
+    <p class="who">{% avatar p.member 22 %}{{ p.member.display_name }} · {{ p.created_at|date:"j M" }}
       {% if p.needed_by %}<span class="when {{ p.urgency|slugify }}">{{ p.urgency }}</span>{% endif %}
     </p>
     <p>{{ p.description|linebreaksbr }}</p>
@@ -73,7 +74,7 @@
 <h2>People are offering</h2>
 {% for p in offers %}
   <div class="card">
-    <p class="who">{{ p.member.display_name }} · {{ p.created_at|date:"j M" }}</p>
+    <p class="who">{% avatar p.member 22 %}{{ p.member.display_name }} · {{ p.created_at|date:"j M" }}</p>
     <p>{{ p.description|linebreaksbr }}</p>
     {% if p.hours_cap %}<p class="cap">Up to {{ p.hours_cap }} hour{{ p.hours_cap|pluralize }} — never at least</p>{% endif %}
 
