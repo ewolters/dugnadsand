@@ -65,6 +65,16 @@
   }
   /* brand.css carries a plain `h1,h2,h3...` colour rule. An element selector beats an
      inherited value, so every heading below states its own colour explicitly. */
+  /* The gloss sits between the eyebrow and the headline and is read as the
+     translation of the word above it — which is what it is. It has been the
+     tagline since the first commit and lived only in the <title>, where the
+     browser tab was the one place anybody could see it. */
+  .gloss {
+    font-family: var(--brand-font-serif); font-style: italic;
+    font-size: clamp(1.0625rem, 2.2vw, 1.25rem); color: var(--brand-moss);
+    margin: 0 0 .6rem;
+  }
+
   .hero h1 {
     color: var(--brand-ink);
     font-family: var(--brand-font-sans); font-weight: 600;
@@ -170,6 +180,7 @@
 
 <section class="hero wrap">
   <p class="eyebrow">Dugnad · Norwegian</p>
+  <p class="gloss">“The work we do together.”</p>
   <h1>Nobody sends an invoice.</h1>
   <p class="lede">Dugnad is a Norwegian word. It's the Saturday the whole street turns out to clear
      the lot or paint the community hall, and nobody keeps track of who owed what. There's usually

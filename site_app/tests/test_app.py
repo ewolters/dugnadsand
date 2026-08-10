@@ -450,3 +450,31 @@ class ThePublicCopyStaysTrue(SignedIn, TestCase):
                  for line in body.splitlines() if 'class="id"' in line}
         self.assertTrue(named)
         self.assertTrue(named <= declared, f"not in the manifest: {named - declared}")
+
+
+class TheTaglineIsOnThePage(SignedIn, TestCase):
+    """It was the tagline from the first commit and lived only in <title>.
+
+    Which is to say the browser tab was the one place anybody could read it —
+    exactly the kind of thing that goes missing without anyone deciding it
+    should. Now it is on the page, and this keeps it there.
+    """
+
+    def test_the_front_page_carries_it_where_a_reader_can_see_it(self):
+        import re
+
+        body = self.client.get("/").content.decode()
+        visible = re.sub(r"<head>.*?</head>", "", body, flags=re.S)
+        visible = re.sub(r"\s+", " ", visible)
+        self.assertIn("The work we do together", visible)
+
+    def test_it_still_matches_the_brand(self):
+        """If the tagline changes in brand.json and not on the page, one of
+        the two is lying about what this is called."""
+        import json
+        from pathlib import Path
+
+        brand = json.loads(
+            (Path(__file__).resolve().parents[2] / "brand.json").read_text())
+        body = self.client.get("/").content.decode()
+        self.assertIn(brand["tagline"], body)
