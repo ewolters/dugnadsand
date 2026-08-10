@@ -229,6 +229,58 @@ would be worse than showing it late.
 
 ---
 
+## 12. No like, and nothing that counts approval
+
+**Rule:** nothing records or displays a reaction, a vote, a rating or a count
+of who approved of something.
+
+**Why:** a like count is a public number attached to a person's contribution,
+which is a score wearing a warmer word. Once posts carry visible counts people
+write for the counts, and whoever gives quietly ranks below whoever posts well.
+That is rule 1 defeated by social pressure rather than by code — which is the
+harder version to undo, because no line of it is wrong.
+
+**What replaces it:** *thanks*, which is sent and gone. It is deliberately
+**not a model**. That began as a schema problem — a row with a sender and a
+recipient has two foreign keys to `Member`, which `no-exchange` flags on sight
+because a two-party record is how a transfer looks — and the honest fix turned
+out to be better than the feature it replaced. With nothing stored, "never
+counted, never aggregated" stops being a promise about restraint and becomes a
+fact about the schema. Nobody can total what was never written down.
+
+**Pins are private.** A public pin is editorial ranking: the same problem with
+an editor, where attention is decided by whoever pins rather than by whoever
+needs.
+
+---
+
+## 13. The system pairs facts. People pair people.
+
+**Rule:** a pairing utility may join two *records*. It may never rank, score,
+or narrow *people*.
+
+**Why:** matching a need to stock in the same unit is coordination. Ranking
+members by suitability is scoring, and the moment such a ranking consults what
+somebody has given it is rule 1 broken — quietly, in the one place nobody
+thinks to look, because it arrives as a helpful feature.
+
+**How to hold it:** none of `running_out`, `fillable_needs` or `going_quiet`
+takes a member argument, and a test asserts that. If one of them ever needs to
+know who is asking in order to decide what to surface, it has stopped being
+coordination, and that change would begin by adding exactly that parameter.
+
+Material is matched on **unit**, never on description. A unit is a word a
+member typed; matching equal ones compares two facts. Matching descriptions
+would need a vocabulary of materials to compare against — and a vocabulary
+makes two donations comparable, which is rule 3. If this ever needs to be
+cleverer, the answer is a better search box for a person, not a better
+classifier for a machine.
+
+**Where a person should be asked, a person asks them.** That is `invite()`, and
+the sender never learns what came of it.
+
+---
+
 ## A note on why these are written down
 
 Every rule here has a plausible feature request attached to it that a thoughtful person

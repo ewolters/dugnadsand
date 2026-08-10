@@ -35,6 +35,42 @@
      <a href="/board/new/">Post something</a> and file it here.</p>
 {% endfor %}
 
+<div class="row">
+  <form method="post" action="/pin/">{% csrf_token %}
+    <input type="hidden" name="project" value="{{ project.id }}">
+    <input type="hidden" name="back" value="/projects/{{ project.id }}/">
+    <button type="submit" class="act quiet">Keep for later</button>
+  </form>
+</div>
+
+<h2>Talk about it</h2>
+{% for c in project.comments.all %}
+  <div class="comment">
+    <p class="who">{{ c.member.display_name }} · {{ c.created_at|date:"j M, H:i" }}
+      {% if c.member_id != member.id %}
+        <form method="post" action="/thanks/{{ c.member_id }}/" class="inline-thanks">
+          {% csrf_token %}
+          <input type="hidden" name="back" value="/projects/{{ project.id }}/">
+          <button type="submit" class="thanks-btn" title="Say thanks. Nothing is recorded.">Say thanks</button>
+        </form>
+      {% endif %}
+    </p>
+    <p>{{ c.body|linebreaksbr }}</p>
+  </div>
+{% empty %}
+  <p class="empty">Nothing said yet.</p>
+{% endfor %}
+
+<form method="post" action="/comment/" class="stack say">
+  {% csrf_token %}
+  <input type="hidden" name="project" value="{{ project.id }}">
+  <div>
+    <label for="id_body">Say something</label>
+    <textarea name="body" id="id_body" rows="2" required></textarea>
+  </div>
+  <div><button type="submit" class="act quiet">Post it</button></div>
+</form>
+
 <h2>What it needs</h2>
 <p class="ordering">Material, not hands. These are two separate records and they are
    never added together — an amount of timber and an amount of time are not the same

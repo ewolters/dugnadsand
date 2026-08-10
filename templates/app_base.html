@@ -116,6 +116,21 @@
        dropping it silently would be worse than showing it late. */
     .card.stale-line { opacity:.8; border-left:3px solid var(--brand-warn); }
     form.inline { display:flex; gap:.4rem; align-items:center; }
+
+    /* Comments are conversation, so they get no card, no border and no
+       reaction row — nothing that invites performance. */
+    .comment { border-left:2px solid var(--brand-rule); padding:.15rem 0 .15rem .9rem;
+      margin:0 0 1rem; }
+    .comment p { margin:0 0 .3rem; }
+    form.say { max-width:34rem; margin-top:1.25rem; }
+    form.inline-thanks { display:inline; }
+    /* Deliberately not a button that lights up or counts. Saying thanks sends
+       one notice and leaves nothing behind, so the control leaves nothing
+       behind either. */
+    .thanks-btn { background:none; border:0; padding:0; margin-left:.6rem; cursor:pointer;
+      font-family:var(--brand-font-mono); font-size:.6875rem; letter-spacing:.06em;
+      text-transform:uppercase; color:var(--brand-ochre); }
+    .thanks-btn:hover { color:var(--brand-spruce); }
     form.inline input { width:7rem; padding:.35rem .5rem; font:inherit;
       border:1px solid var(--brand-rule-strong); border-radius:2px;
       background:var(--brand-white); color:var(--brand-ink); }
@@ -170,6 +185,8 @@
         <a href="/board/" {% if section == "board" %}aria-current="page"{% endif %}>The board</a>
         <a href="/projects/" {% if section == "projects" %}aria-current="page"{% endif %}>Ongoing</a>
         <a href="/warehouse/" {% if section == "warehouse" %}aria-current="page"{% endif %}>On hand</a>
+        <a href="/pairings/" {% if section == "pairings" %}aria-current="page"{% endif %}>Worth a look</a>
+        <a href="/pinned/" {% if section == "pinned" %}aria-current="page"{% endif %}>Kept</a>
         <a href="/notices/" {% if section == "notices" %}aria-current="page"{% endif %}>What's happened{% if notifications_unread %} <span class="badge">{{ notifications_unread }}</span>{% endif %}</a>
         <a href="/ledger/" {% if section == "ledger" %}aria-current="page"{% endif %}>Ledger</a>
         {% if user.member.is_organizer %}<a href="/members/">Members</a>{% endif %}

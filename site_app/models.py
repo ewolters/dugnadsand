@@ -584,3 +584,87 @@ class MaterialGiven(TenantScoped):
 
     def __str__(self):
         return f"{self.quantity} {self.need.unit} by {self.member}"
+
+
+# --------------------------------------------------------------------------
+# Talking to each other
+#
+# Sharing needs somewhere to say things. What it does not need is a scoreboard,
+# so there is no like here and there will not be. A like count is a public
+# number attached to a person's contribution, which is a score wearing a warmer
+# word: once posts carry visible counts people write for the counts, and
+# whoever gives quietly ranks below whoever posts well.
+#
+# Thanks exists instead, and it is NOT A MODEL — see services.say_thanks. It is
+# sent and gone. Nothing accumulates, so nothing can be counted, not even by
+# somebody with a database handle.
+# --------------------------------------------------------------------------
+
+
+class Comment(TenantScoped):
+    """Something said about a posting or a project.
+
+    Coordination, not performance. "I have a truck Thursday" is what this is
+    for. Deliberately absent: any reaction, any count, any score, any ordering
+    but time.
+    """
+
+    posting = models.ForeignKey(
+        Posting, on_delete=models.PROTECT, null=True, blank=True,
+        related_name="comments")
+    project = models.ForeignKey(
+        Project, on_delete=models.PROTECT, null=True, blank=True,
+        related_name="comments")
+
+    member = models.ForeignKey(
+        Member, on_delete=models.PROTECT, related_name="comments")
+    body = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ("created_at",)
+        constraints = [
+            models.CheckConstraint(
+                # Exactly one parent. A comment attached to both would appear
+                # twice and belong to neither.
+                check=(models.Q(posting__isnull=False, project__isnull=True)
+                       | models.Q(posting__isnull=True, project__isnull=False)),
+                name="comment_has_exactly_one_parent"),
+        ]
+
+    def __str__(self):
+        return f"{self.member}: {self.body[:40]}"
+
+
+class Pin(TenantScoped):
+    """Somebody's own bookmark. Private, and that is the whole design.
+
+    A PUBLIC pin is editorial ranking — the like problem with an editor, where
+    what gets attention is decided by whoever pins rather than by whoever needs.
+    This one is visible to its owner and to nobody else, and no count of it is
+    computed or shown anywhere.
+    """
+
+    member = models.ForeignKey(
+        Member, on_delete=models.PROTECT, related_name="pins")
+    posting = models.ForeignKey(
+        Posting, on_delete=models.PROTECT, null=True, blank=True,
+        related_name="pins")
+    project = models.ForeignKey(
+        Project, on_delete=models.PROTECT, null=True, blank=True,
+        related_name="pins")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ("-created_at",)
+        constraints = [
+            models.UniqueConstraint(
+                fields=["member", "posting"], name="one_pin_per_posting",
+                condition=models.Q(posting__isnull=False)),
+            models.UniqueConstraint(
+                fields=["member", "project"], name="one_pin_per_project",
+                condition=models.Q(project__isnull=False)),
+        ]
+
+    def __str__(self):
+        return f"pin by {self.member}"

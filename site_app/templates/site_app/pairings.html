@@ -1,0 +1,70 @@
+{% extends "app_base.html" %}
+{% block title %}Worth a look — Dugnadsand{% endblock %}
+{% block content %}
+<h1>Worth a look</h1>
+<p class="lede">Facts that happen to sit next to each other. Nothing here ranks anybody or
+   decides who should do what — it puts two records side by side and leaves the rest to
+   you.</p>
+
+<h2>Getting close, nobody on it</h2>
+<p class="ordering">Open needs with a date within three days that nobody has taken up.</p>
+{% for p in running_out %}
+  <div class="card need">
+    <p class="who">{{ p.member.display_name }}
+      <span class="when {{ p.urgency|slugify }}">{{ p.urgency }}</span></p>
+    <p>{{ p.description|linebreaksbr }}</p>
+    <div class="row">
+      <form method="post" action="/board/{{ p.id }}/claim/">{% csrf_token %}
+        <button type="submit" class="act">I'll do this</button>
+      </form>
+      <form method="post" action="/pin/">{% csrf_token %}
+        <input type="hidden" name="posting" value="{{ p.id }}">
+        <input type="hidden" name="back" value="/pairings/">
+        <button type="submit" class="act quiet">Keep for later</button>
+      </form>
+    </div>
+  </div>
+{% empty %}
+  <p class="empty">Nothing urgent is going unanswered.</p>
+{% endfor %}
+
+<h2>Needed, and somebody has it</h2>
+<p class="ordering">Bills of material with something outstanding, beside stock recorded in
+   the same unit. Matched on the unit alone — board-feet to board-feet — because matching
+   descriptions would mean keeping a list of what materials are, and a list like that
+   makes two donations comparable.</p>
+{% for need, lines in fillable %}
+  <div class="card">
+    <p class="who">{{ need.project.name }}</p>
+    <p>{{ need.description|linebreaksbr }}</p>
+    <p class="qty">{{ need.remaining }} {{ need.unit }} still needed</p>
+    <p class="on">On hand:
+      {% for l in lines %}{{ l.warehouse.name }} ({{ l.quantity }} {{ l.unit }},
+        {{ l.freshness }}){% if not forloop.last %}; {% endif %}{% endfor %}
+    </p>
+    <div class="row">
+      <a class="act" href="/warehouse/">Go and look</a>
+      <a class="act quiet" href="/projects/{{ need.project_id }}/">The project</a>
+    </div>
+  </div>
+{% empty %}
+  <p class="empty">Nothing outstanding matches anything on hand right now.</p>
+{% endfor %}
+
+<h2>Nobody has checked in a while</h2>
+<p class="ordering">Listings whose holder has not confirmed them in three weeks. They may
+   well still be there — only the person holding them can say.</p>
+{% for l in going_quiet %}
+  <div class="card stale-line">
+    <p class="who">{{ l.warehouse.name }} · {{ l.warehouse.holder.display_name }}</p>
+    <p>{{ l.description|linebreaksbr }}</p>
+    <p class="qty">{{ l.quantity }} {{ l.unit }}
+      <span class="freshness old">{{ l.freshness }}</span></p>
+    <div class="row">
+      <a class="act quiet" href="/warehouse/{{ l.warehouse_id }}/">Ask about it</a>
+    </div>
+  </div>
+{% empty %}
+  <p class="empty">Everything on hand has been confirmed recently.</p>
+{% endfor %}
+{% endblock %}

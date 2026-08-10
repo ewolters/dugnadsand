@@ -743,6 +743,112 @@ def manifest(request, manifest_id):
     })
 
 
+# --------------------------------------------------------------------------
+# Talking, keeping, pairing
+# --------------------------------------------------------------------------
+
+@login_required
+@require_POST
+def comment_new(request):
+    """Say something about a posting or a project."""
+    from .models import Posting, Project
+    from .services_social import add_comment
+
+    member = _member(request)
+    if member is None:
+        return HttpResponseForbidden("Not a member of any organization.")
+
+    posting = project = None
+    if request.POST.get("posting"):
+        posting = get_object_or_404(Posting, pk=request.POST["posting"])
+        back = f"/projects/{posting.project_id}/" if posting.project_id else "/board/"
+    else:
+        project = get_object_or_404(Project, pk=request.POST.get("project"))
+        back = f"/projects/{project.id}/"
+
+    try:
+        add_comment(member=member, body=request.POST.get("body", ""),
+                    posting=posting, project=project)
+    except ValueError as exc:
+        return HttpResponseBadRequest(str(exc))
+    return redirect(back)
+
+
+@login_required
+@require_POST
+def pin_toggle(request):
+    """Bookmark, privately. Nobody else sees this and nothing counts it."""
+    from .models import Posting, Project
+    from .services_social import toggle_pin
+
+    member = _member(request)
+    if member is None:
+        return HttpResponseForbidden("Not a member of any organization.")
+
+    posting = project = None
+    if request.POST.get("posting"):
+        posting = get_object_or_404(Posting, pk=request.POST["posting"])
+    else:
+        project = get_object_or_404(Project, pk=request.POST.get("project"))
+
+    toggle_pin(member=member, posting=posting, project=project)
+    return redirect(request.POST.get("back") or "/board/")
+
+
+@login_required
+@require_POST
+def thanks(request, member_id):
+    """Thank somebody. Sent and gone — no record, so nothing to count.
+
+    Returns to where you were with nothing changed on the page, because there
+    is nothing to show: no total went up, no badge appeared. That absence is
+    the feature.
+    """
+    from .models import Member
+    from .services_social import say_thanks
+
+    member = _member(request)
+    if member is None:
+        return HttpResponseForbidden("Not a member of any organization.")
+
+    say_thanks(to_member=get_object_or_404(Member, pk=member_id),
+               from_member=member)
+    return redirect(request.POST.get("back") or "/board/")
+
+
+@login_required
+def pinned(request):
+    from .services_social import pinned_for
+
+    member = _member(request)
+    if member is None:
+        return HttpResponseForbidden("Not a member of any organization.")
+
+    return render(request, "site_app/pinned.html", {
+        "member": member, "section": "pinned", "pins": pinned_for(member)})
+
+
+@login_required
+def pairings(request):
+    """Facts sitting next to other facts, for a person to act on.
+
+    Nothing here reads a member in order to decide what to show, so nothing
+    here can rank one. Where a person ought to be asked, a person asks them.
+    """
+    from .services_social import fillable_needs, going_quiet, running_out
+
+    member = _member(request)
+    if member is None:
+        return HttpResponseForbidden("Not a member of any organization.")
+
+    return render(request, "site_app/pairings.html", {
+        "member": member, "section": "pairings",
+        "running_out": running_out(),
+        "fillable": fillable_needs(),
+        "going_quiet": going_quiet(),
+    })
+
+
 @login_required
 def notices(request):
     """What has happened here lately, and nothing about who did it.
