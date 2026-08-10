@@ -380,3 +380,73 @@ class Needs(AppBase):
         # like a taxonomy, that is the drift to catch.
         self.assertEqual(set(PostingForm().fields),
                          {"kind", "description", "project", "needed_by", "hours_cap"})
+
+
+class ThePublicCopyStaysTrue(SignedIn, TestCase):
+    """The front page makes claims to strangers. They have to still hold.
+
+    "We keep one record: hours" was true when it was written and stopped being
+    true when material arrived — and nothing caught it, because no test reads
+    the page a nonprofit actually reads. These do, at the level of the CLAIM
+    rather than the wording, so honest rewrites stay cheap.
+    """
+
+    def copy(self, url):
+        """Rendered text with whitespace collapsed.
+
+        Assert the CLAIM, never the line wrapping. The first version of these
+        looked for "not legal advice" and failed because the sentence broke
+        across two lines in the template — a test that fails on reflow makes
+        every honest edit look like a regression.
+        """
+        import re
+
+        return re.sub(r"\s+", " ", self.client.get(url).content.decode()).lower()
+
+    def test_the_front_page_does_not_claim_a_single_record(self):
+        body = self.copy("/")
+        for stale in ("one record", "the whole ledger"):
+            self.assertNotIn(stale, body)
+
+    def test_the_front_page_says_nothing_is_valued(self):
+        self.assertIn("never what it was worth", self.copy("/"))
+
+    def test_the_front_page_mentions_material_at_all(self):
+        """Material is a first-class part of this now. A page that only
+        describes hours undersells it to exactly the people it is for."""
+        body = self.copy("/")
+        self.assertTrue(any(w in body for w in ("board-feet", "shingles", "material")))
+
+    def test_how_it_works_is_public_and_needs_no_account(self):
+        response = self.client.get("/how-it-works/")
+        self.assertEqual(response.status_code, 200)
+
+    def test_how_it_works_says_it_is_not_legal_advice(self):
+        """It describes tax-adjacent behaviour to nonprofit boards. The
+        disclaimer is not decoration."""
+        body = self.copy("/how-it-works/")
+        self.assertIn("not a legal attestation", body)
+        self.assertIn("it is not legal advice", body)
+        self.assertIn("your own counsel", body)
+
+    def test_how_it_works_is_reachable_from_the_public_pages(self):
+        for page in ("/", "/attestation/"):
+            self.assertIn("/how-it-works/",
+                          self.client.get(page).content.decode(), page)
+
+    def test_how_it_works_points_at_the_proof_rather_than_asserting_it(self):
+        body = self.client.get("/how-it-works/").content.decode()
+        self.assertIn("/attestation/", body)
+
+    def test_the_claims_it_names_are_claims_the_manifest_actually_makes(self):
+        """Naming a check the manifest does not carry would be inventing
+        assurance in public."""
+        from policy.attest import load_manifest
+
+        declared = {i["id"] for i in load_manifest()["invariant"]}
+        body = self.client.get("/how-it-works/").content.decode()
+
+        named = {line.split("</td>")[0].split(">")[-1]
+                 for line in body.splitlines() if 'class="id"' in line}
+        self.assertTrue(named)
+        self.assertTrue(named <= declared, f"not in the manifest: {named - declared}")

@@ -13,6 +13,7 @@
         <nav>
             <a href="/" class="brand-name"><img class="mark" src="{% static 'img/tally.svg' %}" alt="" width="52" height="11">Dugnadsand</a>
             <span class="nav-right">
+                <a class="signin" href="/how-it-works/">How it works</a>
                 <span class="place">Upstate South Carolina</span>
                 {% if user.is_authenticated %}
                 <a class="signin" href="/board/">The board</a>

@@ -1,0 +1,211 @@
+{% extends "base.html" %}
+
+{% block title %}How it works — Dugnadsand{% endblock %}
+
+{% block extra_css %}
+<style>
+  /* Same register as /attestation/: this is documentation, and the front page
+     is the argument. Everything below is a --brand-* token; brand-lint fails
+     the build on a literal. */
+  body { margin:0; background:var(--brand-birch); color:var(--brand-ink);
+         font-family:var(--brand-font-serif); line-height:1.65; }
+  body > header { border-bottom:1px solid var(--brand-rule); }
+  body > header nav { max-width:46rem; margin-inline:auto; padding:1.1rem var(--brand-gutter);
+    display:flex; align-items:baseline; justify-content:space-between; gap:1rem; flex-wrap:wrap; }
+  body > header .nav-right { display:flex; align-items:baseline; gap:1.25rem; }
+  body > header .place, body > header .signin {
+    font-family:var(--brand-font-mono); font-size:.6875rem; letter-spacing:.1em;
+    text-transform:uppercase; color:var(--brand-moss); }
+  body > header .signin { color:var(--brand-ochre); text-decoration:none; }
+  body > header .brand-name { font-family:var(--brand-font-sans); font-weight:600;
+    letter-spacing:.07em; text-transform:uppercase; text-decoration:none;
+    color:var(--brand-ink); }
+  .mark { height:.7em; width:auto; margin-right:.55rem; vertical-align:baseline; opacity:.75; }
+  body > footer { border-top:1px solid var(--brand-rule); margin-top:4.5rem;
+    font-family:var(--brand-font-mono); font-size:.75rem; color:var(--brand-moss); }
+  body > footer p { max-width:46rem; margin:0 auto; padding:1.5rem var(--brand-gutter); }
+
+  main { max-width:46rem; margin-inline:auto; padding:0 var(--brand-gutter); }
+
+  h1 { color:var(--brand-ink); font-family:var(--brand-font-sans); font-weight:600;
+       font-size:clamp(1.9rem,5vw,2.6rem); line-height:1.1; letter-spacing:-.02em;
+       margin:3.5rem 0 .5rem; text-wrap:balance; }
+  .sub { color:var(--brand-moss); margin:0 0 2.5rem; font-size:1.0625rem; }
+
+  h2 { color:var(--brand-ink); font-family:var(--brand-font-sans); font-weight:600;
+       font-size:1.35rem; margin:3rem 0 .2rem; letter-spacing:-.01em; }
+  h2 + .lede { color:var(--brand-moss); margin:0 0 1rem; }
+  h3 { color:var(--brand-ink); font-family:var(--brand-font-sans); font-weight:600;
+       font-size:1.0625rem; margin:1.75rem 0 .3rem; }
+  p { margin:0 0 1rem; }
+  strong { font-weight:600; }
+  a { color:var(--brand-spruce); }
+
+  /* One quiet rule between sections rather than a box around everything. */
+  .rule { border:0; border-top:1px solid var(--brand-rule); margin:3rem 0 0; }
+
+  /* The single pulled-out line per section: the thing to remember. */
+  .pull { border-left:3px solid var(--brand-ochre); padding:.15rem 0 .15rem 1rem;
+    margin:1.25rem 0; font-family:var(--brand-font-sans); font-size:1.0625rem;
+    color:var(--brand-ink); }
+
+  .scroll { overflow-x:auto; border:1px solid var(--brand-rule);
+    background:var(--brand-surface); margin:1.5rem 0; }
+  table { border-collapse:collapse; width:100%; min-width:30rem; font-size:.9375rem; }
+  th,td { text-align:left; padding:.6rem .8rem; border-bottom:1px solid var(--brand-rule);
+    vertical-align:top; }
+  thead th { font-family:var(--brand-font-mono); font-size:.6875rem; letter-spacing:.11em;
+    text-transform:uppercase; color:var(--brand-moss); font-weight:400;
+    background:var(--brand-table-head); white-space:nowrap; }
+  tbody tr:last-child td { border-bottom:0; }
+  td.id { font-family:var(--brand-font-mono); white-space:nowrap; color:var(--brand-spruce); }
+
+  .caveat { border:1px solid var(--brand-ochre); background:var(--brand-warn-wash);
+    padding:1rem 1.15rem; margin:2rem 0; font-size:.9375rem; }
+  .caveat b { font-family:var(--brand-font-mono); font-size:.75rem; letter-spacing:.1em;
+    text-transform:uppercase; color:var(--brand-warn); display:block; margin-bottom:.4rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+<h1>How it works</h1>
+<p class="sub">The front page is the idea. This is the machinery — what gets written down,
+   what deliberately never does, and how to check that for yourself rather than taking
+   our word for it.</p>
+
+<h2>Four things people share</h2>
+
+<h3>Hours</h3>
+<p>Somebody does something and it gets written down. Thirteen hours on a community
+   garden. That is the entire entry.</p>
+
+<h3>What's offered, and what's needed</h3>
+<p>A board that runs both directions. Put up what you have, put up what you need, and
+   anyone can take up either. Nobody has to have given first, and asking costs nothing
+   and proves nothing.</p>
+
+<h3>Ongoing work</h3>
+<p>A project gathers related postings — repairing homes on the east side, keeping the
+   pantry stocked. Nobody is put in charge of one. Anyone can mark a project finished,
+   including somebody who never worked on it, because otherwise the first person to move
+   away strands whatever they wrote down.</p>
+
+<h3>Material</h3>
+<p>The part most systems leave out. It has a section of its own below.</p>
+
+<hr class="rule">
+
+<h2>What the record is not</h2>
+<p class="lede">It is not a currency.</p>
+
+<p>Hours cannot be spent, are not owed by anyone to anyone, and buy nothing.
+   <strong>Nothing in the system decides anything based on what you have given.</strong>
+   You can receive having given nothing, ever, and nobody can see whether you have.</p>
+
+<p class="pull">That one property is the whole design. Everything else is shaped to
+   protect it.</p>
+
+<p>There is no total anywhere — not per person, not per project, not your own. A number
+   that can be compared between people is a score, and a score brings back through social
+   pressure exactly what the code removes.</p>
+
+<p>You can also stop whenever. Taking something on and then stepping away deletes the
+   record of it: not marked <em>withdrawn</em>, not counted, gone. A stored record of
+   stopping is a record of not following through, and anything stored can eventually be
+   counted by somebody.</p>
+
+<hr class="rule">
+
+<h2>The virtual warehouse</h2>
+<p class="lede">Willing hands are rarely the bottleneck. A pallet of shingles is.</p>
+
+<p>A farm or a business lists a place they keep material, and what is in it.
+   <strong>The goods never enter our custody.</strong> They stay where their holder keeps
+   them; this stores a location, a description and a count. That keeps this a directory
+   rather than a warehouse, which matters legally as much as practically — and it is the
+   same shape that keeps the hours a record rather than a currency.</p>
+
+<p class="pull">We can prove a thing moved. We never say what it was worth.</p>
+
+<p>Every amount shows how recently the person holding it last looked — <em>confirmed
+   today</em>, <em>not confirmed in four weeks</em>. Only the holder can move that clock,
+   and shipping something out deliberately does not: the sender knows what they sent,
+   they have not re-counted what is left. Listings that have gone quiet are dimmed rather
+   than hidden, because the material may well still be there.</p>
+
+<p>When material moves it produces a manifest with a QR code. Whoever takes delivery
+   scans it to sign for it — no account, no sign-up, because they are standing in a yard
+   with a phone, and a receipt nobody can record is a receipt that never happens.</p>
+
+<hr class="rule">
+
+<h2>Bills of material</h2>
+<p class="lede">A project can say what it needs, not just who it needs.</p>
+
+<p>Reclaimed oak, two hundred board-feet. People record what actually arrives against it,
+   and material can come straight from a warehouse listing so the paperwork and the
+   project agree.</p>
+
+<p><strong>Hours and material are kept in separate lists and are never added together.</strong>
+   There is no way to record what material is worth, and no way to say what it is worth
+   in hours. Both would put a price on a gift, and a priced gift is a transaction.</p>
+
+<p>The one figure the system does show is what is <em>still needed</em> — eighty
+   board-feet short. That is a fact about the project rather than about any person, and
+   material cannot be coordinated without it.</p>
+
+<hr class="rule">
+
+<h2>Your organization is your own</h2>
+
+<p>Each organization is admitted deliberately, and its members, postings, ledger and
+   material are invisible to every other one. That separation is enforced by the database
+   itself rather than by application code remembering to filter, and it fails closed: a
+   mistake makes rows disappear rather than leak.</p>
+
+<p>Anything that leaves the system — a notification, an email, an integration — carries
+   only that something exists, and a link. Never the words somebody wrote, never a
+   member's name. Those stay inside and are fetched when the reader signs in.</p>
+
+<hr class="rule">
+
+<h2>How to check any of this</h2>
+<p class="lede">Everything above is a claim, and claims are cheap.</p>
+
+<p>So each one is tied to a test that runs continuously, and the results are published at
+   <a href="/attestation/">/attestation/</a> — run live when you load that page, so a
+   stalled checker cannot make a green record look like a green system.</p>
+
+<div class="scroll">
+  <table>
+    <thead><tr><th>Claim</th><th>What it means</th></tr></thead>
+    <tbody>
+      <tr><td class="id">no-gating</td><td>No code path consults what a member has given when deciding what they may receive</td></tr>
+      <tr><td class="id">no-balance</td><td>No record carries a balance, a credit limit, or a spendable total</td></tr>
+      <tr><td class="id">no-material-valuation</td><td>No record of material carries a value, a price, or an equivalence in hours</td></tr>
+      <tr><td class="id">no-obligation</td><td>Offers are ceilings. Nothing records a minimum, a completion, or a penalty for stopping</td></tr>
+      <tr><td class="id">no-aggregate-display</td><td>No per-member total is computed or displayed</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<p>A check whose subject does not exist yet reports <em>incomplete</em> rather than
+   passing, and a run can never read green while any check is in that state. An honest
+   amber is the right answer until the thing is built.</p>
+
+<div class="caveat">
+  <b>Not a legal attestation</b>
+  This says what the code was checked for and what the checks returned. It is not legal
+  advice, it is not a tax opinion, and it does not tell your organization what its
+  obligations are — those are questions for your own counsel and accountant. What it can
+  tell you is exactly what the software does and does not do, which is the part we can be
+  held to.
+</div>
+
+<p>The code is public at
+   <a href="https://github.com/ewolters/dugnadsand">github.com/ewolters/dugnadsand</a>.
+   The claims live in <code>policy/manifest.toml</code>, the checks behind them in
+   <code>policy/checks.py</code>, and the reasoning in <code>docs/design-rules.md</code>.</p>
+
+<p>If this sounds like your street, <a href="/#say-hello">tell us about it</a>.</p>
+{% endblock %}

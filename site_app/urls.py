@@ -36,6 +36,7 @@ urlpatterns = [
     path("setup/<str:token>/", auth_views.setup, name="setup"),
     path("members/", views.members, name="members"),
     path("members/new/", views.member_new, name="member_new"),
+    path("how-it-works/", views.how_it_works, name="how_it_works"),
     path("attestation/", views.attestation, name="attestation"),
     path("attestation/run/", views.attestation_run, name="attestation_run"),
 ]

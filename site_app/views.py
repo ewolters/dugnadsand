@@ -74,6 +74,17 @@ def index(request):
 ATTEST_TOKEN = os.environ.get("DUGNADSAND_ATTEST_TOKEN")
 
 
+def how_it_works(request):
+    """The mechanics, publicly, for somebody deciding whether to use this.
+
+    Static and unauthenticated. The front page is about the idea; this is about
+    what the software does and refuses to do, and /attestation/ is the proof
+    that the refusals hold. Three pages, three jobs — the front page was
+    carrying all of them, which is how its ledger line drifted out of date.
+    """
+    return render(request, "site_app/how_it_works.html")
+
+
 def attestation(request):
     """Public, read-only. The latest recorded run plus a live chain check.
 
