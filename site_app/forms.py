@@ -125,3 +125,61 @@ class AddMemberForm(forms.Form):
     is_organizer = forms.BooleanField(
         required=False, label="Can add other members",
         help_text="Organizers add people. They get no extra view of the ledger.")
+
+
+class WarehouseForm(forms.ModelForm):
+    """A place somebody keeps things. An address and who to ask.
+
+    No capacity, no utilisation, no cost per pallet. This is an index of
+    somebody else's barn, not a warehouse management system.
+    """
+
+    class Meta:
+        from .models import Warehouse
+
+        model = Warehouse
+        fields = ("name", "address", "notes")
+        labels = {
+            "name": "What to call it",
+            "address": "Where it is, and how to get in",
+            "notes": "Anything a person turning up should know (optional)",
+        }
+        help_texts = {
+            "address": "Write it however you would tell a neighbour. "
+                       "\u201cSecond barn, gate code 4412\u201d beats a postal address.",
+        }
+        widgets = {
+            "address": forms.Textarea(attrs={"rows": 3}),
+            "notes": forms.Textarea(attrs={"rows": 3}),
+        }
+
+
+class StockLineForm(forms.Form):
+    """Something available. Described, counted, and never priced.
+
+    There is no value field and none may be added. A figure here would be an
+    appraisal of donated property produced by a platform about a donor — see
+    no-material-valuation in policy/manifest.toml.
+    """
+
+    description = forms.CharField(
+        max_length=2000, widget=forms.Textarea(attrs={"rows": 3}),
+        label="What it is, in your own words")
+    quantity = forms.DecimalField(
+        max_digits=12, decimal_places=2, min_value=Decimal("0.01"),
+        label="How much")
+    unit = forms.CharField(
+        max_length=40, label="Counted in what",
+        help_text="Board-feet, pallets, cases, metres \u2014 whatever you actually "
+                  "count it in.")
+
+
+class SendMaterialForm(forms.Form):
+    quantity = forms.DecimalField(
+        max_digits=12, decimal_places=2, min_value=Decimal("0.01"),
+        label="How much is going")
+    destination = forms.CharField(
+        max_length=2000, widget=forms.Textarea(attrs={"rows": 2}),
+        label="Where it is going",
+        help_text="A person, a site, an organization \u2014 whatever will make sense "
+                  "to whoever signs for it.")

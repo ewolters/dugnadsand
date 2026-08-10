@@ -156,6 +156,52 @@ amount and timing.
 
 ---
 
+## 9. Material is described and counted, never priced
+
+**Rule:** no record of material may carry a value, a price, or an equivalence
+in hours.
+
+**Why:** two conversions will be proposed, both will sound like improvements,
+and both end the gift framing.
+
+A **price** on donated material makes this an appraisal of donated property —
+produced by a platform, about a donor. That is the artifact a §170 deduction
+turns on, and the one document a system like this must never generate. A
+manifest may prove goods *moved*. What they were worth is between the donor,
+their advisor and the IRS.
+
+An **equivalence in hours** — "200 board-feet became 40 hours" — reads as
+bookkeeping and is an exchange rate. A rate is ascertainable value however it
+is denominated, and once material and labour are commensurable, rule 1 and
+rule 2 are both gone. Two logs, deliberately never summed.
+
+**How to hold it:** `no-material-valuation` in the manifest scans every
+material model for value-ish field names *and* for any relation to the hours
+ledger, because the equivalence can arrive as a foreign key as easily as a
+number.
+
+---
+
+## 10. We never take custody
+
+**Rule:** goods stay where their holder keeps them. The system records a
+location, a description and a count.
+
+**Why:** no custody means no title, and no title means no storage liability, no
+insurance obligation and no unrelated-business exposure. The platform stays a
+*directory* — which is exactly the posture that keeps hours a *record* rather
+than a currency. One sentence covers both: **we prove a thing moved, we never
+say what it was worth.**
+
+**And the operational half:** a quantity with no date is a claim about the
+present tense that nobody checked, and somebody drives forty miles on it. Every
+surface showing an amount shows how old the confirmation is, only the holder
+can move that clock, and **staleness never renders as availability**. Stale
+stock is dimmed, never hidden — it may still be there, and dropping it silently
+would be worse than showing it late.
+
+---
+
 ## A note on why these are written down
 
 Every rule here has a plausible feature request attached to it that a thoughtful person

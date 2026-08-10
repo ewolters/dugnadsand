@@ -1,0 +1,23 @@
+{% extends "app_base.html" %}
+{% block title %}Add a place — Dugnadsand{% endblock %}
+{% block content %}
+<h1>Add a place</h1>
+<p class="lede">Somewhere you keep material. It stays yours and stays where it is —
+   listing it here tells people it exists and how to reach you, nothing more.</p>
+
+<form method="post" class="stack">
+  {% csrf_token %}
+  {% for field in form %}
+    <div>
+      <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+      {{ field }}
+      {% if field.help_text %}<p class="help">{{ field.help_text }}</p>{% endif %}
+      {% if field.errors %}<p class="err">{{ field.errors.0 }}</p>{% endif %}
+    </div>
+  {% endfor %}
+  <div class="row">
+    <button type="submit" class="act">Add it</button>
+    <a class="act quiet" href="/warehouse/">Cancel</a>
+  </div>
+</form>
+{% endblock %}

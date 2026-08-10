@@ -1,0 +1,28 @@
+{% extends "app_base.html" %}
+{% block title %}Send material — Dugnadsand{% endblock %}
+{% block content %}
+<p class="crumb"><a href="/warehouse/{{ line.warehouse_id }}/">{{ line.warehouse.name }}</a></p>
+<h1>Send material</h1>
+<p class="lede">{{ line.description|linebreaksbr }}</p>
+<p class="qty">{{ line.quantity }} {{ line.unit }} recorded
+  <span class="freshness{% if line.stale %} old{% endif %}">{{ line.freshness }}</span>
+</p>
+
+<form method="post" class="stack">
+  {% csrf_token %}
+  {% for field in form %}
+    <div>
+      <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+      {{ field }}
+      {% if field.help_text %}<p class="help">{{ field.help_text }}</p>{% endif %}
+      {% if field.errors %}<p class="err">{{ field.errors.0 }}</p>{% endif %}
+    </div>
+  {% endfor %}
+  <p class="help">This produces paperwork with a code the receiver can scan to sign for
+     it. They do not need an account here.</p>
+  <div class="row">
+    <button type="submit" class="act">Make the manifest</button>
+    <a class="act quiet" href="/warehouse/{{ line.warehouse_id }}/">Cancel</a>
+  </div>
+</form>
+{% endblock %}

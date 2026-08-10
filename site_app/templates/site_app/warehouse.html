@@ -1,0 +1,39 @@
+{% extends "app_base.html" %}
+{% block title %}What's on hand — Dugnadsand{% endblock %}
+{% block content %}
+<h1>What's on hand</h1>
+<p class="lede">Material somebody nearby already has. It stays where they keep it — this
+   is an index of other people's barns, not a warehouse. Every amount below says how
+   recently the person holding it last looked.</p>
+
+<p><a class="act" href="/warehouse/new/">Add a place</a></p>
+
+<h2>Available now</h2>
+{% for l in lines %}
+  <div class="card{% if l.stale %} stale-line{% endif %}">
+    <p class="who">{{ l.warehouse.name }} · {{ l.warehouse.holder.display_name }}</p>
+    <p>{{ l.description|linebreaksbr }}</p>
+    <p class="qty">{{ l.quantity }} {{ l.unit }}
+      <span class="freshness{% if l.stale %} old{% endif %}">{{ l.freshness }}</span>
+    </p>
+    <div class="row">
+      <a class="act quiet" href="/warehouse/{{ l.warehouse_id }}/">Where it is</a>
+      <a class="act" href="/warehouse/line/{{ l.id }}/send/">Send some of this</a>
+    </div>
+  </div>
+{% empty %}
+  <p class="empty">Nothing recorded yet. If you have material sitting somewhere,
+     <a href="/warehouse/new/">add the place</a> and list it.</p>
+{% endfor %}
+
+<h2>Places</h2>
+{% for w in warehouses %}
+  <div class="card">
+    <p class="who">{{ w.holder.display_name }}</p>
+    <h3 class="proj"><a href="/warehouse/{{ w.id }}/">{{ w.name }}</a></h3>
+    <p>{{ w.address|linebreaksbr }}</p>
+  </div>
+{% empty %}
+  <p class="empty">No places yet.</p>
+{% endfor %}
+{% endblock %}

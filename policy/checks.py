@@ -190,6 +190,56 @@ def no_routing_by_record():
         f"({', '.join(present)}).")
 
 
+MATERIAL_MODELS = ("Warehouse", "StockLine", "Manifest")
+
+# Field names that would put a value on material, or make it commensurable with
+# hours. Deliberately broad: this is the one place where a plausible-sounding
+# addition does the most damage, so the check errs toward stopping a rename
+# rather than toward letting a synonym through.
+_VALUATION = re.compile(
+    r"value|price|cost|worth|amount|apprais|assess|estimate|"
+    r"fair_market|fmv|retail|msrp|rate|hours|hour_equiv|labou?r",
+    re.I)
+
+
+def no_material_valuation():
+    """Material may be described and counted. It may never be priced.
+
+    Also refuses any link from a material record to the hours ledger. A
+    Contribution FK on a StockLine would be the equivalence written as a
+    relation rather than a number, which is the same thing arriving by a
+    different door.
+    """
+    from django.apps import apps
+
+    present = {m.__name__: m for m in apps.get_models()
+               if m.__name__ in MATERIAL_MODELS}
+    if not present:
+        return Result(
+            "no-material-valuation", NOT_ENFORCEABLE,
+            "The absence of material valuation cannot be tested: no material "
+            f"record exists yet (looked for {', '.join(MATERIAL_MODELS)}).")
+
+    hits = []
+    for name, model in sorted(present.items()):
+        for f in _all_fields(model):
+            fname = getattr(f, "name", "")
+            if _VALUATION.search(fname):
+                hits.append(f"{name}.{fname} names a value or an hour equivalence")
+            related = getattr(f, "related_model", None)
+            if related is not None and related.__name__ == "Contribution":
+                hits.append(f"{name}.{fname} links material to the hours ledger")
+
+    if hits:
+        return Result("no-material-valuation", BREACHED,
+                      "A material record carries a value or an hour equivalence.",
+                      hits)
+    return Result(
+        "no-material-valuation", UPHELD,
+        "Material is described and counted, never priced and never converted "
+        f"to hours ({', '.join(sorted(present))}).")
+
+
 def no_exchange():
     blocked = _needs_domain("no-exchange", "The absence of exchange")
     if blocked:
@@ -402,6 +452,7 @@ CHECKS = {
     "no_balance": no_balance,
     "no_gating": no_gating,
     "no_routing_by_record": no_routing_by_record,
+    "no_material_valuation": no_material_valuation,
     "no_exchange": no_exchange,
     "flat_hours": flat_hours,
     "no_money_rails": no_money_rails,

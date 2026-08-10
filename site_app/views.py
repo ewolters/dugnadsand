@@ -518,6 +518,168 @@ def act(request, token):
     return render(request, "site_app/act.html", {"side": side})
 
 
+# --------------------------------------------------------------------------
+# The virtual warehouse
+#
+# Every surface below shows a quantity WITH the age of its confirmation. A
+# number on its own is a claim about the present tense that nobody checked, and
+# somebody drives forty miles on it. Staleness must never render as
+# availability — the same trap as reading an empty table as a measured zero.
+# --------------------------------------------------------------------------
+
+@login_required
+def warehouse(request):
+    """Everything on offer across every warehouse in this organization."""
+    from .models import Warehouse
+    from .services_warehouse import available_lines
+
+    member = _member(request)
+    if member is None:
+        return HttpResponseForbidden("Not a member of any organization.")
+
+    return render(request, "site_app/warehouse.html", {
+        "member": member, "section": "warehouse",
+        "lines": available_lines(member.organization_id),
+        "warehouses": Warehouse.objects.filter(active=True).select_related("holder"),
+    })
+
+
+@login_required
+def warehouse_new(request):
+    from .forms import WarehouseForm
+
+    member = _member(request)
+    if member is None:
+        return HttpResponseForbidden("Not a member of any organization.")
+
+    form = WarehouseForm(request.POST or None)
+    if request.method == "POST" and form.is_valid():
+        place = form.save(commit=False)
+        place.holder = member
+        place.organization_id = member.organization_id
+        place.save()
+        return redirect(f"/warehouse/{place.id}/")
+
+    return render(request, "site_app/warehouse_form.html",
+                  {"form": form, "section": "warehouse"})
+
+
+@login_required
+def warehouse_detail(request, warehouse_id):
+    from .forms import StockLineForm
+    from .models import StockLine, Warehouse
+    from .services_warehouse import _now
+
+    member = _member(request)
+    if member is None:
+        return HttpResponseForbidden("Not a member of any organization.")
+
+    place = get_object_or_404(Warehouse, pk=warehouse_id)
+    form = StockLineForm(request.POST or None)
+
+    # Only the holder adds stock. Anyone else writing a line would be asserting
+    # what is in somebody else's barn.
+    mine = place.holder_id == member.id
+    if request.method == "POST" and mine and form.is_valid():
+        StockLine.objects.create(
+            organization_id=member.organization_id, warehouse=place,
+            description=form.cleaned_data["description"],
+            quantity=form.cleaned_data["quantity"],
+            unit=form.cleaned_data["unit"],
+            confirmed_at=_now(), confirmed_by=member)
+        return redirect(f"/warehouse/{place.id}/")
+
+    return render(request, "site_app/warehouse_detail.html", {
+        "member": member, "section": "warehouse", "warehouse": place,
+        "lines": place.lines.select_related("confirmed_by"),
+        "form": form, "mine": mine,
+    })
+
+
+@login_required
+@require_POST
+def stock_confirm(request, line_id):
+    """The holder saying it is still true. The only thing that moves the clock."""
+    from .models import StockLine
+    from .services_warehouse import confirm_line
+
+    member = _member(request)
+    line = get_object_or_404(StockLine, pk=line_id)
+    if member is None or line.warehouse.holder_id != member.id:
+        return HttpResponseForbidden(
+            "Only whoever holds it can confirm what is there.")
+
+    confirm_line(line=line, member=member,
+                 quantity=request.POST.get("quantity") or None)
+    return redirect(f"/warehouse/{line.warehouse_id}/")
+
+
+@login_required
+def stock_send(request, line_id):
+    from .forms import SendMaterialForm
+    from .models import StockLine
+    from .services_warehouse import send_material
+
+    member = _member(request)
+    if member is None:
+        return HttpResponseForbidden("Not a member of any organization.")
+
+    line = get_object_or_404(StockLine, pk=line_id)
+    form = SendMaterialForm(request.POST or None)
+    if request.method == "POST" and form.is_valid():
+        try:
+            manifest = send_material(
+                line=line, quantity=form.cleaned_data["quantity"],
+                destination=form.cleaned_data["destination"], member=member)
+        except ValueError as exc:
+            form.add_error("quantity", str(exc))
+        else:
+            return redirect(f"/manifest/{manifest.id}/")
+
+    return render(request, "site_app/send_form.html",
+                  {"form": form, "line": line, "section": "warehouse"})
+
+
+@login_required
+def manifest(request, manifest_id):
+    """The paperwork that travels with the goods.
+
+    Carries a QR to a single-use receipt link and NO VALUATION. Evidence that a
+    thing moved is a different document from a statement of what it was worth,
+    and only one of them is safe for a platform to produce.
+    """
+    from kjerne_platform.work import port as work_port
+    from kjerne_platform.work import tokens
+
+    from .auth_views import _qr_svg
+    from .models import Manifest
+
+    member = _member(request)
+    if member is None:
+        return HttpResponseForbidden("Not a member of any organization.")
+
+    doc = get_object_or_404(Manifest, pk=manifest_id)
+
+    qr_svg = receipt_url = None
+    if not doc.received:
+        try:
+            token = tokens.issue(
+                work_port.open(WORK_TOML), verb="confirm-receipt",
+                payload={"manifest": str(doc.id)}, tenant=doc.organization_id,
+                recipient=doc.destination[:200])
+            receipt_url = f"https://dugnadsand.org/act/{token}/"
+            qr_svg = _qr_svg(receipt_url)
+        except Exception:
+            # Paper that cannot be scanned is still paper. The manifest prints
+            # either way and receipt can be recorded by hand.
+            logger.exception("could not mint a receipt token")
+
+    return render(request, "site_app/manifest.html", {
+        "member": member, "section": "warehouse", "manifest": doc,
+        "qr_svg": qr_svg, "receipt_url": receipt_url,
+    })
+
+
 @login_required
 def notices(request):
     """What has happened here lately, and nothing about who did it.

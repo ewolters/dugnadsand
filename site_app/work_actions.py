@@ -140,6 +140,22 @@ def invite(*, posting, email, member=None):
     )
 
 
+@port.action(SITE, "confirm-receipt")
+def confirm_receipt(*, manifest, note=""):
+    """Somebody at the far end signed for it.
+
+    Reachable by token on purpose, and the clearest case for the dual path in
+    the whole system: whoever takes delivery is standing in a yard with a phone
+    and very often has no account here. Requiring one would mean the receipt
+    never gets recorded, and an unrecorded receipt is the thing a donating
+    business needed this for.
+    """
+    from .models import Manifest
+    from .services_warehouse import receive_material
+
+    return receive_material(manifest=_resolve(Manifest, manifest), note=note)
+
+
 @port.action(SITE, "close-item")
 def close_item(*, item, party):
     """Take it off the board. Only the person who posted it, and it records

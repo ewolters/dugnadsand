@@ -1,0 +1,52 @@
+{% extends "app_base.html" %}
+{% block title %}{{ warehouse.name }} — Dugnadsand{% endblock %}
+{% block content %}
+<p class="crumb"><a href="/warehouse/">What's on hand</a></p>
+<h1>{{ warehouse.name }}</h1>
+<p class="who">Held by {{ warehouse.holder.display_name }}</p>
+<p class="lede">{{ warehouse.address|linebreaksbr }}</p>
+{% if warehouse.notes %}<p class="note">{{ warehouse.notes|linebreaksbr }}</p>{% endif %}
+
+<h2>What's there</h2>
+{% for l in lines %}
+  <div class="card{% if l.stale %} stale-line{% endif %}">
+    <p>{{ l.description|linebreaksbr }}</p>
+    <p class="qty">{{ l.quantity }} {{ l.unit }}
+      <span class="freshness{% if l.stale %} old{% endif %}">{{ l.freshness }}</span>
+      <span class="by">by {{ l.confirmed_by.display_name }}</span>
+    </p>
+    <div class="row">
+      {% if mine %}
+        <form method="post" action="/warehouse/line/{{ l.id }}/confirm/" class="inline">
+          {% csrf_token %}
+          <input type="number" name="quantity" step="0.01" min="0"
+                 value="{{ l.quantity }}" aria-label="How much is there now">
+          <button type="submit" class="act quiet">Still there</button>
+        </form>
+      {% endif %}
+      <a class="act" href="/warehouse/line/{{ l.id }}/send/">Send some</a>
+    </div>
+  </div>
+{% empty %}
+  <p class="empty">Nothing listed here yet.</p>
+{% endfor %}
+
+{% if mine %}
+  <h2>Add something</h2>
+  <form method="post" class="stack">
+    {% csrf_token %}
+    {% for field in form %}
+      <div>
+        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+        {{ field }}
+        {% if field.help_text %}<p class="help">{{ field.help_text }}</p>{% endif %}
+        {% if field.errors %}<p class="err">{{ field.errors.0 }}</p>{% endif %}
+      </div>
+    {% endfor %}
+    <p class="help">There is no place to put a value, and there will not be. What it is
+       worth is between you, your accountant and the IRS — this only records that it
+       exists and, later, that it moved.</p>
+    <div><button type="submit" class="act">List it</button></div>
+  </form>
+{% endif %}
+{% endblock %}

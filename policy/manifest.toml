@@ -62,6 +62,32 @@ check = "no_routing_by_record"
 enforceable_when = "a delivery path exists"
 
 [[invariant]]
+id = "no-material-valuation"
+claim = "No record of material carries a value, a price, or an equivalence in hours."
+why = """
+The warehouse is the second surface where valuation can enter, and neither of
+the existing claims can see it: flat-hours is about hours and no-tax-artifact
+scans for per-member statements. Material is a different shape of the same
+danger.
+
+Two conversions are forbidden and both will be proposed as improvements.
+
+A PRICE. Putting a dollar figure on donated material makes this an appraisal of
+donated property, produced by a platform, about a donor — the exact artifact a
+§170 deduction turns on, and the one document a system like this must never
+generate. A manifest may prove that goods MOVED. What they were worth is
+between the donor, their advisor and the IRS, and nothing here should make it
+easier to get that wrong.
+
+AN EQUIVALENCE IN HOURS. "200 board-feet became 40 hours" reads as bookkeeping
+and is an exchange rate. A rate is ascertainable value however it is
+denominated, and once material and labour are commensurable the gift framing is
+gone — see flat-hours and no-exchange. Two logs, deliberately never summed.
+"""
+check = "no_material_valuation"
+enforceable_when = "a material record exists"
+
+[[invariant]]
 id = "no-exchange"
 claim = "Nothing links what a member received to what a member gave."
 why = """

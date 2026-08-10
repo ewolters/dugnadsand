@@ -17,7 +17,7 @@ extensions = ["scheduling"]
 invariants = [
     "no-balance", "no-gating", "no-routing-by-record", "no-exchange",
     "flat-hours", "no-money-rails", "no-tax-artifact", "no-catalog",
-    "no-obligation", "no-aggregate-display",
+    "no-obligation", "no-aggregate-display", "no-material-valuation",
 ]
 
 # Verbs this site binds for the shared port. Imported when the port opens.
@@ -85,7 +85,11 @@ link = "/board/"
 # would let it take somebody else's posting off the board. A token lives in an
 # inbox and forwards trivially, so the question is never what it should be
 # stopped from doing but what is safe enough to put in a mail.
-verbs = ["claim"]
+# confirm-receipt is here for the same reason claim is: the person who needs
+# to press it is standing somewhere with a phone and no account. It writes one
+# timestamp on one manifest and cannot be made to write anything else — the
+# payload is fixed when the QR is printed.
+verbs = ["claim", "confirm-receipt"]
 ttl_hours = 72
 
 # THE SETTING THAT MAKES THIS SITE DIFFERENT.

@@ -1,0 +1,45 @@
+{% extends "app_base.html" %}
+{% block title %}Manifest — Dugnadsand{% endblock %}
+{% block content %}
+<p class="crumb no-print"><a href="/warehouse/{{ manifest.stock_line.warehouse_id }}/">{{ manifest.stock_line.warehouse.name }}</a></p>
+
+<div class="manifest">
+  <h1>Manifest</h1>
+  <dl class="meta">
+    <dt>Reference</dt><dd>{{ manifest.id }}</dd>
+    <dt>From</dt><dd>{{ manifest.stock_line.warehouse.name }}</dd>
+    <dt>Sent by</dt><dd>{{ manifest.sent_by.display_name }}</dd>
+    <dt>Sent</dt><dd>{{ manifest.sent_at|date:"j M Y, H:i" }}</dd>
+    <dt>To</dt><dd>{{ manifest.destination|linebreaksbr }}</dd>
+  </dl>
+
+  <table class="ledger">
+    <thead><tr><th>What</th><th>How much</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>{{ manifest.stock_line.description }}</td>
+        <td class="hrs">{{ manifest.quantity }} {{ manifest.stock_line.unit }}</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p class="note">This records what moved and when. It states no value, and no value
+     will be added to it — what the material is worth is between the donor, their
+     advisor and the IRS, and this is not that document.</p>
+
+  {% if manifest.received %}
+    <p class="received">Signed for {{ manifest.received_at|date:"j M Y, H:i" }}.
+      {% if manifest.received_note %}<br>{{ manifest.received_note }}{% endif %}</p>
+  {% elif qr_svg %}
+    <h2>Signing for it</h2>
+    <p class="note">Whoever takes delivery scans this. No account needed, and it works
+       once.</p>
+    <div class="qr">{{ qr_svg|safe }}</div>
+    <p class="help" style="word-break:break-all">{{ receipt_url }}</p>
+  {% else %}
+    <h2>Signing for it</h2>
+    <p class="note">The code could not be generated. Receipt can still be recorded by
+       hand — the paperwork is what matters and this is it.</p>
+  {% endif %}
+</div>
+{% endblock %}

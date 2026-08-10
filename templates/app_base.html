@@ -103,6 +103,30 @@
     form.finish { margin-top:2rem; }
     td.num { font-variant-numeric:tabular-nums; text-align:right; }
 
+    /* A quantity and the age of its confirmation always travel together. A
+       number alone is a claim about the present tense that nobody checked. */
+    .qty { font-family:var(--brand-font-mono); font-size:.9rem; }
+    .freshness { font-size:.6875rem; letter-spacing:.06em; text-transform:uppercase;
+      color:var(--brand-ok); background:var(--brand-ok-wash); border-radius:2px;
+      padding:.05rem .35rem; margin-left:.5rem; }
+    .freshness.old { color:var(--brand-warn); background:var(--brand-warn-wash); }
+    .qty .by { font-size:.6875rem; color:var(--brand-moss); margin-left:.5rem;
+      text-transform:none; letter-spacing:0; }
+    /* Stale stock is dimmed but never hidden — it may still be there, and
+       dropping it silently would be worse than showing it late. */
+    .card.stale-line { opacity:.8; border-left:3px solid var(--brand-warn); }
+    form.inline { display:flex; gap:.4rem; align-items:center; }
+    form.inline input { width:7rem; padding:.35rem .5rem; font:inherit;
+      border:1px solid var(--brand-rule-strong); border-radius:2px;
+      background:var(--brand-white); color:var(--brand-ink); }
+    .manifest { background:var(--brand-paper); border:1px solid var(--brand-rule);
+      padding:1.5rem; border-radius:2px; }
+    .received { font-family:var(--brand-font-mono); font-size:.8125rem;
+      color:var(--brand-ok); background:var(--brand-ok-wash); padding:.6rem .8rem;
+      border-radius:2px; }
+    @media print { .no-print, header.app, body > footer { display:none; }
+      .manifest { border:0; padding:0; } }
+
     .notice { border-bottom:1px solid var(--brand-rule); padding:.85rem 0; }
     .notice:last-of-type { border-bottom:0; }
     .notice .msg { margin:0 0 .2rem; }
@@ -145,6 +169,7 @@
       <nav>
         <a href="/board/" {% if section == "board" %}aria-current="page"{% endif %}>The board</a>
         <a href="/projects/" {% if section == "projects" %}aria-current="page"{% endif %}>Ongoing</a>
+        <a href="/warehouse/" {% if section == "warehouse" %}aria-current="page"{% endif %}>On hand</a>
         <a href="/notices/" {% if section == "notices" %}aria-current="page"{% endif %}>What's happened{% if notifications_unread %} <span class="badge">{{ notifications_unread }}</span>{% endif %}</a>
         <a href="/ledger/" {% if section == "ledger" %}aria-current="page"{% endif %}>Ledger</a>
         {% if user.member.is_organizer %}<a href="/members/">Members</a>{% endif %}

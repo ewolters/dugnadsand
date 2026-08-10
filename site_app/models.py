@@ -325,3 +325,153 @@ class Attestation(models.Model):
 
     def __str__(self):
         return f"#{self.sequence} {self.status} at {self.recorded_at:%Y-%m-%d %H:%M}Z"
+
+
+# --------------------------------------------------------------------------
+# The virtual warehouse
+#
+# Businesses and farms already hold material that somebody nearby needs. The
+# bottleneck in mutual aid is materials, not willing hands, and nothing else in
+# this system moves that.
+#
+# WE NEVER TAKE CUSTODY. The goods stay where their holder keeps them; this
+# stores a location and a description and nothing else. That is not modesty, it
+# is the whole legal shape: no custody means no title, and no title means no
+# storage liability, no insurance obligation, and no unrelated-business
+# exposure. The platform stays a DIRECTORY — which is the same posture that
+# keeps hours a RECORD rather than a currency.
+#
+# One line runs through all of it: we prove a thing moved, we never say what it
+# was worth. The moment any row here carries a dollar figure it becomes an
+# appraisal of donated property, produced by a platform, about a donor — see
+# no-material-valuation in policy/manifest.toml.
+# --------------------------------------------------------------------------
+
+
+class Warehouse(TenantScoped):
+    """Somewhere a member holds material. Their place, their goods, our index.
+
+    Deliberately absent: capacity, utilisation, cost per pallet, any field that
+    would make this a warehouse management system. It is an address and the
+    name of somebody to ask.
+    """
+
+    name = models.CharField(max_length=200)
+    holder = models.ForeignKey(
+        Member, on_delete=models.PROTECT, related_name="warehouses")
+
+    # Free text on purpose. "Second barn, gate code 4412, Ola has the key" is
+    # more useful to a person driving there than any structured address.
+    address = models.TextField()
+    notes = models.TextField(blank=True)
+
+    active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ("name",)
+
+    def __str__(self):
+        return self.name
+
+
+class StockLine(TenantScoped):
+    """Something available, as its holder last confirmed it.
+
+    confirmed_at is not metadata. A quantity with no date is a claim about the
+    present tense that nobody checked, and somebody drives forty miles on it.
+    Every surface that shows an amount shows how old the amount is, and
+    staleness must never render as availability.
+    """
+
+    warehouse = models.ForeignKey(
+        Warehouse, on_delete=models.PROTECT, related_name="lines")
+
+    # Free text, like every other description in this system. A shipped
+    # taxonomy of materials would make two donations comparable, and
+    # comparables have a price — see no-catalog.
+    description = models.TextField()
+    quantity = models.DecimalField(max_digits=12, decimal_places=2)
+    unit = models.CharField(max_length=40)
+
+    confirmed_at = models.DateTimeField()
+    confirmed_by = models.ForeignKey(
+        Member, on_delete=models.PROTECT, related_name="stock_confirmations")
+
+    available = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ("-confirmed_at",)
+
+    @property
+    def confirmed_days_ago(self):
+        from django.utils import timezone
+
+        return (timezone.now() - self.confirmed_at).days
+
+    @property
+    def freshness(self):
+        """How much this number should be trusted, in words.
+
+        Returns a judgement rather than a date because a date invites the
+        reader to do this arithmetic themselves and most will not.
+        """
+        days = self.confirmed_days_ago
+        if days <= 0:
+            return "confirmed today"
+        if days == 1:
+            return "confirmed yesterday"
+        if days <= 14:
+            return f"confirmed {days} days ago"
+        if days <= 60:
+            return f"not confirmed in {days // 7} weeks"
+        return "not confirmed in months"
+
+    @property
+    def stale(self):
+        return self.confirmed_days_ago > 14
+
+    def __str__(self):
+        return f"{self.quantity} {self.unit}"
+
+
+class Manifest(TenantScoped):
+    """Material moving from a warehouse to somebody who needs it.
+
+    The receiving half is the point. A donating business needs evidence that
+    its goods reached charitable use, and this can supply that — evidence of
+    TRANSFER, never a valuation. Those are different documents and only one of
+    them is safe for a platform to produce.
+
+    Receipt is confirmed by scanning the QR on the paperwork travelling with
+    the goods, which is a dual-path token: the receiver very often has no
+    account and should not need one.
+    """
+
+    stock_line = models.ForeignKey(
+        StockLine, on_delete=models.PROTECT, related_name="manifests")
+    quantity = models.DecimalField(max_digits=12, decimal_places=2)
+
+    # Where it is going, in words. Not a member FK: material frequently goes to
+    # somebody who is not in this organization, which is the normal case rather
+    # than an exception to model around.
+    destination = models.TextField()
+
+    sent_by = models.ForeignKey(
+        Member, on_delete=models.PROTECT, related_name="manifests_sent")
+    sent_at = models.DateTimeField(auto_now_add=True)
+
+    received_at = models.DateTimeField(null=True, blank=True)
+    # Free text: whoever signed for it, however they gave their name.
+    received_note = models.TextField(blank=True)
+
+    class Meta:
+        ordering = ("-sent_at",)
+
+    @property
+    def received(self):
+        return self.received_at is not None
+
+    def __str__(self):
+        return f"{self.quantity} {self.stock_line.unit} to {self.destination[:40]}"
