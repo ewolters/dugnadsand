@@ -20,6 +20,9 @@ invariants = [
     "no-obligation", "no-aggregate-display",
 ]
 
+# Verbs this site binds for the shared port. Imported when the port opens.
+actions = "site_app.work_actions"
+
 # Everything below is a table. Bare keys must stay ABOVE this line: TOML
 # assigns them to whichever table was opened last, so an `extensions` line
 # written after [map.party] silently becomes map.party.extensions and the site
@@ -59,3 +62,16 @@ occurred_at = "recorded_at"
 model = "site_app.Member"
 id = "id"
 tenant = "organization"
+
+[egress]
+# What an adapter OUTSIDE this tenant may be handed. Slack is outside. So is a
+# webhook and a digest email. Row-level security stops at the process
+# boundary, so anything handed over has left the organization for good.
+#
+# signal-only: that something exists, its state, and a link. Never the free
+# text, never a member's name. The link resolves under the reader's own
+# session, inside their own tenant, which is where a member's circumstances
+# belong. Same rule the notification layer reached the hard way, applied where
+# the blast radius is larger.
+policy = "signal-only"
+link = "/board/"
