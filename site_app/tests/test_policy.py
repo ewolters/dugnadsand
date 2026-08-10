@@ -177,3 +177,49 @@ class NoGatingAtRuntime(SignedIn, TestCase):
             "The claim path read the contribution ledger. Nothing may gate on what a "
             "member has given - see docs/design-rules.md section 1.",
         )
+
+
+class RoutingNeverConsultsTheRecord(SignedIn, TestCase):
+    """no-routing-by-record, and proof that it can fail.
+
+    The check's own subject is a file list, so a typo in DELIVERY_MODULES would
+    make it pass by scanning nothing. These tests pin both directions.
+    """
+
+    def test_the_delivery_modules_it_claims_to_scan_actually_exist(self):
+        from pathlib import Path
+
+        from policy.checks import BASE_DIR, DELIVERY_MODULES
+
+        self.assertTrue(DELIVERY_MODULES)
+        for name in DELIVERY_MODULES:
+            self.assertTrue(Path(BASE_DIR / name).exists(),
+                            f"{name} is listed as a delivery path but is not there")
+
+    def test_it_holds_today(self):
+        from policy.checks import UPHELD, no_routing_by_record
+
+        self.assertEqual(no_routing_by_record().status, UPHELD)
+
+    def test_it_breaks_when_a_delivery_path_names_the_ledger(self):
+        """The feature it forbids: recipients ranked by what they have given."""
+        from unittest.mock import patch
+
+        from policy import checks
+
+        source = "def _audience(org):\n    from .models import Contribution\n"
+        with patch.object(checks.Path, "read_text", lambda self: source), \
+             patch.object(checks.Path, "exists", lambda self: True):
+            result = checks.no_routing_by_record()
+
+        self.assertEqual(result.status, checks.BREACHED)
+        self.assertTrue(any("Contribution" in e for e in result.evidence))
+
+    def test_it_reports_unenforceable_rather_than_passing_when_nothing_is_there(self):
+        from unittest.mock import patch
+
+        from policy import checks
+
+        with patch.object(checks.Path, "exists", lambda self: False):
+            result = checks.no_routing_by_record()
+        self.assertEqual(result.status, checks.NOT_ENFORCEABLE)

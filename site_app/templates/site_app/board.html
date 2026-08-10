@@ -9,9 +9,13 @@
 <p><a class="act" href="/board/new/">Post something</a></p>
 
 <h2>People are asking for</h2>
+<p class="ordering">Soonest first. Anything without a date sits at the bottom — not
+   because it matters less, but because there is nothing to sort it by.</p>
 {% for p in needs %}
   <div class="card need">
-    <p class="who">{{ p.member.display_name }} · {{ p.created_at|date:"j M" }}</p>
+    <p class="who">{{ p.member.display_name }} · {{ p.created_at|date:"j M" }}
+      {% if p.needed_by %}<span class="when {{ p.urgency|slugify }}">{{ p.urgency }}</span>{% endif %}
+    </p>
     <p>{{ p.description|linebreaksbr }}</p>
     {% if p.hours_cap %}<p class="cap">Roughly {{ p.hours_cap }} hour{{ p.hours_cap|pluralize }}</p>{% endif %}
 

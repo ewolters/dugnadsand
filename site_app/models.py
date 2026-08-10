@@ -105,6 +105,13 @@ class Posting(TenantScoped):
     kind = models.CharField(max_length=8, choices=KINDS, default=OFFER)
     description = models.TextField()
     hours_cap = models.PositiveIntegerField(null=True, blank=True)
+
+    # When it stops being useful. A ride on Thursday and a fence sometime this
+    # year are different problems, and until this existed the board could not
+    # tell them apart — everything was equally urgent, which is to say nothing
+    # was. Optional: plenty of help has no deadline.
+    needed_by = models.DateField(null=True, blank=True)
+
     open = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -114,6 +121,35 @@ class Posting(TenantScoped):
     @property
     def is_need(self):
         return self.kind == self.NEED
+
+    @property
+    def days_left(self):
+        """Whole days until this stops being useful, or None if open-ended."""
+        if not self.needed_by:
+            return None
+        from django.utils import timezone
+        return (self.needed_by - timezone.localdate()).days
+
+    @property
+    def urgency(self):
+        """A word for how soon, for people rather than for sorting.
+
+        Deliberately about the POSTING and never about the person who made it.
+        The moment a board ranks by who posted rather than by what is needed,
+        it has started gating — see policy/manifest.toml, no-gating.
+        """
+        days = self.days_left
+        if days is None:
+            return "whenever"
+        if days < 0:
+            return "overdue"
+        if days == 0:
+            return "today"
+        if days == 1:
+            return "tomorrow"
+        if days <= 7:
+            return f"in {days} days"
+        return "later"
 
     def __str__(self):
         return f"{self.get_kind_display()}: {self.description[:50]}"

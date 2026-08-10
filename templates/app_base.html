@@ -72,6 +72,28 @@
     .err { color:var(--brand-error); font-size:.9rem; margin:.3rem 0 0; }
     .empty { color:var(--brand-moss); font-style:italic; }
 
+    /* Unread count. Ochre because it is worth a look, not alert red — nothing
+       here is an emergency and nothing here is owed. */
+    header.app nav .badge { display:inline-block; background:var(--brand-ochre); color:var(--brand-white);
+      border-radius:999px; padding:.05rem .38rem; font-size:.6875rem; letter-spacing:0; }
+
+    /* How soon a need is wanted. Colour carries the same information as the
+       word, never information the word leaves out. */
+    .when { font-family:var(--brand-font-mono); font-size:.6875rem; letter-spacing:.06em;
+      text-transform:uppercase; border:1px solid currentColor; border-radius:2px;
+      padding:.05rem .35rem; margin-left:.4rem; color:var(--brand-moss); }
+    .when.today, .when.tomorrow { color:var(--brand-warn); background:var(--brand-warn-wash); }
+    .when.overdue { color:var(--brand-alert); background:var(--brand-alert-wash); }
+
+    .ordering { color:var(--brand-moss); font-size:.875rem; margin:0 0 1rem; }
+
+    .notice { border-bottom:1px solid var(--brand-rule); padding:.85rem 0; }
+    .notice:last-of-type { border-bottom:0; }
+    .notice .msg { margin:0 0 .2rem; }
+    .notice .stamp { font-family:var(--brand-font-mono); font-size:.6875rem; letter-spacing:.06em;
+      color:var(--brand-moss); margin:0; }
+    .notice.fresh .msg { font-weight:600; }
+
     table.ledger { width:100%; border-collapse:collapse; background:var(--brand-paper);
                    border:1px solid var(--brand-rule); font-size:.9rem; }
     table.ledger th, table.ledger td { text-align:left; padding:.6rem .8rem;
@@ -106,6 +128,7 @@
       {% if user.is_authenticated %}
       <nav>
         <a href="/board/" {% if section == "board" %}aria-current="page"{% endif %}>The board</a>
+        <a href="/notices/" {% if section == "notices" %}aria-current="page"{% endif %}>What's happened{% if notifications_unread %} <span class="badge">{{ notifications_unread }}</span>{% endif %}</a>
         <a href="/ledger/" {% if section == "ledger" %}aria-current="page"{% endif %}>Ledger</a>
         {% if user.member.is_organizer %}<a href="/members/">Members</a>{% endif %}
         <a href="/password/">Password</a>

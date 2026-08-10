@@ -1,0 +1,22 @@
+{% extends "app_base.html" %}
+{% block title %}What's happened — Dugnadsand{% endblock %}
+{% block content %}
+<h1>What's happened</h1>
+<p class="lede">Anything that appeared on the board here, and anything somebody took up.
+   Nobody is told whether you read this, and nobody is waiting on you.</p>
+
+{% if items is None %}
+  <p class="empty">Can't reach the notice service right now. Nothing has been lost —
+     the board itself is unaffected. <a href="/board/">Go to the board</a>.</p>
+{% else %}
+  {% for n in items %}
+    <div class="notice{% if not n.read_at %} fresh{% endif %}">
+      <p class="msg">{% if n.link %}<a href="{{ n.link }}">{{ n.message }}</a>{% else %}{{ n.message }}{% endif %}</p>
+      <p class="stamp">{{ n.created_at|date:"j M, H:i" }}</p>
+    </div>
+  {% empty %}
+    <p class="empty">Nothing yet. When somebody posts a need or takes something up,
+       it turns up here.</p>
+  {% endfor %}
+{% endif %}
+{% endblock %}

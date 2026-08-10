@@ -132,6 +132,7 @@ def attestation_run(request):
 @require_POST
 def claim_posting(request, posting_id):
     from .models import Posting
+    from .notifications import announce_claim
     from .services import claim_posting as do_claim
 
     member = getattr(request.user, "member", None)
@@ -140,10 +141,11 @@ def claim_posting(request, posting_id):
 
     posting = get_object_or_404(Posting, pk=posting_id)
     try:
-        do_claim(posting=posting, member=member)
+        claim = do_claim(posting=posting, member=member)
     except ValueError as exc:
         return HttpResponseBadRequest(str(exc))
 
+    announce_claim(claim)
     return redirect("/board/")
 
 
@@ -197,11 +199,16 @@ def _member(request):
 def board(request):
     """Everything open in this member's organization, both directions.
 
-    Ordered by recency, and only by recency. Ranking either column by who has
-    given most would make the record function as standing — see no-gating — and
-    a request sorted by its asker's contribution is the exact failure this
-    system exists to avoid.
+    Needs are ordered by when they are needed, then by recency. Offers stay in
+    recency order — an offer has no deadline to sort by.
+
+    The invariant is not "order by recency", it is that ORDER NEVER CONSULTS
+    THE PERSON. Sorting a need by its own date is a fact about the need;
+    sorting it by its asker's contribution would make the record function as
+    standing, which is the exact failure this system exists to avoid. See
+    no-gating in policy/manifest.toml.
     """
+    from datetime import date
     from .models import Posting
 
     member = _member(request)
@@ -217,9 +224,17 @@ def board(request):
         .prefetch_related("claims__member")
         .order_by("-created_at")
     )
+    needs = [p for p in open_postings if p.kind == Posting.NEED]
+    # Dated needs first, soonest at the top; undated ones keep their place at
+    # the bottom in recency order. A need with no date is not less important,
+    # it just has nothing to sort on, and inventing a position for it would be
+    # inventing information.
+    needs.sort(key=lambda p: (p.needed_by is None,
+                              p.needed_by or date.max,
+                              -p.created_at.timestamp()))
     return render(request, "site_app/board.html", {
         "member": member,
-        "needs": [p for p in open_postings if p.kind == Posting.NEED],
+        "needs": needs,
         "offers": [p for p in open_postings if p.kind == Posting.OFFER],
     })
 
@@ -227,6 +242,7 @@ def board(request):
 @login_required
 def posting_new(request):
     from .forms import PostingForm
+    from .notifications import announce_posting
 
     member = _member(request)
     if member is None:
@@ -238,6 +254,9 @@ def posting_new(request):
         posting.member = member
         posting.organization_id = member.organization_id
         posting.save()
+        # Everyone else in the organization, chosen by membership and nothing
+        # else. Fails open — see site_app/notifications.py.
+        announce_posting(posting)
         return redirect("/board/")
 
     return render(request, "site_app/posting_form.html", {"form": form})
@@ -327,6 +346,37 @@ def ledger(request):
 # they replace it, the person who added them can sign in as them — so the
 # change is forced rather than suggested.
 # --------------------------------------------------------------------------
+
+
+@login_required
+def notices(request):
+    """What has happened here lately, and nothing about who did it.
+
+    Opening this page marks everything read. There is deliberately no record
+    of that going anywhere useful: a sender who could see that a notice was
+    delivered and not acted on would be watching for a response, and being
+    watched for a response is an obligation. Nobody here owes anybody an
+    answer — see docs/design-rules.md.
+    """
+    from .notifications import mark_read_here, recent_here
+
+    member = _member(request)
+    if member is None:
+        return HttpResponseForbidden("Not a member of any organization.")
+
+    email = request.user.email
+    try:
+        items = recent_here(email, limit=50) if email else []
+        # Explicit ids. Clearing by address alone would dismiss notices raised
+        # by other federation sites — see site_app/notifications.py.
+        mark_read_here(email, [n["id"] for n in items if n["read_at"] is None])
+    except Exception:
+        logger.warning("notices unavailable", exc_info=True)
+        items = None  # distinct from "nothing here" — the template says so
+
+    return render(request, "site_app/notices.html", {
+        "member": member, "items": items, "section": "notices",
+    })
 
 
 @login_required

@@ -114,13 +114,19 @@ class Postings(AppBase):
         """
         from site_app.forms import PostingForm
 
-        self.assertEqual(set(PostingForm().fields), {"kind", "description", "hours_cap"})
+        # needed_by is allowed here: a date is a fact about the NEED. What
+        # stays forbidden is anything describing the WORK — service type,
+        # skill, rate — because those create comparables and comparables
+        # create ascertainable value.
+        self.assertEqual(set(PostingForm().fields),
+                         {"kind", "description", "needed_by", "hours_cap"})
 
         self.sign_in(self.ada_user)
         body = self.client.get("/board/new/").content.decode().lower()
         self.assertNotIn("<select", body, "the posting form has a dropdown")
         posted = set(re.findall(r'<(?:input|textarea)[^>]*name="([^"]+)"', body))
-        self.assertEqual(posted - {"csrfmiddlewaretoken"}, {"kind", "description", "hours_cap"})
+        self.assertEqual(posted - {"csrfmiddlewaretoken"},
+                         {"kind", "description", "needed_by", "hours_cap"})
 
     def test_only_the_offerer_can_close_it(self):
         self.sign_in(self.ada_user)
@@ -269,8 +275,13 @@ class Needs(AppBase):
         self.assertIn("ride to the clinic", body)
         self.assertIn("potatoes", body)
 
-    def test_needs_are_ordered_only_by_recency(self):
-        """Ranking requests by contribution is gating wearing a sort order."""
+    def test_undated_needs_keep_recency_order(self):
+        """Ranking requests by contribution is gating wearing a sort order.
+
+        Needs with a date sort by that date (see test_matching.WhenItIsNeeded);
+        needs without one fall back to recency, because there is nothing else
+        about them to sort on that is not about the person who asked.
+        """
         from site_app.models import Posting
 
         self.sign_in(self.ada_user)
@@ -322,4 +333,9 @@ class Needs(AppBase):
 
         choices = dict(PostingForm().fields["kind"].choices)
         self.assertEqual(set(choices), {"offer", "need"})
-        self.assertEqual(set(PostingForm().fields), {"kind", "description", "hours_cap"})
+        # needed_by is allowed here: a date is a fact about the NEED. What
+        # stays forbidden is anything describing the WORK — service type,
+        # skill, rate — because those create comparables and comparables
+        # create ascertainable value.
+        self.assertEqual(set(PostingForm().fields),
+                         {"kind", "description", "needed_by", "hours_cap"})

@@ -138,6 +138,58 @@ def no_gating():
                   "No claim path references the contribution record.")
 
 
+# Modules that decide WHO HEARS ABOUT WHAT. Kept as an explicit list rather
+# than a name heuristic: no_gating already showed what happens when a check
+# infers its own scope from function names, and a routing module renamed to
+# something clever would silently fall out of coverage. Adding a delivery path
+# means adding it here, and the check fails loudly if a listed file is gone.
+DELIVERY_MODULES = ("site_app/notifications.py",)
+
+
+def no_routing_by_record():
+    """The delivery layer must not know the contribution record exists.
+
+    Deliberately blunt: any mention of Contribution anywhere in a delivery
+    module is a breach, not just a mention inside a suggestively named
+    function. There is no legitimate reason for the code that picks recipients
+    to name the ledger, and a rule with no exceptions is a rule nobody has to
+    argue about at review time.
+    """
+    present = [m for m in DELIVERY_MODULES if (BASE_DIR / m).exists()]
+    if not present:
+        return Result(
+            "no-routing-by-record", NOT_ENFORCEABLE,
+            "The absence of routing by record cannot be tested: no delivery "
+            f"path exists yet (looked for {', '.join(DELIVERY_MODULES)}).",
+        )
+
+    hits = []
+    for name in present:
+        path = BASE_DIR / name
+        try:
+            tree = ast.parse(path.read_text())
+        except SyntaxError:
+            continue
+        for node in ast.walk(tree):
+            found = None
+            if isinstance(node, ast.Name) and node.id == "Contribution":
+                found = node.id
+            elif isinstance(node, ast.Attribute) and node.attr == "Contribution":
+                found = node.attr
+            elif isinstance(node, ast.alias) and node.name == "Contribution":
+                found = node.name
+            if found:
+                hits.append(f"{name}:{getattr(node, 'lineno', '?')} names {found}")
+
+    if hits:
+        return Result("no-routing-by-record", BREACHED,
+                      "A delivery path references the contribution record.", hits)
+    return Result(
+        "no-routing-by-record", UPHELD,
+        "No delivery path references the contribution record "
+        f"({', '.join(present)}).")
+
+
 def no_exchange():
     blocked = _needs_domain("no-exchange", "The absence of exchange")
     if blocked:
@@ -349,6 +401,7 @@ def no_aggregate_display():
 CHECKS = {
     "no_balance": no_balance,
     "no_gating": no_gating,
+    "no_routing_by_record": no_routing_by_record,
     "no_exchange": no_exchange,
     "flat_hours": flat_hours,
     "no_money_rails": no_money_rails,

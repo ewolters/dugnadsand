@@ -26,6 +26,15 @@ written.
 A nudge that says "you've received four times and given once." Any of these, shipped by
 someone reasonable trying to be helpful.
 
+**And the quiet version — routing.** Once the system started telling people that a need
+exists, a second surface opened. "Send needs to whoever actually turns up" is the
+obvious efficiency win, it reads as good engineering, and it is this rule broken: a
+member who has given nothing hears about fewer needs, so the record has begun deciding
+what reaches whom. Withholding the chance to help is a softer denial than refusing a
+claim and it is still a denial. Everyone in the organization hears; who responds is
+theirs to decide. Enforced separately as `no-routing-by-record`, because the check
+behind rule 1 scans claim paths and cannot see delivery ones.
+
 ---
 
 ## 2. Hours are hours

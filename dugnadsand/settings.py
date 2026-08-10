@@ -61,6 +61,11 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
+                # Unread badge on every page. Site-scoped on purpose — the
+                # shared kjerne_platform.notify.notifications counts across
+                # the whole federation, which would show a member another
+                # product's notices here. Fails open.
+                "site_app.notifications.badge",
             ],
         },
     },

@@ -38,20 +38,24 @@ class PostingForm(forms.ModelForm):
         from .models import Posting
 
         model = Posting
-        fields = ("kind", "description", "hours_cap")
+        fields = ("kind", "description", "needed_by", "hours_cap")
         labels = {
             "kind": "Are you offering something, or asking for something",
             "description": "In your own words",
+            "needed_by": "Is there a date it stops being useful (optional)",
             "hours_cap": "Roughly how many hours (optional)",
         }
         help_texts = {
             "kind": "Asking costs nothing and proves nothing. Nobody can see "
                     "what you have or have not contributed.",
+            "needed_by": "A ride on Thursday and a fence sometime this year are "
+                         "different things. Leave it blank if there's no rush.",
             "hours_cap": "A ceiling, never a floor. Whoever takes this on can "
                          "stop before it, any time, and nothing is recorded.",
         }
         widgets = {
             "description": forms.Textarea(attrs={"rows": 4}),
+            "needed_by": forms.DateInput(attrs={"type": "date"}),
             "kind": forms.RadioSelect,
         }
 

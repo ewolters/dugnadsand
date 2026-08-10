@@ -24,6 +24,13 @@
   </div>
 
   <div>
+    <label for="{{ form.needed_by.id_for_label }}">{{ form.needed_by.label }}</label>
+    {{ form.needed_by }}
+    <p class="help">{{ form.needed_by.help_text }}</p>
+    {% if form.needed_by.errors %}<p class="err">{{ form.needed_by.errors.0 }}</p>{% endif %}
+  </div>
+
+  <div>
     <label for="{{ form.hours_cap.id_for_label }}">{{ form.hours_cap.label }}</label>
     {{ form.hours_cap }}
     <p class="help">{{ form.hours_cap.help_text }}</p>

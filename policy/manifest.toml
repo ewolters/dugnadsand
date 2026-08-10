@@ -42,6 +42,26 @@ check = "no_gating"
 enforceable_when = "a claim path exists"
 
 [[invariant]]
+id = "no-routing-by-record"
+claim = "No code path consults what a member has given when deciding who to tell about a need."
+why = """
+This is no-gating applied to the delivery layer, and it needs its own entry
+because no-gating cannot see it. That check scans functions whose NAME contains
+"claim" — exact while claiming was the only place eligibility could hide, and
+blind the moment the system started routing.
+
+Routing is where the pressure will come from. "Send needs to whoever actually
+turns up" is the obvious efficiency win, it sounds like good engineering, and it
+is gating: a member who has given nothing hears about fewer needs, so the record
+has begun deciding what reaches whom. Withholding an opportunity to help is a
+softer denial than refusing a claim, and it is still a denial.
+
+Everyone in the organization hears. Who responds is theirs to decide.
+"""
+check = "no_routing_by_record"
+enforceable_when = "a delivery path exists"
+
+[[invariant]]
 id = "no-exchange"
 claim = "Nothing links what a member received to what a member gave."
 why = """
