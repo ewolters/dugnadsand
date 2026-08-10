@@ -467,6 +467,13 @@ class Manifest(TenantScoped):
     # Free text: whoever signed for it, however they gave their name.
     received_note = models.TextField(blank=True)
 
+    # The receipt capability, minted once and kept. It is PRINTED and travels
+    # with the goods, so it has to be stable: minting a fresh one on every
+    # render left a live link behind per page view, and there is no reason for
+    # a second to exist while the first still works. Reissued only once the
+    # stored one is spent or expired.
+    receipt_token = models.CharField(max_length=128, blank=True, editable=False)
+
     class Meta:
         ordering = ("-sent_at",)
 

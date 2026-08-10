@@ -18,14 +18,15 @@ from kjerne_platform.work import tokens
 from site_app.models import Claim, Member, Organization, Posting
 from site_app.tenancy import tenant_context
 
-from .helpers import SignedIn
+from .helpers import CleansPlatformTokens, SignedIn
 
 WORK_TOML = "work.toml"
 SENSITIVE = "Can someone drive my mother to dialysis on Thursday"
 
 
-class DualPathBase(SignedIn, TestCase):
+class DualPathBase(CleansPlatformTokens, SignedIn, TestCase):
     def setUp(self):
+        super().setUp()   # chains into CleansPlatformTokens
         self.port = work_port.open(WORK_TOML)
         self.alpha = Organization.objects.create(slug="alpha", name="Alpha Mutual Aid")
         self.ada_user = User.objects.create_user(
@@ -44,16 +45,6 @@ class DualPathBase(SignedIn, TestCase):
                 description=SENSITIVE)
 
         self.minted = []
-
-    def tearDown(self):
-        """Tokens live in the shared platform DB, outside Django's rollback."""
-        if not self.minted:
-            return
-        from kjerne_platform.db import get_conn
-        with get_conn() as conn, conn.cursor() as cur:
-            cur.execute("DELETE FROM work_action_token WHERE token = ANY(%s)",
-                        (self.minted,))
-            conn.commit()
 
     def mint(self, side=tokens.CONFIRM, verb="claim"):
         token = tokens.issue(

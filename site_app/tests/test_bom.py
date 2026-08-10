@@ -25,11 +25,15 @@ from site_app.models import (Contribution, MaterialGiven, MaterialNeed,
                              StockLine, Warehouse)
 from site_app.tenancy import bypass_rls, tenant_context
 
-from .helpers import SignedIn
+from .helpers import CleansPlatformTokens, SignedIn
 
 
-class BomBase(SignedIn, TestCase):
+class BomBase(CleansPlatformTokens, SignedIn, TestCase):
     def setUp(self):
+        # Chains into CleansPlatformTokens. This class does not mint a token
+        # itself — rendering a manifest mints one for it, which is exactly the
+        # case per-test bookkeeping kept missing.
+        super().setUp()
         self.alpha = Organization.objects.create(slug="alpha", name="Alpha Mutual Aid")
         self.beta = Organization.objects.create(slug="beta", name="Beta Mutual Aid")
 

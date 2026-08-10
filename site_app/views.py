@@ -726,10 +726,19 @@ def manifest(request, manifest_id):
     qr_svg = receipt_url = None
     if not doc.received:
         try:
-            token = tokens.issue(
-                work_port.open(WORK_TOML), verb="confirm-receipt",
-                payload={"manifest": str(doc.id)}, tenant=doc.organization_id,
-                recipient=doc.destination[:200])
+            port = work_port.open(WORK_TOML)
+            token = doc.receipt_token
+            # Mint only when there is nothing usable. The code is PRINTED and
+            # travels with the goods, so it has to be the same code every time
+            # this page is rendered — and one live receipt link per page view
+            # is a trail of capabilities nobody asked for.
+            if not tokens.is_live(port, token):
+                token = tokens.issue(
+                    port, verb="confirm-receipt",
+                    payload={"manifest": str(doc.id)}, tenant=doc.organization_id,
+                    recipient=doc.destination[:200])
+                doc.receipt_token = token
+                doc.save(update_fields=["receipt_token"])
             receipt_url = f"https://dugnadsand.org/act/{token}/"
             qr_svg = _qr_svg(receipt_url)
         except Exception:

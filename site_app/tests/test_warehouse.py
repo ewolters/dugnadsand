@@ -29,11 +29,12 @@ from site_app.models import (Manifest, Member, Organization, StockLine,
                              Warehouse)
 from site_app.tenancy import bypass_rls, tenant_context
 
-from .helpers import SignedIn
+from .helpers import CleansPlatformTokens, SignedIn
 
 
-class WarehouseBase(SignedIn, TestCase):
+class WarehouseBase(CleansPlatformTokens, SignedIn, TestCase):
     def setUp(self):
+        super().setUp()   # chains into CleansPlatformTokens
         self.alpha = Organization.objects.create(slug="alpha", name="Alpha Mutual Aid")
         self.beta = Organization.objects.create(slug="beta", name="Beta Mutual Aid")
 
@@ -260,15 +261,6 @@ class SigningForIt(WarehouseBase):
                 sent_by=self.ada)
         self.minted = []
 
-    def tearDown(self):
-        if not self.minted:
-            return
-        from kjerne_platform.db import get_conn
-        with get_conn() as conn, conn.cursor() as cur:
-            cur.execute("DELETE FROM work_action_token WHERE token = ANY(%s)",
-                        (self.minted,))
-            conn.commit()
-
     def mint(self):
         from kjerne_platform.work import port as work_port
         from kjerne_platform.work import tokens
@@ -341,3 +333,72 @@ class TheWarehouseIsTenantScoped(WarehouseBase):
 
         self.sign_in(self.bo_user)
         self.assertEqual(self.client.get(f"/manifest/{doc.id}/").status_code, 404)
+
+
+class TheReceiptCodeIsStable(WarehouseBase):
+    """It is printed and travels with the goods.
+
+    The first version minted a token on every render, so refreshing the page
+    ten times left ten live receipt links behind — and leaked a row into the
+    shared platform table each time, including from the test suite. Same shape
+    as enrolling a second factor on render instead of once.
+    """
+
+    def setUp(self):
+        super().setUp()
+        with tenant_context(self.alpha):
+            self.doc = Manifest.objects.create(
+                organization=self.alpha, stock_line=self.lumber,
+                quantity=Decimal("50.00"), destination="Habitat build",
+                sent_by=self.ada)
+
+    def live_tokens(self):
+        from kjerne_platform.db import get_conn
+        with get_conn() as conn, conn.cursor() as cur:
+            cur.execute(
+                "SELECT count(*) FROM work_action_token "
+                " WHERE site = 'dugnadsand' AND used_at IS NULL "
+                "   AND payload->>'manifest' = %s", (str(self.doc.id),))
+            return conn and cur.fetchone()[0]
+
+    def test_rendering_the_page_repeatedly_mints_exactly_one(self):
+        self.sign_in(self.ada_user)
+        for _ in range(4):
+            self.client.get(f"/manifest/{self.doc.id}/")
+        self.assertEqual(self.live_tokens(), 1)
+
+    def test_the_printed_code_does_not_change_between_renders(self):
+        import re
+
+        self.sign_in(self.ada_user)
+
+        def code():
+            body = self.client.get(f"/manifest/{self.doc.id}/").content.decode()
+            return re.search(r"/act/([A-Za-z0-9_-]+)/", body).group(1)
+
+        self.assertEqual(code(), code())
+
+    def test_the_token_is_kept_on_the_manifest(self):
+        self.sign_in(self.ada_user)
+        self.client.get(f"/manifest/{self.doc.id}/")
+        with tenant_context(self.alpha):
+            self.doc.refresh_from_db()
+        self.assertTrue(self.doc.receipt_token)
+
+    def test_a_spent_code_is_replaced_rather_than_reused(self):
+        """Reprinting after somebody already signed should not hand out a
+        second chance at the same receipt — but a manifest reopened for any
+        reason must still be scannable."""
+        from kjerne_platform.work import port as work_port
+        from kjerne_platform.work import tokens
+
+        self.sign_in(self.ada_user)
+        self.client.get(f"/manifest/{self.doc.id}/")
+        with tenant_context(self.alpha):
+            self.doc.refresh_from_db()
+            first = self.doc.receipt_token
+            tokens.redeem(work_port.open("work.toml"), first)
+
+            self.doc.refresh_from_db()
+            self.assertTrue(self.doc.received)
+            self.assertFalse(tokens.is_live(work_port.open("work.toml"), first))
