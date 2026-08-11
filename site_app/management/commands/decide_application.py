@@ -16,7 +16,8 @@ from django.contrib.auth.models import User
 from django.core.management.base import BaseCommand, CommandError
 
 from site_app.models import Application
-from site_app.services_applications import (NotReady, admit, decline,
+from site_app.services_applications import (AdmissionProblem, NotReady,
+                                            admit_to_network, decline,
                                             record_screening, tell_decision,
                                             verify_credential)
 
@@ -36,6 +37,10 @@ class Command(BaseCommand):
         parser.add_argument("--found", action="store_true",
                             help="Something came back that needs a person")
         parser.add_argument("--note", default="")
+        parser.add_argument(
+            "--into", help="Organization slug an individual is joining")
+        parser.add_argument(
+            "--username", help="Override the login name derived from the email")
 
     def handle(self, *args, **options):
         try:
@@ -79,17 +84,52 @@ class Command(BaseCommand):
             return
 
         if options["admit"]:
+            into = None
+            if options["into"]:
+                from site_app.models import Organization
+                try:
+                    into = Organization.objects.get(slug=options["into"])
+                except Organization.DoesNotExist:
+                    raise CommandError(f"No organization with slug '{options['into']}'.")
+
             try:
-                admit(application=application, user=user, note=options["note"])
+                made = admit_to_network(
+                    application=application, user=user, note=options["note"],
+                    into=into, username=options["username"])
             except NotReady as refused:
                 raise CommandError(
                     "Not admitted. Still needs: " + "; ".join(refused.blockers))
-            tell_decision(application)
-            self.stdout.write(self.style.SUCCESS("Admitted. The applicant has been told."))
-            self.stdout.write(
-                "Create its tenant with:\n"
-                f'  manage.py admit_organization "{application.legal_name}"'
-                + (f" --region {application.region.slug}" if application.region else ""))
+            except AdmissionProblem as problem:
+                raise CommandError(str(problem))
+
+            # The setup mail IS the acceptance when a login was created: it
+            # carries the news and the thing to do next. Sending the decision
+            # mail as well would deliver a second letter saying somebody will
+            # be in touch to set up an account that is already set up.
+            if not made["mailed"]:
+                tell_decision(application)
+            self.stdout.write(self.style.SUCCESS("Admitted."))
+
+            if made["region"]:
+                self.stdout.write(f"  chapter:  {made['region'].name} ({made['region'].slug})")
+                self.stdout.write(
+                    "  No login was created: there is no chapter screen to sign "
+                    "into yet.\n  Give somebody a role with:\n"
+                    f"    manage.py add_region_role {made['region'].slug} <username> --role lead")
+                return
+
+            self.stdout.write(f"  organization:  {made['organization'].name} "
+                              f"({made['organization'].slug})")
+            self.stdout.write(f"  first member:  {made['member'].display_name} "
+                              f"({made['member'].user.username})")
+            if made["mailed"]:
+                self.stdout.write(self.style.SUCCESS(
+                    "  setup link:    sent, single use, expires in 7 days"))
+            else:
+                self.stdout.write(self.style.WARNING(
+                    "  setup link:    NOT SENT — the address is suppressed. "
+                    "Resend with:\n"
+                    f"    manage.py send_setup_link {made['member'].user.username}"))
             return
 
         for reason in application.blockers:

@@ -250,3 +250,116 @@ def tell_decision(application):
         subject = "Your application to Dugnadsand"
 
     return _mail(to=application.email, subject=subject, body=body)
+
+
+# --------------------------------------------------------------------------
+# Turning a yes into a working front door.
+#
+# Admission used to end with a printed instruction to run three more commands,
+# which meant an accepted applicant sat waiting while somebody remembered.
+# This does the whole thing: the tenant, its first member, and the single-use
+# link that lets that person choose their own password.
+# --------------------------------------------------------------------------
+
+class AdmissionProblem(Exception):
+    """Admission cannot be completed as asked."""
+
+
+def _username_for(application):
+    """A login name derived from the email, then the contact name.
+
+    Derived rather than asked for because the applicant never chose one, and
+    inventing a prompt for it would put a decision in front of whoever is
+    reviewing at the moment they are least able to answer it. Collisions get a
+    numeric suffix; the member can be told what theirs is by the setup mail,
+    which prints it.
+    """
+    from django.contrib.auth.models import User
+    from django.utils.text import slugify
+
+    stem = slugify((application.email or "").split("@")[0]) \
+        or slugify(application.contact_name) or "member"
+    stem = stem[:24]
+
+    candidate, n = stem, 1
+    while User.objects.filter(username=candidate).exists():
+        n += 1
+        candidate = f"{stem}-{n}"
+    return candidate
+
+
+def admit_to_network(*, application, user, note="", into=None, username=None):
+    """Say yes, and build what the yes implies.
+
+    business, nonprofit  a new organization, its first member, a setup link
+    individual           a member of an EXISTING organization, a setup link
+    chapter              a chapter, and no login
+
+    A chapter gets no account on purpose. There is no chapter screen to sign
+    into yet, and issuing a credential for a door that does not exist teaches
+    somebody their password does not work.
+
+    Refuses to run twice. The blockers are checked first, so nothing is
+    created for an application that was never going to pass.
+    """
+    from django.db import transaction
+    from django.utils.text import slugify
+
+    from .models import Organization, Region
+    from .services_members import create_member
+    from .services_setup import send_setup_mail
+
+    if application.organization_id or (application.admitted and application.decided_at):
+        raise AdmissionProblem(
+            "This application has already been decided. Admitting it again "
+            "would create a second organization for one applicant.")
+
+    if application.blockers:
+        raise NotReady(application.blockers)
+
+    if application.kind == Application.INDIVIDUAL and into is None:
+        raise AdmissionProblem(
+            "An individual joins an organization that already exists. Name it "
+            "with --into <slug>; a person admitted into nothing can see "
+            "nothing, because every row is scoped to a tenant.")
+
+    if application.kind == Application.CHAPTER:
+        slug = slugify(application.legal_name)[:50]
+        if Region.objects.filter(slug=slug).exists():
+            raise AdmissionProblem(f"A chapter with slug '{slug}' already exists.")
+        region = Region.objects.create(slug=slug, name=application.legal_name)
+        admit(application=application, user=user, note=note)
+        return {"region": region, "organization": None, "member": None,
+                "mailed": False}
+
+    with transaction.atomic():
+        if into is not None:
+            organization = into
+        else:
+            slug = slugify(application.legal_name)[:50]
+            if Organization.objects.filter(slug=slug).exists():
+                raise AdmissionProblem(
+                    f"An organization with slug '{slug}' is already admitted.")
+            organization = Organization.objects.create(
+                slug=slug, name=application.legal_name,
+                region=application.region)
+
+        member, _password = create_member(
+            organization=organization,
+            username=username or _username_for(application),
+            display_name=application.contact_name,
+            email=application.email,
+            # The first person in a new organization can add the rest. Somebody
+            # has to be able to, and there is nobody else yet. An individual
+            # joining an existing organization gets no such privilege.
+            is_organizer=into is None)
+
+        admit(application=application, user=user, note=note,
+              organization=organization)
+
+    # After the transaction. A link minted inside it would survive a rollback
+    # in the mail queue's memory while vanishing from the database.
+    mailed = send_setup_mail(member) is not None
+
+    return {"region": None, "organization": organization, "member": member,
+            "mailed": mailed}

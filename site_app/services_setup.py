@@ -68,3 +68,46 @@ def consume_setup_link(link):
     with bypass_rls():
         SetupLink.objects.filter(pk=link.pk, used_at__isnull=True).update(
             used_at=timezone.now())
+
+
+# --------------------------------------------------------------------------
+# The invitation mail. Extracted from the send_setup_link command so that the
+# admission path and the command send the SAME letter: two copies would drift,
+# and the drift would be in what a new member is told this system is.
+# --------------------------------------------------------------------------
+
+BASE_URL = "https://dugnadsand.org"
+SITE = "dugnadsand"
+
+
+def send_setup_mail(member):
+    """Mint a single-use link and email it. Returns the queue id, or None if
+    the address is suppressed.
+
+    Minting happens here rather than in the caller because a link that is
+    created and then not sent is a live credential nobody knows about.
+    """
+    from kjerne_platform import email as platform_email
+
+    user = member.user
+    token = issue_setup_link(member)
+    link = f"{BASE_URL}/setup/{token}/"
+
+    body = (
+        f"Hello {member.display_name},\n\n"
+        f"Your account for Dugnadsand is ready. Follow this link to choose a "
+        f"password and set up a second factor:\n\n"
+        f"    {link}\n\n"
+        f"The link works once and expires in seven days. Your username is "
+        f"{user.username}.\n\n"
+        f"Dugnadsand writes down what happened and never what it was worth. "
+        f"Hours given, material brought — kept in separate records, never added "
+        f"together and never priced. None of it is a currency: nothing is bought, "
+        f"sold or owed, and nothing you do or don't contribute changes what you "
+        f"can ask for.\n\n"
+        f"{BASE_URL}\n"
+    )
+
+    return platform_email.send(
+        to=user.email, subject="Your Dugnadsand account", body=body,
+        site=SITE, from_name="Dugnadsand")

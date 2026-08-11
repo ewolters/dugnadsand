@@ -489,3 +489,231 @@ class WhoIsTold(ApplicationBase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(Application.objects.count(), 1)
+
+
+class AdmittingBuildsTheFrontDoor(ApplicationBase):
+    """A yes used to end with a printed list of three more commands, which
+    meant an accepted applicant waited while somebody remembered to run them.
+    """
+
+    def ready_business(self):
+        application = self.a_business()
+        self.verify_all(application)
+        return Application.objects.get(pk=application.pk)
+
+    def admit_it(self, application, **kw):
+        from unittest.mock import patch
+
+        from site_app.services_applications import admit_to_network
+
+        with patch("kjerne_platform.email.send", return_value=1) as send:
+            made = admit_to_network(application=application,
+                                    user=self.reviewer, **kw)
+        return made, send
+
+    def test_it_creates_the_organization_in_the_right_chapter(self):
+        from site_app.models import Organization
+
+        made, _ = self.admit_it(self.ready_business())
+        organization = Organization.objects.get(slug="alderman-electric-llc")
+
+        self.assertEqual(organization.name, "Alderman Electric LLC")
+        self.assertEqual(organization.region, self.region)
+        self.assertEqual(made["organization"], organization)
+
+    def test_it_creates_the_first_member_from_the_contact(self):
+        from site_app.tenancy import tenant_context
+
+        made, _ = self.admit_it(self.ready_business())
+        with tenant_context(made["organization"]):
+            member = made["member"]
+            self.assertEqual(member.display_name, "Dana Alderman")
+            self.assertEqual(member.user.email, "dana@example.test")
+            # Somebody has to be able to add the rest, and there is nobody else.
+            self.assertTrue(member.is_organizer)
+
+    def test_the_username_is_derived_from_the_email(self):
+        made, _ = self.admit_it(self.ready_business())
+        self.assertEqual(made["member"].user.username, "dana")
+
+    def test_a_taken_username_gets_a_suffix_rather_than_failing(self):
+        from django.contrib.auth.models import User
+
+        User.objects.create_user("dana", password="dugnad-test-pw")
+        made, _ = self.admit_it(self.ready_business())
+        self.assertEqual(made["member"].user.username, "dana-2")
+
+    def test_it_sends_the_setup_link(self):
+        made, send = self.admit_it(self.ready_business())
+        self.assertTrue(made["mailed"])
+
+        bodies = [c.kwargs["body"] for c in send.call_args_list]
+        setup = [b for b in bodies if "/setup/" in b]
+        self.assertEqual(len(setup), 1, "expected exactly one setup link")
+        self.assertIn("works once and expires in seven days", setup[0])
+
+    def test_the_link_actually_works(self):
+        """Guard the guard. A mail containing a URL proves nothing about
+        whether that URL resolves to this member."""
+        import re
+
+        from site_app.services_setup import resolve_setup_link
+
+        made, send = self.admit_it(self.ready_business())
+        body = next(c.kwargs["body"] for c in send.call_args_list
+                    if "/setup/" in c.kwargs["body"])
+        token = re.search(r"/setup/([^/\s]+)/", body).group(1)
+
+        _link, member = resolve_setup_link(token)
+        self.assertEqual(member.pk, made["member"].pk)
+
+    def test_the_application_records_the_organization_it_created(self):
+        made, _ = self.admit_it(self.ready_business())
+        fresh = Application.objects.get(pk=made["member"].organization.applications.first().pk)
+        self.assertEqual(fresh.organization, made["organization"])
+        self.assertTrue(fresh.admitted)
+
+    def test_admitting_twice_does_not_create_a_second_organization(self):
+        from site_app.models import Organization
+        from site_app.services_applications import AdmissionProblem
+
+        application = self.ready_business()
+        self.admit_it(application)
+        with self.assertRaises(AdmissionProblem):
+            self.admit_it(Application.objects.get(pk=application.pk))
+        self.assertEqual(
+            Organization.objects.filter(name="Alderman Electric LLC").count(), 1)
+
+    def test_nothing_is_created_for_an_application_that_is_not_ready(self):
+        """The blockers are checked BEFORE anything is built, so a refusal
+        leaves no half-made tenant behind."""
+        from site_app.models import Organization
+
+        with self.assertRaises(NotReady):
+            self.admit_it(self.a_business())
+        self.assertEqual(Organization.objects.count(), 0)
+
+    def test_an_individual_must_be_admitted_into_an_existing_organization(self):
+        """A person admitted into nothing can see nothing: every row is
+        scoped to a tenant, so a memberless login is a blank screen."""
+        from site_app.services_applications import AdmissionProblem
+
+        application = submit(
+            kind=Application.INDIVIDUAL, legal_name="Ola Nilsen",
+            contact_name="Ola Nilsen", email="ola@example.test",
+            statement="A truck.", agreed=True)
+        record_screening(
+            application=application, user=self.reviewer, source="A registry",
+            searched_name="Ola Nilsen", searched_on=date.today(), clear=True)
+
+        with self.assertRaises(AdmissionProblem) as caught:
+            self.admit_it(Application.objects.get(pk=application.pk))
+        self.assertIn("--into", str(caught.exception))
+
+    def test_an_individual_joins_the_named_organization_without_privilege(self):
+        from site_app.models import Organization
+        from site_app.tenancy import tenant_context
+
+        host = Organization.objects.create(slug="rivertown", name="Rivertown")
+        application = submit(
+            kind=Application.INDIVIDUAL, legal_name="Ola Nilsen",
+            contact_name="Ola Nilsen", email="ola@example.test",
+            statement="A truck.", agreed=True)
+        record_screening(
+            application=application, user=self.reviewer, source="A registry",
+            searched_name="Ola Nilsen", searched_on=date.today(), clear=True)
+
+        made, _ = self.admit_it(Application.objects.get(pk=application.pk),
+                                into=host)
+        with tenant_context(host):
+            self.assertEqual(made["member"].organization, host)
+            self.assertFalse(made["member"].is_organizer)
+
+    def test_a_chapter_gets_a_region_and_no_login(self):
+        """No account on purpose: there is no chapter screen to sign into, and
+        issuing a credential for a door that does not exist teaches somebody
+        their password does not work."""
+        from django.contrib.auth.models import User
+        from site_app.models import Region
+
+        application = submit(
+            kind=Application.CHAPTER, legal_name="Midlands South Carolina",
+            contact_name="Sam Reed", email="sam@example.test",
+            statement="We want to start one here.", agreed=True)
+
+        made, send = self.admit_it(Application.objects.get(pk=application.pk))
+
+        self.assertIsNotNone(Region.objects.filter(slug="midlands-south-carolina").first())
+        self.assertIsNone(made["member"])
+        self.assertFalse(made["mailed"])
+        self.assertFalse(User.objects.filter(username="sam").exists())
+        self.assertEqual(
+            [c for c in send.call_args_list if "/setup/" in c.kwargs["body"]], [])
+
+
+class TheCommandIsWhatAPersonRuns(ApplicationBase):
+    def run_decide(self, application, *args):
+        from io import StringIO
+        from unittest.mock import patch
+
+        from django.core.management import call_command
+
+        out = StringIO()
+        with patch("kjerne_platform.email.send", return_value=1) as send:
+            call_command("decide_application", str(application.id),
+                         "--by", "reviewer", *args, stdout=out)
+        return out.getvalue(), send
+
+    def test_admitting_end_to_end_from_the_command_line(self):
+        from site_app.models import Organization
+
+        application = self.a_business()
+        self.verify_all(application)
+        output, send = self.run_decide(application, "--admit")
+
+        self.assertIn("organization:", output)
+        self.assertIn("setup link:    sent", output)
+        self.assertTrue(Organization.objects.filter(
+            slug="alderman-electric-llc").exists())
+        self.assertEqual(
+            len([c for c in send.call_args_list if "/setup/" in c.kwargs["body"]]), 1)
+
+    def test_an_admitted_applicant_is_not_told_somebody_will_be_in_touch(self):
+        """That sentence was true until the setup link was wired. Now the
+        account exists and the link is already in their inbox, so a second
+        letter promising to set one up contradicts the first."""
+        application = self.a_business()
+        self.verify_all(application)
+        _output, send = self.run_decide(application, "--admit")
+
+        bodies = " ".join(c.kwargs["body"] for c in send.call_args_list)
+        self.assertNotIn("will be in touch", bodies)
+        self.assertIn("/setup/", bodies)
+
+    def test_the_command_refuses_and_names_what_is_missing(self):
+        from django.core.management.base import CommandError
+
+        application = self.a_business()
+        with self.assertRaises(CommandError) as caught:
+            self.run_decide(application, "--admit")
+        self.assertIn("Business license not verified", str(caught.exception))
+
+    def test_declining_from_the_command_line_tells_the_applicant(self):
+        application = self.a_business()
+        output, send = self.run_decide(application, "--decline",
+                                       "--note", "Out of area.")
+        self.assertIn("Declined", output)
+        self.assertIn("not been taken forward", send.call_args.kwargs["body"])
+
+    def test_a_chapter_admitted_from_the_command_line_gets_no_login(self):
+        application = submit(
+            kind=Application.CHAPTER, legal_name="Midlands South Carolina",
+            contact_name="Sam Reed", email="sam@example.test",
+            statement="Starting one here.", agreed=True)
+        output, send = self.run_decide(application, "--admit")
+
+        self.assertIn("chapter:", output)
+        self.assertIn("No login was created", output)
+        # It DOES get the acceptance letter, because no setup mail carried it.
+        self.assertIn("accepted", " ".join(
+            c.kwargs["body"] for c in send.call_args_list))

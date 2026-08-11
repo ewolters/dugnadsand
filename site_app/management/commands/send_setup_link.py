@@ -7,10 +7,9 @@ password nobody else has ever seen, then enrolls a second factor.
 
 from django.contrib.auth.models import User
 from django.core.management.base import BaseCommand, CommandError
-from kjerne_platform import email as platform_email
 
 from site_app.models import Member
-from site_app.services_setup import issue_setup_link
+from site_app.services_setup import send_setup_mail
 from site_app.tenancy import bypass_rls
 
 SITE = "dugnadsand"
@@ -53,31 +52,9 @@ class Command(BaseCommand):
             self.stdout.write("  link:         not created — run without --dry-run")
             return
 
-        token = issue_setup_link(member)
-        link = f"{BASE_URL}/setup/{token}/"
-
-        body = (
-            f"Hello {member.display_name},\n\n"
-            f"Your account for Dugnadsand is ready. Follow this link to choose a "
-            f"password and set up a second factor:\n\n"
-            f"    {link}\n\n"
-            f"The link works once and expires in seven days. Your username is "
-            f"{user.username}.\n\n"
-            f"Dugnadsand writes down what happened and never what it was worth. "
-            f"Hours given, material brought — kept in separate records, never added "
-            f"together and never priced. None of it is a currency: nothing is bought, "
-            f"sold or owed, and nothing you do or don't contribute changes what you "
-            f"can ask for.\n\n"
-            f"{BASE_URL}\n"
-        )
-
-        queued = platform_email.send(
-            to=user.email,
-            subject="Your Dugnadsand account",
-            body=body,
-            site=SITE,
-            from_name="Dugnadsand",
-        )
+        # One implementation, shared with the admission path — see
+        # services_setup.send_setup_mail.
+        queued = send_setup_mail(member)
         if queued is None:
             raise CommandError(
                 f"{user.email} is on the suppression list; nothing was sent.")
