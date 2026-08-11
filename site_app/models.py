@@ -23,6 +23,14 @@ class Organization(models.Model):
     admitted_at = models.DateTimeField(auto_now_add=True)
     active = models.BooleanField(default=True)
 
+    # Which chapter admitted it. The ONLY link between a chapter and a tenant,
+    # and it points this way on purpose: a label on the tenant root, rather
+    # than a collection the chapter can walk into. Null for an organization
+    # admitted before chapters existed, or admitted directly.
+    region = models.ForeignKey(
+        "Region", on_delete=models.PROTECT, null=True, blank=True,
+        related_name="organizations")
+
     class Meta:
         ordering = ("name",)
 
@@ -858,3 +866,90 @@ class Clearance(TenantScoped):
         if self.obtained_on is None or self.expires_on is None:
             return False
         return self.expires_on < timezone.localdate()
+
+
+class Region(models.Model):
+    """A chapter. Emphatically NOT a tenant.
+
+    Organizations are the tenant, and row-level security is written against
+    organization_id alone. A chapter sitting above several organizations is
+    therefore a roster and a name, never a wider lens: /policy/ tells every
+    admitted organization that its members, postings, ledger, projects and
+    material are invisible to every other organization, and a chapter that
+    could read across them would make that sentence false for everybody at
+    once.
+
+    So the rule this model is built to keep is structural rather than
+    procedural: NOTHING HERE MAY POINT AT TENANT-SCOPED DATA. Region and
+    RegionRole carry no ForeignKey to any TenantScoped model, in either
+    direction, and test_regions.py asserts that by walking the field list --
+    because the tempting version of this feature is a chapter dashboard
+    showing how each organization is doing, which is the same information the
+    ledger is built not to compute.
+
+    The single link is Organization.region, a label on the tenant root saying
+    which chapter admitted it. That is enough to run a chapter and not enough
+    to look inside one.
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    slug = models.SlugField(unique=True)
+    name = models.CharField(max_length=200)
+
+    # Where it covers, in words. Not a bounding box or a list of counties: a
+    # chapter's edge is social and gets argued about, and a structured one
+    # would have to be adjudicated by whoever holds the map.
+    covers = models.TextField(blank=True)
+    description = models.TextField(blank=True)
+
+    active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ("name",)
+
+    def __str__(self):
+        return self.name
+
+
+class RegionRole(models.Model):
+    """Who runs a chapter.
+
+    Attached to a User rather than to a Member, and the distinction is the
+    whole point. A Member belongs to exactly one organization, so hanging a
+    chapter role off one would mean the chapter was led from inside a member
+    organization, with that organization's records one join away. A User is a
+    login, and a login carries no tenancy of its own.
+
+    Holding a role here grants no read of any organization's records, and
+    there is no code path by which it could: RLS keys on the tenant GUC, which
+    is set from a Member, and this model has no Member.
+    """
+
+    LEAD = "lead"
+    ADMIN = "admin"
+    ROLES = [(LEAD, "Lead"), (ADMIN, "Administrator")]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    region = models.ForeignKey(
+        Region, on_delete=models.CASCADE, related_name="roles")
+    user = models.ForeignKey(
+        "auth.User", on_delete=models.CASCADE, related_name="region_roles")
+
+    role = models.CharField(max_length=8, choices=ROLES, default=ADMIN)
+
+    # What they are called locally. A chapter that wants a Steward or a
+    # Convenor should not have to be told it has an Administrator.
+    title = models.CharField(max_length=120, blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ("region__name", "role", "created_at")
+        constraints = [
+            models.UniqueConstraint(
+                fields=["region", "user", "role"], name="one_role_per_person_per_region"),
+        ]
+
+    def __str__(self):
+        return f"{self.get_role_display()} of {self.region}"

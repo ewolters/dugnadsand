@@ -20,6 +20,8 @@ class Command(BaseCommand):
         parser.add_argument("name", help='Display name, e.g. "Rivertown Mutual Aid"')
         parser.add_argument(
             "--slug", help="URL-safe short name; derived from the name if omitted")
+        parser.add_argument(
+            "--region", help="Chapter slug that admitted it, if any")
 
     def handle(self, *args, **options):
         name = options["name"].strip()
@@ -30,11 +32,19 @@ class Command(BaseCommand):
         # Organization is not tenant-scoped, so this would work without the
         # bypass. It is here to say plainly that admission happens outside any
         # one organization's view of the world.
+        region = None
+        if options.get("region"):
+            from site_app.models import Region
+            try:
+                region = Region.objects.get(slug=options["region"])
+            except Region.DoesNotExist:
+                raise CommandError(f"No chapter with slug '{options['region']}'.")
+
         with bypass_rls():
             if Organization.objects.filter(slug=slug).exists():
                 raise CommandError(
                     f"An organization with slug '{slug}' is already admitted.")
-            org = Organization.objects.create(slug=slug, name=name)
+            org = Organization.objects.create(slug=slug, name=name, region=region)
 
         self.stdout.write(self.style.SUCCESS(f"Admitted {org.name} ({org.slug})."))
         self.stdout.write(
