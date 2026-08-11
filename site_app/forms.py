@@ -593,6 +593,11 @@ class MeasureForm(forms.Form):
 
 class PhotoForm(forms.Form):
     image = forms.FileField(label="Photograph")
+    depicts_people = forms.BooleanField(
+        required=False, initial=True, label="There are people in this picture",
+        help_text="Leave this ticked unless the photograph shows no "
+                  "identifiable person. A packet cannot be published while "
+                  "anybody in it has not agreed.")
     caption = forms.CharField(
         max_length=300, required=False, label="Caption (optional)",
         help_text="What is happening in it. Naming people is a decision for "
@@ -618,3 +623,26 @@ class PacketForm(forms.Form):
         label="Who to thank (optional)",
         help_text="In your own words. Nothing here is generated, and nothing "
                   "is ranked.")
+
+
+class ConsentForm(forms.Form):
+    """Recording that somebody in a photograph agreed, or did not.
+
+    person is a name typed by whoever asked. Most people at a work party are
+    not members, so this is not a picker — and a picker would only cover the
+    people the system already knows about, which is the wrong half.
+    """
+
+    person = forms.CharField(max_length=200, label="Who is in it")
+    given_on = forms.DateField(
+        required=False, label="When they agreed",
+        widget=forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"),
+        help_text="Leave blank to note that somebody is in the picture before "
+                  "they have been asked.")
+    how = forms.CharField(
+        max_length=120, required=False, label="How (optional)",
+        help_text="In person, by message, on a signed form — whatever "
+                  "happened.")
+    note = forms.CharField(
+        max_length=2000, required=False, widget=forms.Textarea(attrs={"rows": 2}),
+        label="Note (optional)")

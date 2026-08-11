@@ -1255,6 +1255,12 @@ class Photo(TenantScoped):
     image = models.FileField(upload_to=_photo_path)
     caption = models.CharField(max_length=300, blank=True)
 
+    # Declared when the photograph is added, and defaulting to TRUE on
+    # purpose: assume a picture of a work party has people in it until
+    # somebody says otherwise. A default of False would publish faces by
+    # omission, which is the direction this must never fail in.
+    depicts_people = models.BooleanField(default=True)
+
     added_by = models.ForeignKey(
         Member, on_delete=models.PROTECT, related_name="photos_added")
     created_at = models.DateTimeField(auto_now_add=True)
@@ -1314,3 +1320,76 @@ class Packet(TenantScoped):
     @property
     def published(self):
         return bool(self.published_at and self.token)
+
+
+class PhotoConsent(TenantScoped):
+    """A record that somebody in a photograph agreed to it being published.
+
+    CHAINED, like contributions and attestations, and for the reason those
+    are: consent is the record most worth altering after the fact. Somebody
+    who published a photograph they should not have has every motive to make a
+    consent row appear afterwards, or to make a withdrawal disappear. Each
+    entry commits to its predecessor, so an inserted, edited or deleted record
+    breaks the chain from that point on and verification says where.
+
+    TAMPER-EVIDENT, NOT TAMPER-PROOF, and not proof that consent was given.
+    This says a member recorded that a person agreed, on a date, by some
+    means. It is evidence of an asking, exactly as a Clearance is — the chain
+    only makes that evidence hard to rewrite quietly afterwards. A community
+    must still be able to correct a mistake and honour a withdrawal, which is
+    why nothing here is immutable.
+
+    The person's name is ENCRYPTED at rest, and the chain payload carries a
+    KEYED digest of it rather than the name itself. A plain hash would hand
+    somebody with a stolen database the ability to confirm a guessed name
+    without ever having the encryption key, which would undo the encryption
+    through the back door of the integrity mechanism.
+    """
+
+    photo = models.ForeignKey(
+        Photo, on_delete=models.PROTECT, related_name="consents")
+
+    # Who is depicted, as they are known locally. Most people at a work party
+    # are not members, so this is a name and not a relation.
+    person = EncryptedCharField(max_length=500, blank=False)
+
+    # Null while outstanding: the row exists from the moment somebody says a
+    # person is in the picture, exactly as a Clearance exists before it is
+    # obtained. An outstanding consent is a visible blocker, not an absence.
+    given_on = models.DateField(null=True, blank=True)
+    how = models.CharField(max_length=120, blank=True)
+
+    # Withdrawal is a first-class event, not a delete. Somebody changing their
+    # mind must leave a record that they did.
+    withdrawn_on = models.DateField(null=True, blank=True)
+
+    note = EncryptedTextField(blank=True)
+
+    # ONE member link, as everywhere else — see Clearance. Who wrote it down,
+    # never who is in it.
+    recorded_by = models.ForeignKey(
+        Member, on_delete=models.PROTECT, related_name="consents_recorded")
+    recorded_at = models.DateTimeField()
+
+    sequence = models.PositiveIntegerField()
+    previous_hash = models.CharField(max_length=64, blank=True, editable=False)
+    entry_hash = models.CharField(max_length=64, unique=True, editable=False)
+
+    class Meta:
+        ordering = ("sequence",)
+        constraints = [
+            models.UniqueConstraint(
+                fields=["organization", "sequence"],
+                name="one_consent_sequence_per_organization"),
+        ]
+
+    def __str__(self):
+        return f"consent {self.sequence}"
+
+    @property
+    def given(self):
+        return bool(self.given_on) and not self.withdrawn_on
+
+    @property
+    def withdrawn(self):
+        return bool(self.withdrawn_on)

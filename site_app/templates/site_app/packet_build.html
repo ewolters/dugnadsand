@@ -24,8 +24,12 @@
     <button class="act quiet" type="submit">Withdraw it</button>
   </form>
 {% elif packet %}
+  {% if consent_blockers %}
+    <p class="stale">Cannot be published yet:
+      {% for b in consent_blockers %}{{ b }}{% if not forloop.last %}; {% endif %}{% endfor %}.</p>
+  {% endif %}
   <form method="post" action="/projects/{{ project.id }}/packet/publish/">{% csrf_token %}
-    <button class="act" type="submit">Publish it</button>
+    <button class="act" type="submit"{% if consent_blockers %} disabled{% endif %}>Publish it</button>
   </form>
 {% endif %}
 
@@ -61,10 +65,46 @@
 {% endfor %}
 
 <h2>Photographs</h2>
-{% for p in photos %}
-  <div class="card">
-    <img src="/photo/{{ p.id }}/" alt="{{ p.caption }}" style="max-width:100%;height:auto">
-    {% if p.caption %}<p class="note">{{ p.caption }}</p>{% endif %}
+<p class="note">A packet cannot be published while somebody in a photograph has not
+   agreed, or has withdrawn. Recording it here does not obtain it — this is a note that
+   a person was asked and what they said.</p>
+
+{% for row in photos %}
+  <div class="card{% if row.photo.depicts_people and not row.consents %} need{% endif %}">
+    <img src="/photo/{{ row.photo.id }}/" alt="{{ row.photo.caption }}" style="max-width:100%;height:auto">
+    {% if row.photo.caption %}<p class="note">{{ row.photo.caption }}</p>{% endif %}
+
+    {% if row.photo.depicts_people %}
+      {% for c in row.consents %}
+        <p class="qty">{{ c.person }} —
+          {% if c.withdrawn %}<span class="stale">withdrew {{ c.withdrawn_on|date:"j M Y" }}</span>
+          {% elif c.given %}agreed {{ c.given_on|date:"j M Y" }}{% if c.how %} ({{ c.how }}){% endif %}
+          {% else %}<span class="stale">not asked yet</span>{% endif %}
+        </p>
+      {% empty %}
+        <p class="stale">This shows people and nobody is named on it.</p>
+      {% endfor %}
+
+      <details>
+        <summary>Record who is in it</summary>
+        <form method="post" action="/projects/{{ project.id }}/packet/">{% csrf_token %}
+          <input type="hidden" name="what" value="consent">
+          <input type="hidden" name="photo" value="{{ row.photo.id }}">
+          {{ consent_form.as_p }}
+          <button class="act" type="submit">Record it</button>
+        </form>
+        <form method="post" action="/projects/{{ project.id }}/packet/">{% csrf_token %}
+          <input type="hidden" name="what" value="withdraw">
+          <input type="hidden" name="photo" value="{{ row.photo.id }}">
+          <p><label for="w-{{ row.photo.id }}">Somebody has withdrawn</label>
+             <input id="w-{{ row.photo.id }}" name="person" type="text" maxlength="200" required></p>
+          <input type="hidden" name="note" value="">
+          <button class="act quiet" type="submit">Record a withdrawal</button>
+        </form>
+      </details>
+    {% else %}
+      <p class="cap">Declared to show no identifiable person.</p>
+    {% endif %}
   </div>
 {% empty %}
   <p class="empty">None yet.</p>

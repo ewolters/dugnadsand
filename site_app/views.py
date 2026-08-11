@@ -7,6 +7,7 @@ from django.contrib.auth.decorators import login_required
 from django.http import (Http404, HttpResponseBadRequest,
                          HttpResponseForbidden, JsonResponse)
 from django.shortcuts import get_object_or_404, redirect, render
+from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 from kjerne_platform import email, rate_limit
@@ -1578,10 +1579,12 @@ def chapter(request):
 @login_required
 def project_packet(request, project_id):
     """Build the packet: measures, photos, and the words around them."""
-    from .forms import MeasureForm, PacketForm, PhotoForm
+    from .forms import ConsentForm, MeasureForm, PacketForm, PhotoForm
     from .models import Project
     from .services_packet import (UnitRefused, add_photo, build_packet,
-                                  material_for, record_measure)
+                                  consent_blockers, consent_state,
+                                  expect_consent, material_for, record_consent,
+                                  record_measure, withdraw_consent)
 
     member = _member(request)
     if member is None:
@@ -1612,12 +1615,35 @@ def project_packet(request, project_id):
             photo_form = PhotoForm(request.POST, request.FILES)
             if photo_form.is_valid():
                 try:
-                    add_photo(project=project, member=member,
-                              upload=photo_form.cleaned_data["image"],
-                              caption=photo_form.cleaned_data["caption"])
+                    add_photo(
+                        project=project, member=member,
+                        upload=photo_form.cleaned_data["image"],
+                        caption=photo_form.cleaned_data["caption"],
+                        depicts_people=photo_form.cleaned_data["depicts_people"])
                     return redirect(f"/projects/{project.id}/packet/")
                 except ValueError as refused:
                     photo_form.add_error("image", str(refused))
+        elif what in ("consent", "withdraw"):
+            from .models import Photo
+
+            consent_form = ConsentForm(request.POST)
+            photo = get_object_or_404(Photo, pk=request.POST.get("photo"))
+            if consent_form.is_valid():
+                fields = consent_form.cleaned_data
+                if what == "withdraw":
+                    withdraw_consent(
+                        photo=photo, member=member, person=fields["person"],
+                        withdrawn_on=timezone.localdate(), note=fields["note"])
+                elif fields["given_on"]:
+                    record_consent(
+                        photo=photo, member=member, person=fields["person"],
+                        given_on=fields["given_on"], how=fields["how"],
+                        note=fields["note"])
+                else:
+                    expect_consent(
+                        photo=photo, member=member, person=fields["person"],
+                        note=fields["note"])
+                return redirect(f"/projects/{project.id}/packet/")
         elif what == "packet":
             packet_form = PacketForm(request.POST)
             if packet_form.is_valid():
@@ -1625,12 +1651,16 @@ def project_packet(request, project_id):
                              **packet_form.cleaned_data)
                 return redirect(f"/projects/{project.id}/packet/")
 
+    photos = [{"photo": p, "consents": consent_state(p)}
+              for p in project.photos.all()]
+
     return render(request, "site_app/packet_build.html", {
         "member": member, "section": "projects", "project": project,
         "packet": packet, "measures": project.measures.all(),
-        "photos": project.photos.all(), "material": material_for(project),
+        "photos": photos, "material": material_for(project),
         "measure_form": measure_form, "photo_form": photo_form,
-        "packet_form": packet_form,
+        "packet_form": packet_form, "consent_form": ConsentForm(),
+        "consent_blockers": consent_blockers(project),
     })
 
 
@@ -1638,7 +1668,8 @@ def project_packet(request, project_id):
 @require_POST
 def packet_publish(request, project_id):
     from .models import Project
-    from .services_packet import publish_packet, withdraw_packet
+    from .services_packet import (ConsentOutstanding, publish_packet,
+                                  withdraw_packet)
 
     member = _member(request)
     if member is None:
@@ -1655,8 +1686,13 @@ def packet_publish(request, project_id):
             request, "Withdrawn. The link that was sent out no longer works, "
                      "and publishing again mints a different one.")
     else:
-        publish_packet(packet=packet, member=member)
-        messages.success(request, "Published.")
+        try:
+            publish_packet(packet=packet, member=member)
+        except ConsentOutstanding as refused:
+            messages.error(
+                request, "Not published. " + "; ".join(refused.blockers) + ".")
+        else:
+            messages.success(request, "Published.")
     return redirect(f"/projects/{project.id}/packet/")
 
 

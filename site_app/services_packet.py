@@ -77,7 +77,8 @@ def record_measure(*, project, member, label, quantity, unit, note=""):
         note=note, recorded_by=member)
 
 
-def add_photo(*, project, member, upload, caption=""):
+def add_photo(*, project, member, upload, caption="",
+              depicts_people=True):
     """A picture of the work, validated before it is written anywhere.
 
     Uses the federation's shared upload validation rather than trusting the
@@ -93,7 +94,8 @@ def add_photo(*, project, member, upload, caption=""):
 
     return Photo.objects.create(
         organization_id=project.organization_id, project=project,
-        image=upload, caption=caption.strip()[:300], added_by=member)
+        image=upload, caption=caption.strip()[:300], added_by=member,
+        depicts_people=depicts_people)
 
 
 def build_packet(*, project, member, title, summary, acknowledgements=""):
@@ -110,12 +112,20 @@ def build_packet(*, project, member, title, summary, acknowledgements=""):
 
 
 def publish_packet(*, packet, member):
-    """Mint the link and put it out.
+    """Mint the link and put it out, or refuse and say who has not agreed.
+
+    The consent gate is checked HERE rather than in the view, so no caller can
+    publish faces by going round the screen — the same reason the unit refusal
+    lives in check_unit and not in the form.
 
     Idempotent: publishing an already-published packet keeps the same token,
     because the link has been sent to people and changing it silently would
     break every copy of it.
     """
+    blockers = consent_blockers(packet.project)
+    if blockers:
+        raise ConsentOutstanding(blockers)
+
     if not packet.published:
         packet.token = secrets.token_urlsafe(32)
         packet.published_at = _now()
@@ -150,3 +160,176 @@ def material_for(project):
             .filter(need__project=project)
             .select_related("need")
             .order_by("recorded_at"))
+
+
+# --------------------------------------------------------------------------
+# Consent for photographs.
+#
+# Chained, because consent is the record most worth altering afterwards.
+# Somebody who published a picture they should not have has every motive to
+# make a consent appear, or a withdrawal vanish. Each entry commits to its
+# predecessor, so either shows up as a broken chain and verification says
+# where it broke.
+#
+# It remains evidence of an asking, not proof of an agreement. The chain makes
+# it hard to rewrite quietly; it cannot make it true.
+# --------------------------------------------------------------------------
+
+class ConsentOutstanding(Exception):
+    """Publication refused: somebody in a photograph has not agreed."""
+
+    def __init__(self, blockers):
+        self.blockers = blockers
+        super().__init__("; ".join(blockers) or "consent outstanding")
+
+
+def person_digest(name):
+    """A KEYED digest of a person's name, for the chain payload.
+
+    Not a plain hash. The name is encrypted at rest, and a bare sha256 in the
+    chain would let somebody holding a stolen database confirm a guessed name
+    without ever having the encryption key — undoing the encryption through
+    the back door of the integrity mechanism. Keyed on SECRET_KEY, which lives
+    in the same env file as the encryption key and not in the database.
+    """
+    import hashlib
+    import hmac
+    import unicodedata
+
+    from django.conf import settings
+
+    normalized = unicodedata.normalize("NFKC", (name or "").strip()).casefold()
+    return hmac.new(settings.SECRET_KEY.encode(), normalized.encode(),
+                    hashlib.sha256).hexdigest()
+
+
+def _consent_payload(*, photo, person, given_on, how, withdrawn_on, note):
+    return {
+        "photo": str(photo.id),
+        "person": person_digest(person),
+        "given_on": given_on.isoformat() if given_on else "",
+        "how": how,
+        "withdrawn_on": withdrawn_on.isoformat() if withdrawn_on else "",
+        "note": note,
+    }
+
+
+def _append_consent(*, photo, member, person, given_on=None, how="",
+                    withdrawn_on=None, note=""):
+    """Append one entry to the organization's consent chain.
+
+    Serialised on the Organization row for the same reason record_contribution
+    is: appending is read-then-write, and two people writing up the same work
+    party both read the same tip. The unique (organization, sequence)
+    constraint means a race can never corrupt the chain, but without the lock
+    the loser gets an IntegrityError where a person expected a saved record.
+    """
+    from django.db import transaction
+    from kjerne_platform import chain
+
+    from .models import Organization, PhotoConsent
+
+    recorded_at = _now()
+
+    with transaction.atomic():
+        Organization.objects.select_for_update().get(pk=photo.organization_id)
+
+        previous = (PhotoConsent.objects
+                    .filter(organization_id=photo.organization_id)
+                    .order_by("-sequence").first())
+        sequence = (previous.sequence + 1) if previous else 0
+        previous_hash = previous.entry_hash if previous else ""
+
+        payload = _consent_payload(
+            photo=photo, person=person, given_on=given_on, how=how,
+            withdrawn_on=withdrawn_on, note=note)
+
+        return PhotoConsent.objects.create(
+            organization_id=photo.organization_id, photo=photo, person=person,
+            given_on=given_on, how=how, withdrawn_on=withdrawn_on, note=note,
+            recorded_by=member, recorded_at=recorded_at, sequence=sequence,
+            previous_hash=previous_hash,
+            entry_hash=chain.entry_hash(
+                sequence=sequence, recorded_at=recorded_at, payload=payload,
+                previous_hash=previous_hash))
+
+
+def expect_consent(*, photo, member, person, note=""):
+    """Say somebody is in the picture, before they have been asked.
+
+    The row exists from that moment, so an unasked person is a visible blocker
+    rather than a silence — the same shape as MaterialNeed and Clearance.
+    """
+    return _append_consent(photo=photo, member=member, person=person, note=note)
+
+
+def record_consent(*, photo, member, person, given_on, how="", note=""):
+    """They agreed. A NEW chain entry, never an edit of the outstanding one.
+
+    Editing in place would leave no trace that the record ever said anything
+    else, which is the whole property being bought here.
+    """
+    return _append_consent(photo=photo, member=member, person=person,
+                           given_on=given_on, how=how, note=note)
+
+
+def withdraw_consent(*, photo, member, person, withdrawn_on, note=""):
+    """They changed their mind. Also an append, and it blocks publication."""
+    return _append_consent(photo=photo, member=member, person=person,
+                           withdrawn_on=withdrawn_on, note=note)
+
+
+def consent_state(photo):
+    """The current position per person: the LAST entry for each one wins.
+
+    Entries are append-only, so a person's standing is whatever their most
+    recent row says. Keyed on the digest rather than the name so two spellings
+    of one person do not silently become two people — and so this comparison
+    never needs the name in the clear.
+    """
+    latest = {}
+    for entry in photo.consents.all().order_by("sequence"):
+        latest[person_digest(entry.person)] = entry
+    return list(latest.values())
+
+
+def consent_blockers(project):
+    """Why this packet cannot go out yet, named per photograph."""
+    reasons = []
+    for photo in project.photos.all():
+        if not photo.depicts_people:
+            continue
+        state = consent_state(photo)
+        if not state:
+            reasons.append(
+                f"a photograph shows people and nobody is named on it")
+            continue
+        for entry in state:
+            if entry.withdrawn:
+                reasons.append(f"{entry.person} has withdrawn consent")
+            elif not entry.given:
+                reasons.append(f"{entry.person} has not agreed yet")
+    return reasons
+
+
+def verify_consents(organization_id):
+    """Verify the organization's consent chain end to end."""
+    from kjerne_platform import chain
+
+    from .models import PhotoConsent
+
+    entries = list(PhotoConsent.objects
+                   .filter(organization_id=organization_id)
+                   .order_by("sequence"))
+    return chain.verify_chain([
+        {
+            "sequence": e.sequence,
+            "recorded_at": e.recorded_at,
+            "payload": _consent_payload(
+                photo=e.photo, person=e.person, given_on=e.given_on,
+                how=e.how, withdrawn_on=e.withdrawn_on, note=e.note),
+            "previous_hash": e.previous_hash,
+            "entry_hash": e.entry_hash,
+        }
+        for e in entries
+    ])

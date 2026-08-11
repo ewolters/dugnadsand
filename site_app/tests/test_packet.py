@@ -10,6 +10,7 @@ the link, which is the point -- but nothing unpublished may be, and a
 photograph must not be fetchable just because somebody knows its id.
 """
 
+from datetime import date
 from decimal import Decimal
 from io import BytesIO
 
@@ -204,9 +205,14 @@ class WhoCanReadIt(PacketBase):
 
 class Photographs(PacketBase):
     def add_one(self):
+        """depicts_people=False on purpose. These tests are about who may
+        FETCH a file; the consent gate has its own class, and leaving it
+        engaged here would make every one of them fail for the wrong
+        reason."""
         with tenant_context(self.org):
             return add_photo(project=self.project, member=self.member,
-                             upload=an_image(), caption="The put-in, at eight.")
+                             upload=an_image(), caption="The put-in, at eight.",
+                             depicts_people=False)
 
     def test_a_photo_is_served_once_the_packet_is_published(self):
         photo = self.add_one()
@@ -265,7 +271,8 @@ class Photographs(PacketBase):
                 project=self.project, member=self.member,
                 upload=SimpleUploadedFile(
                     "2026-08-11 Greenville Dana's house.png",
-                    an_image().read(), content_type="image/png"))
+                    an_image().read(), content_type="image/png"),
+                depicts_people=False)
         self.assertNotIn("Greenville", photo.image.name)
         self.assertNotIn("Dana", photo.image.name)
         self.assertTrue(photo.image.name.startswith("packets/"))
@@ -298,3 +305,222 @@ class TheBuildPage(PacketBase):
 
         with tenant_context(self.org):
             self.assertTrue(Packet.objects.get(project=self.project).published)
+
+
+class ConsentGatesPublication(PacketBase):
+    """A face goes out only when somebody recorded that its owner agreed."""
+
+    def a_photo(self, depicts_people=True):
+        from site_app.services_packet import add_photo
+
+        with tenant_context(self.org):
+            return add_photo(project=self.project, member=self.member,
+                             upload=an_image(), caption="At the put-in",
+                             depicts_people=depicts_people)
+
+    def test_a_photo_of_people_with_nobody_named_blocks(self):
+        from site_app.services_packet import ConsentOutstanding
+
+        self.a_photo()
+        packet = self.a_packet()
+        with tenant_context(self.org):
+            with self.assertRaises(ConsentOutstanding) as caught:
+                publish_packet(packet=packet, member=self.member)
+        self.assertIn("nobody is named", str(caught.exception))
+
+    def test_a_photo_declared_to_show_no_people_does_not(self):
+        self.a_photo(depicts_people=False)
+        packet = self.a_packet()
+        with tenant_context(self.org):
+            publish_packet(packet=packet, member=self.member)
+        self.assertTrue(packet.published)
+
+    def test_naming_somebody_who_has_not_agreed_still_blocks(self):
+        from site_app.services_packet import ConsentOutstanding, expect_consent
+
+        photo = self.a_photo()
+        packet = self.a_packet()
+        with tenant_context(self.org):
+            expect_consent(photo=photo, member=self.member, person="Ola Nilsen")
+            with self.assertRaises(ConsentOutstanding) as caught:
+                publish_packet(packet=packet, member=self.member)
+        self.assertIn("Ola Nilsen has not agreed yet", str(caught.exception))
+
+    def test_recording_agreement_releases_it(self):
+        from site_app.services_packet import record_consent
+
+        photo = self.a_photo()
+        packet = self.a_packet()
+        with tenant_context(self.org):
+            record_consent(photo=photo, member=self.member, person="Ola Nilsen",
+                           given_on=date.today(), how="in person")
+            publish_packet(packet=packet, member=self.member)
+        self.assertTrue(packet.published)
+
+    def test_a_withdrawal_blocks_again(self):
+        """The property that makes this consent rather than a checkbox."""
+        from site_app.services_packet import (ConsentOutstanding,
+                                              record_consent, withdraw_consent)
+
+        photo = self.a_photo()
+        packet = self.a_packet()
+        with tenant_context(self.org):
+            record_consent(photo=photo, member=self.member, person="Ola Nilsen",
+                           given_on=date.today(), how="in person")
+            publish_packet(packet=packet, member=self.member)
+
+            withdraw_consent(photo=photo, member=self.member,
+                             person="Ola Nilsen", withdrawn_on=date.today())
+            with self.assertRaises(ConsentOutstanding) as caught:
+                publish_packet(packet=packet, member=self.member)
+        self.assertIn("withdrawn", str(caught.exception))
+
+    def test_the_gate_is_in_the_service_not_the_view(self):
+        """So nothing publishes faces by going round the screen."""
+        import inspect
+
+        from site_app import services_packet
+
+        source = inspect.getsource(services_packet.publish_packet)
+        self.assertIn("consent_blockers", source)
+
+    def test_two_spellings_of_one_name_do_not_become_two_people(self):
+        """State is keyed on the digest, which normalises case and spacing."""
+        from site_app.services_packet import (consent_state, expect_consent,
+                                              record_consent)
+
+        photo = self.a_photo()
+        with tenant_context(self.org):
+            expect_consent(photo=photo, member=self.member, person="Ola Nilsen")
+            record_consent(photo=photo, member=self.member,
+                           person="  ola nilsen ", given_on=date.today())
+            state = consent_state(photo)
+        self.assertEqual(len(state), 1)
+        self.assertTrue(state[0].given)
+
+
+class TheConsentChainIsTamperEvident(PacketBase):
+    """Consent is the record most worth altering afterwards.
+
+    Somebody who published a photograph they should not have has every motive
+    to make a consent appear, or a withdrawal vanish.
+    """
+
+    def setUp(self):
+        super().setUp()
+        from site_app.services_packet import (add_photo, expect_consent,
+                                              record_consent)
+
+        with tenant_context(self.org):
+            self.photo = add_photo(project=self.project, member=self.member,
+                                   upload=an_image())
+            expect_consent(photo=self.photo, member=self.member, person="Ola")
+            record_consent(photo=self.photo, member=self.member, person="Ola",
+                           given_on=date.today(), how="in person")
+
+    def verify(self):
+        from site_app.services_packet import verify_consents
+
+        with tenant_context(self.org):
+            return verify_consents(self.org.id)
+
+    def test_an_untouched_chain_verifies(self):
+        self.assertTrue(self.verify().ok)
+
+    def test_it_chains_in_order_from_zero(self):
+        from site_app.models import PhotoConsent
+
+        with tenant_context(self.org):
+            entries = list(PhotoConsent.objects.order_by("sequence"))
+        self.assertEqual([e.sequence for e in entries], [0, 1])
+        self.assertEqual(entries[0].previous_hash, "")
+        self.assertEqual(entries[1].previous_hash, entries[0].entry_hash)
+
+    def test_rewriting_a_consent_date_breaks_it(self):
+        from datetime import timedelta
+
+        from site_app.models import PhotoConsent
+
+        with tenant_context(self.org):
+            entry = PhotoConsent.objects.order_by("-sequence").first()
+            PhotoConsent.objects.filter(pk=entry.pk).update(
+                given_on=date.today() - timedelta(days=400))
+
+        self.assertFalse(self.verify().ok,
+                         "a back-dated consent verified clean")
+
+    def test_changing_who_agreed_breaks_it(self):
+        from site_app.models import PhotoConsent
+
+        with tenant_context(self.org):
+            entry = PhotoConsent.objects.order_by("-sequence").first()
+            entry.person = "Somebody Else"
+            entry.save(update_fields=["person"])
+
+        self.assertFalse(self.verify().ok,
+                         "the name was swapped and the chain still verified")
+
+    def test_deleting_the_last_entry_is_NOT_caught_by_the_chain_alone(self):
+        """The known limit, asserted rather than left to be discovered.
+
+        A hash chain detects insertion, edit and deletion from the MIDDLE,
+        because every later entry commits to what came before. It cannot
+        detect truncation of the END: chop the tip off and what remains is a
+        perfectly valid shorter chain.
+
+        That matters here more than it does for hours, because the tip is
+        exactly what somebody would remove — the withdrawal that arrived last.
+        Closing it needs the tip recorded somewhere the same person cannot
+        edit, which the attestation chain does for the manifest and nothing
+        yet does for this one.
+        """
+        from site_app.models import PhotoConsent
+        from site_app.services_packet import withdraw_consent
+
+        with tenant_context(self.org):
+            withdraw_consent(photo=self.photo, member=self.member,
+                             person="Ola", withdrawn_on=date.today())
+            PhotoConsent.objects.order_by("-sequence").first().delete()
+
+        report = self.verify()
+        self.assertTrue(report.ok,
+                        "deleting the TIP is not detectable by the chain alone")
+
+    def test_deleting_an_entry_from_the_middle_breaks_it(self):
+        from site_app.models import PhotoConsent
+        from site_app.services_packet import withdraw_consent
+
+        with tenant_context(self.org):
+            withdraw_consent(photo=self.photo, member=self.member,
+                             person="Ola", withdrawn_on=date.today())
+            PhotoConsent.objects.filter(sequence=1).delete()
+
+        self.assertFalse(self.verify().ok)
+
+    def test_the_name_is_not_stored_in_the_clear(self):
+        from django.db import connection
+
+        from site_app.models import PhotoConsent
+
+        # INSIDE the tenant: the raw cursor is subject to RLS exactly as the
+        # ORM is, so a query outside it returns no row at all rather than an
+        # unencrypted one — which would have read as a passing test.
+        with tenant_context(self.org):
+            pk = PhotoConsent.objects.first().pk
+            with connection.cursor() as cur:
+                cur.execute(
+                    "SELECT person FROM site_app_photoconsent WHERE id = %s",
+                    [str(pk)])
+                stored = cur.fetchone()[0]
+        self.assertNotIn("Ola", stored)
+
+    def test_the_chain_payload_carries_a_keyed_digest_not_the_name(self):
+        """A bare hash would let somebody with a stolen database confirm a
+        guessed name without ever holding the encryption key."""
+        import hashlib
+
+        from site_app.services_packet import person_digest
+
+        self.assertNotEqual(person_digest("Ola"),
+                            hashlib.sha256(b"ola").hexdigest())
+        self.assertEqual(person_digest("Ola"), person_digest(" ola "))
