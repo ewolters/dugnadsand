@@ -576,7 +576,8 @@ class NoTemplateCommentReachesThePage(SignedIn, TestCase):
     ever visible after rendering.
     """
 
-    PUBLIC = ["/", "/how-it-works/", "/policy/", "/attestation/", "/login/"]
+    PUBLIC = ["/", "/how-it-works/", "/policy/", "/virtual-warehouse/",
+              "/attestation/", "/login/"]
     MEMBER = ["/board/", "/board/new/", "/projects/", "/warehouse/",
               "/manifests/", "/pairings/", "/pinned/", "/you/", "/notices/",
               "/ledger/", "/password/"]
@@ -946,8 +947,9 @@ class TheFooterReachesTheStatements(TestCase):
     only from a page you had already found.
     """
 
-    PUBLIC = ["/", "/how-it-works/", "/policy/", "/attestation/"]
-    LINKS = ["/how-it-works/", "/policy/", "/attestation/"]
+    PUBLIC = ["/", "/how-it-works/", "/policy/", "/virtual-warehouse/",
+              "/attestation/"]
+    LINKS = ["/how-it-works/", "/policy/", "/virtual-warehouse/", "/attestation/"]
 
     def test_every_public_page_carries_them(self):
         for path in self.PUBLIC:
@@ -971,3 +973,56 @@ class TheFooterReachesTheStatements(TestCase):
         css = (Path(__file__).resolve().parents[2]
                / "static" / "css" / "brand.css").read_text()
         self.assertIn("body > footer a", css)
+
+
+class TheWarehouseExplainer(TestCase):
+    """A business decides whether to list a pallet before anybody gives them
+    a login, so this has to be public and it has to be honest about limits."""
+
+    def page(self):
+        return re.sub(r"\s+", " ", self.client.get("/virtual-warehouse/").content.decode())
+
+    def test_it_is_public(self):
+        self.assertEqual(self.client.get("/virtual-warehouse/").status_code, 200)
+
+    def test_the_diagram_is_real_markup_rather_than_a_picture(self):
+        """Inline SVG inherits the palette, scales with the page, and its
+        labels are text a screen reader can read."""
+        page = self.page()
+        self.assertIn("<svg", page)
+        self.assertIn('role="img"', page)
+        self.assertIn("aria-label", page)
+
+    def test_the_example_manifest_is_marked_as_an_example(self):
+        """A realistic document on a public page is a thing somebody will
+        screenshot. It has to say what it is."""
+        self.assertIn("not a real consignment", self.page())
+
+    def test_the_example_carries_no_value_of_any_kind(self):
+        page = self.page()
+        self.assertNotIn("$", page)
+        self.assertIn("It states no value", page)
+
+    def test_it_states_the_refusals_and_not_only_the_features(self):
+        page = self.page()
+        for required in ("never enter our custody",
+                         "will not price anything",
+                         "will not convert material into hours",
+                         "will not sort your material into types"):
+            self.assertIn(required, page, required)
+
+    def test_it_explains_why_there_are_no_material_categories(self):
+        """The reasoning matters more than the rule: somebody will offer to
+        add icons, and the page should already answer them."""
+        page = self.page()
+        self.assertIn("comparable", page)
+        self.assertIn("board-feet to board-feet", page)
+
+    def test_no_material_taxonomy_was_introduced_by_this_page(self):
+        """A page about material is exactly where a category list creeps in."""
+        from site_app.models import MaterialNeed, StockLine
+
+        for model in (StockLine, MaterialNeed):
+            with_choices = {f.name for f in model._meta.get_fields()
+                            if getattr(f, "choices", None)}
+            self.assertEqual(with_choices, set(), model.__name__)

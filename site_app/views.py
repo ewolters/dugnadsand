@@ -186,6 +186,24 @@ def policy(request):
     })
 
 
+def virtual_warehouse(request):
+    """How material moves, for somebody who has not seen it work.
+
+    Public: a business deciding whether to list a pallet needs to understand
+    what they are and are not agreeing to before anybody gives them a login.
+
+    The QR on the example is real and scannable and points back at this page.
+    A live receipt link would be a working capability printed on a public
+    document; a fake picture of one would teach somebody to trust a shape
+    rather than a link.
+    """
+    from .auth_views import _qr_svg
+
+    return render(request, "site_app/virtual_warehouse.html", {
+        "example_qr": _qr_svg("https://dugnadsand.org/virtual-warehouse/"),
+    })
+
+
 def attestation(request):
     """Public, read-only. The latest recorded run plus a live chain check.
 
