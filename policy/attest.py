@@ -38,6 +38,10 @@ STATUS_BREACHED = "BREACHED"
 
 # Repeated into every stored attestation so the disclaimer travels with the
 # record and cannot be separated from it by whoever reads the JSON later.
+# An arbitrary but fixed key for pg_advisory_xact_lock. Only this chain uses
+# it; the number means nothing beyond "not the same as anybody else's".
+_CHAIN_LOCK = 8_231_104
+
 DISCLAIMER = (
     "Engineering manifest, not a legal attestation. This records that automated "
     "checks ran against this codebase and what they returned. It makes no claim "
@@ -125,28 +129,42 @@ def attest(*, persist=True):
         return payload
 
     # Imported here so run_checks() stays usable without the app registry.
+    from django.db import connection, transaction
+
     from site_app.models import Attestation
 
-    previous = Attestation.objects.order_by("-sequence").first()
-    sequence = (previous.sequence + 1) if previous else 0
-    previous_hash = previous.entry_hash if previous else ""
+    # Same race as the contribution chain: read the tip, add one, insert. Two
+    # runs at once — the nightly schedule and somebody triggering it by hand —
+    # would compute the same sequence, and one would lose to the unique
+    # constraint. This chain has no parent row to lock, so an advisory lock
+    # stands in for one. It is released when the transaction ends, whether that
+    # is a commit or a crash.
+    with transaction.atomic():
+        with connection.cursor() as cur:
+            cur.execute("SELECT pg_advisory_xact_lock(%s)", [_CHAIN_LOCK])
 
-    entry_hash = chain.entry_hash(
-        sequence=sequence,
-        recorded_at=recorded_at,
-        payload=payload,
-        previous_hash=previous_hash,
-    )
+        previous = Attestation.objects.order_by("-sequence").first()
+        sequence = (previous.sequence + 1) if previous else 0
+        previous_hash = previous.entry_hash if previous else ""
 
-    Attestation.objects.create(
-        sequence=sequence,
-        recorded_at=recorded_at,
-        status=status,
-        manifest_hash=payload["manifest_hash"],
-        payload=payload,
-        previous_hash=previous_hash,
-        entry_hash=entry_hash,
-    )
+        entry_hash = chain.entry_hash(
+            sequence=sequence,
+            recorded_at=recorded_at,
+            payload=payload,
+            previous_hash=previous_hash,
+        )
+
+        # Inside the lock, so the read of the tip and the write of the next
+        # link cannot be separated by another run.
+        Attestation.objects.create(
+            sequence=sequence,
+            recorded_at=recorded_at,
+            status=status,
+            manifest_hash=payload["manifest_hash"],
+            payload=payload,
+            previous_hash=previous_hash,
+            entry_hash=entry_hash,
+        )
 
     payload["persisted"] = True
     payload["sequence"] = sequence

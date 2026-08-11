@@ -9,7 +9,7 @@ we could forget to write, but absent.
 from decimal import Decimal
 
 from django.contrib.auth.models import User
-from django.test import TestCase
+from django.test import TestCase, TransactionTestCase
 
 from .helpers import SignedIn
 
@@ -163,3 +163,115 @@ class ClaimEndpoint(TenancyBase):
         self.assertIn(response.status_code, (302, 403))
         with tenant_context(self.alpha):
             self.assertEqual(Claim.objects.count(), 0)
+
+
+class TwoPeopleRecordingAtOnce(TransactionTestCase):
+    """Appending to a chain is read-then-write, and that is a race.
+
+    Two people writing up the same work party both read the same tip and both
+    compute the same sequence number. The unique constraint on (organization,
+    sequence) means the chain can never be corrupted — but without a lock the
+    loser gets an IntegrityError, which reaches them as a 500 with their hours
+    gone. Proved before the fix by interleaving by hand; this races it.
+
+    TransactionTestCase rather than TestCase: the usual one wraps everything in
+    a single transaction, so threads cannot see each other's writes and the
+    race cannot happen at all — a test that would have passed against the bug.
+    """
+
+    def setUp(self):
+        from site_app.models import Member, Organization, Posting
+        from site_app.tenancy import tenant_context
+
+        self.org = Organization.objects.create(slug="race", name="Race")
+        with tenant_context(self.org):
+            self.members = [
+                Member.objects.create(organization=self.org, display_name=f"M{i}")
+                for i in range(6)]
+            self.posting = Posting.objects.create(
+                organization=self.org, member=self.members[0],
+                kind=Posting.OFFER, description="A work party.")
+
+    def tearDown(self):
+        from django.db import connection
+
+        from site_app.models import (Contribution, Member, Organization,
+                                     Posting)
+        from site_app.tenancy import bypass_rls
+
+        with bypass_rls():
+            Contribution.objects.filter(organization=self.org).delete()
+            Posting.objects.filter(organization=self.org).delete()
+            Member.objects.filter(organization=self.org).delete()
+            Organization.objects.filter(pk=self.org.pk).delete()
+        connection.close()
+
+    def test_every_writer_gets_their_entry_and_a_unique_sequence(self):
+        import threading
+        from decimal import Decimal
+
+        from django.db import connection
+
+        from site_app.models import Contribution
+        from site_app.services import record_contribution
+        from site_app.tenancy import tenant_context
+
+        errors = []
+        start = threading.Barrier(len(self.members))
+
+        def write(member):
+            try:
+                start.wait(timeout=5)
+                with tenant_context(self.org):
+                    record_contribution(posting=self.posting, member=member,
+                                        hours=Decimal("1.00"), note="")
+            except Exception as exc:            # noqa: BLE001 - reported below
+                errors.append(f"{type(exc).__name__}: {exc}")
+            finally:
+                connection.close()
+
+        threads = [threading.Thread(target=write, args=(m,))
+                   for m in self.members]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join(timeout=20)
+
+        self.assertEqual(errors, [])
+        with tenant_context(self.org):
+            rows = list(Contribution.objects.filter(organization=self.org))
+            sequences = sorted(c.sequence for c in rows)
+
+        self.assertEqual(len(rows), len(self.members))
+        self.assertEqual(sequences, list(range(len(self.members))))
+
+    def test_and_the_chain_they_wrote_still_verifies(self):
+        """Serialising is only worth anything if the links still join up."""
+        import threading
+        from decimal import Decimal
+
+        from django.db import connection
+
+        from site_app.services import record_contribution, verify_contributions
+        from site_app.tenancy import tenant_context
+
+        start = threading.Barrier(len(self.members))
+
+        def write(member):
+            try:
+                start.wait(timeout=5)
+                with tenant_context(self.org):
+                    record_contribution(posting=self.posting, member=member,
+                                        hours=Decimal("2.00"), note="")
+            finally:
+                connection.close()
+
+        threads = [threading.Thread(target=write, args=(m,))
+                   for m in self.members]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join(timeout=20)
+
+        with tenant_context(self.org):
+            self.assertTrue(verify_contributions(self.org))

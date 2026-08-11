@@ -908,3 +908,31 @@ class TheContactFormNeedsNoCookie(TestCase):
     @staticmethod
     def copy_text(response):
         return re.sub(r"\s+", " ", response.content.decode())
+
+
+class TheMigrationsMatchTheModels(TestCase):
+    """Nothing catches migration drift except asking.
+
+    Eight models carried hand-written migrations — written that way to avoid an
+    interactive makemigrations prompt — that declared the RESOLVED related_name
+    rather than the "%(class)ss" the models declare. Identical at runtime,
+    identical in SQL, and enough to make `makemigrations --check` fail, which
+    meant nobody could use it as a gate and the next person to run
+    makemigrations would find a mystery migration mixed into their own.
+    """
+
+    def test_no_model_change_is_missing_a_migration(self):
+        from io import StringIO
+
+        from django.core.management import call_command
+
+        out = StringIO()
+        try:
+            call_command("makemigrations", "--check", "--dry-run",
+                         verbosity=1, stdout=out, stderr=out)
+        except SystemExit:
+            self.fail(
+                "Models and migrations disagree. Run:\n"
+                "    python3 manage.py makemigrations site_app\n"
+                "and read what it wants before accepting it:\n\n"
+                + out.getvalue())

@@ -11,9 +11,10 @@ Two rules govern everything here, and both are checked by policy/manifest.toml:
 from datetime import datetime, timezone
 from decimal import Decimal
 
+from django.db import transaction
 from kjerne_platform import chain
 
-from .models import Claim, Contribution
+from .models import Claim, Contribution, Organization
 
 # Contribution.hours is decimal_places=2, so Decimal("3.5") comes back out of
 # Postgres as Decimal("3.50"). Hashing str(hours) on the way in and on the way
@@ -91,39 +92,56 @@ def record_contribution(*, member, posting, hours, note="", recorded_at=None):
 
     recorded_at = recorded_at or datetime.now(timezone.utc)
 
-    previous = (
-        Contribution.objects
-        .filter(organization_id=member.organization_id)
-        .order_by("-sequence")
-        .first()
-    )
-    sequence = (previous.sequence + 1) if previous else 0
-    previous_hash = previous.entry_hash if previous else ""
+    # SERIALISED PER ORGANIZATION, because appending to a chain is
+    # read-then-write and two people recording hours in the same second both
+    # read the same tip. The unique constraint on (organization, sequence)
+    # means that can never corrupt the chain — but without a lock the loser
+    # gets an IntegrityError, which reaches a member as a 500 with their hours
+    # gone. That is the failure on the busiest day, when several people write
+    # up a work party at once.
+    #
+    # The organization row is the lock because the chain is per organization:
+    # exactly the granularity that needs ordering, and no more. Organization is
+    # not tenant-scoped — it IS the tenant — so this reads without bypass.
+    with transaction.atomic():
+        Organization.objects.select_for_update().get(pk=member.organization_id)
 
-    payload = {
-        "member": str(member.id),
-        "posting": str(posting.id),
-        "hours": _canonical_hours(hours),
-        "note": note,
-    }
-    entry_hash = chain.entry_hash(
-        sequence=sequence,
-        recorded_at=recorded_at,
-        payload=payload,
-        previous_hash=previous_hash,
-    )
+        previous = (
+            Contribution.objects
+            .filter(organization_id=member.organization_id)
+            .order_by("-sequence")
+            .first()
+        )
+        sequence = (previous.sequence + 1) if previous else 0
+        previous_hash = previous.entry_hash if previous else ""
 
-    return Contribution.objects.create(
-        organization_id=member.organization_id,
-        member=member,
-        posting=posting,
-        hours=hours,
-        note=note,
-        recorded_at=recorded_at,
-        sequence=sequence,
-        previous_hash=previous_hash,
-        entry_hash=entry_hash,
-    )
+        payload = {
+            "member": str(member.id),
+            "posting": str(posting.id),
+            "hours": _canonical_hours(hours),
+            "note": note,
+        }
+        entry_hash = chain.entry_hash(
+            sequence=sequence,
+            recorded_at=recorded_at,
+            payload=payload,
+            previous_hash=previous_hash,
+        )
+
+        # Inside the lock: the read of the tip and the write of the next link
+        # are one indivisible step, which is the only thing that makes the
+        # sequence safe to compute in Python.
+        return Contribution.objects.create(
+            organization_id=member.organization_id,
+            member=member,
+            posting=posting,
+            hours=hours,
+            note=note,
+            recorded_at=recorded_at,
+            sequence=sequence,
+            previous_hash=previous_hash,
+            entry_hash=entry_hash,
+        )
 
 
 def verify_contributions(organization):
