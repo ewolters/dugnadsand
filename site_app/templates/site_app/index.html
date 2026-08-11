@@ -293,7 +293,12 @@
     <p class="note-sent">Thanks — that's come through. We'll write back.</p>
   {% else %}
     <form method="post" action="/#say-hello" class="contact" novalidate>
-      {% csrf_token %}
+      {% comment %}
+        No csrf_token: this form is exempt, because a token on an anonymous
+        form protects nothing and cost a real visitor their message. What
+        replaces it is the signed stamp below — see forms.ContactForm.
+      {% endcomment %}
+      <input type="hidden" name="t" value="{{ form.t.value|default:'' }}">
       {% if form.non_field_errors %}
         <p class="err">{{ form.non_field_errors.0 }}</p>
       {% endif %}

@@ -30,27 +30,56 @@ def _client_ip(request):
     return forwarded.split(",")[0].strip() or request.META.get("REMOTE_ADDR", "")
 
 
+@csrf_exempt
+def _restamped(form):
+    """Hand a rejected form back with a NEW stamp.
+
+    Re-rendering the old one means the next attempt is judged on when the
+    first page was drawn, so somebody who takes a minute to fix a typo gets
+    told their form went stale — a dead end built out of the anti-spam check.
+    """
+    form.data = form.data.copy()
+    form.data["t"] = ContactForm.stamp()
+    return form
+
+
+@csrf_exempt
 def index(request):
+    """The front page, and the contact form on it.
+
+    CSRF-EXEMPT ON PURPOSE. The token protected nothing here — the attack it
+    prevents is riding a logged-in session, and this form is anonymous — while
+    costing at least one real visitor their message when their browser
+    returned no cookies. What it incidentally did, keeping out bots that
+    blind-POST, is now done by a signed timestamp in the form, which needs no
+    cookie and works for somebody with everything blocked.
+
+    Nothing else on this view acts on a session, which is what makes the
+    exemption safe. Every authenticated form on the site still carries CSRF.
+    """
     if request.method != "POST":
         return render(request, "site_app/index.html", {
-            "form": ContactForm(),
+            "form": ContactForm(initial={"t": ContactForm.stamp()}),
             "sent": request.GET.get("sent") == "1",
         })
 
     form = ContactForm(request.POST)
     if not form.is_valid():
-        return render(request, "site_app/index.html", {"form": form, "sent": False})
+        return render(request, "site_app/index.html",
+                      {"form": _restamped(form), "sent": False})
 
     # Five a day per address keeps a bored someone from filling the inbox.
     if not rate_limit.check("dugnadsand_contact", _client_ip(request), 5, 86400):
         form.add_error(None, "That's a few too many messages for one day. Try tomorrow.")
-        return render(request, "site_app/index.html", {"form": form, "sent": False})
+        return render(request, "site_app/index.html",
+                      {"form": _restamped(form), "sent": False})
 
     if not INBOX:
         # Fail loudly in the log rather than quietly dropping someone's message.
         logger.error("DUGNADSAND_CONTACT_EMAIL is unset; contact form cannot deliver.")
         form.add_error(None, "The contact form isn't set up yet. Please try again later.")
-        return render(request, "site_app/index.html", {"form": form, "sent": False})
+        return render(request, "site_app/index.html",
+                      {"form": _restamped(form), "sent": False})
 
     data = form.cleaned_data
     email.send(
@@ -65,57 +94,32 @@ def index(request):
 
 
 def csrf_failure(request, reason=""):
-    """What a stranger sees when their browser did not return the token.
+    """What somebody sees when a form's token does not check out.
 
-    Django's default is a bare "CSRF verification failed. Request aborted."
-    and everything they typed is gone. Somebody filling in the contact form on
-    a public page has done nothing wrong, has no idea what a CSRF token is, and
-    is now looking at a dead end — which is how a message that was going to be
-    sent stops being sent.
+    Only reachable for the authenticated forms now — the contact form on the
+    front page is exempt, because a token on an anonymous form protects
+    nothing and cost a real visitor their message. This used to carry a second
+    branch that rebuilt the contact form with their words in it; that branch
+    became unreachable the moment the exemption landed, and dead code that
+    claims to help somebody is worse than none.
 
-    So: plain language, their words kept, and a fresh token. They press send
-    again and it works.
-
-    IT IS SAFE TO SHOW THEM BACK WHAT THEY POSTED. The form is repopulated and
-    nothing is acted on — no mail leaves, no rate-limit budget is spent. The
-    values are escaped by the template like any other input, so a cross-site
-    POST crafted to be reflected here is inert.
-
-    Not repopulated: the honeypot. Handing a bot back the field that caught it
-    would be teaching it the answer.
+    Django's default is "CSRF verification failed. Request aborted.", which
+    tells a person nothing they can act on.
     """
-    posted = request.POST if request.method == "POST" else {}
-    looks_like_contact = any(posted.get(k) for k in ("name", "email", "message"))
-
-    # The default log line says nothing a person could act on. This is the
-    # whole reason the previous occurrence could not be diagnosed.
+    # The old log line said only "Forbidden (CSRF cookie not set.)", which is
+    # why the first occurrences could not be diagnosed at all.
     logger.warning(
-        "CSRF failure on %s (%s) — contact_form=%s cookies=%d origin=%r "
-        "referer=%r ua=%r",
-        request.path, reason, looks_like_contact, len(request.COOKIES),
+        "CSRF failure on %s (%s) — cookies=%d origin=%r referer=%r ua=%r",
+        request.path, reason, len(request.COOKIES),
         request.headers.get("Origin"), request.headers.get("Referer"),
         (request.headers.get("User-Agent") or "")[:120])
 
-    # Two different truths, and telling somebody the wrong one wastes their
-    # afternoon. If the browser sent NO cookies at all, it is not returning
-    # ours either and pressing send again will fail identically — forever.
-    # "Try once more" is only honest when something came back.
-    cookies_off = not request.COOKIES
-
-    if not looks_like_contact:
-        return render(request, "site_app/csrf_failed.html",
-                      {"reason": reason, "cookies_off": cookies_off}, status=403)
-
-    return render(request, "site_app/index.html", {
-        "form": ContactForm(initial={
-            "name": posted.get("name", ""),
-            "email": posted.get("email", ""),
-            "message": posted.get("message", ""),
-        }),
-        "sent": False,
-        "csrf_retry": True,
-        "cookies_off": cookies_off,
-    }, status=403)
+    # Two different truths. If the browser sent NO cookies it is not returning
+    # ours either, and "try once more" sends somebody round a loop that cannot
+    # end.
+    return render(request, "site_app/csrf_failed.html",
+                  {"reason": reason, "cookies_off": not request.COOKIES},
+                  status=403)
 
 
 # --------------------------------------------------------------------------

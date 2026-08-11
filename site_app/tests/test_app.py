@@ -15,6 +15,7 @@ from django.test import TestCase, override_settings
 
 from .helpers import SignedIn
 
+from site_app.forms import ContactForm
 from site_app.models import Claim, Contribution, Member, Posting, Organization
 from site_app.tenancy import set_tenant, tenant_context
 
@@ -735,121 +736,175 @@ class NoTemplateVariableSilentlyFails(SignedIn, TestCase):
         self.assertEqual(self.missing(f"/manifest/{self.manifest.id}/"), [])
 
 
-class ACsrfFailureIsRecoverable(TestCase):
-    """Somebody filled in the contact form and lost everything they typed.
+class ACsrfFailureExplainsItself(TestCase):
+    """Django's default is "CSRF verification failed. Request aborted."
 
-    Django's default is "CSRF verification failed. Request aborted." — a bare
-    403 with no way back. A stranger on a public page has done nothing wrong,
-    has never heard of a CSRF token, and their message simply stops existing.
-
-    Two of these were in the log before anybody noticed, thirty seconds apart:
-    somebody tried, failed, went back, tried again, failed, left.
+    That is all a person gets, and it names a thing they have never heard of.
+    Reachable now only for the authenticated forms — the contact form is
+    exempt — but a member whose session went cold sees this too.
     """
 
-    def post_without_token(self, cookies=None, **data):
+    def post_without_token(self, cookies=None, path="/login/"):
         from django.test import Client
 
-        # enforce_csrf_checks makes the test client behave like a browser that
-        # sent no token, which is exactly the reported failure.
         client = Client(enforce_csrf_checks=True)
         for name, value in (cookies or {}).items():
             client.cookies[name] = value
-        return client.post("/", data)
+        return client.post(path, {"username": "ada", "password": "x"})
 
     @staticmethod
     def copy(response):
-        """Rendered text with whitespace collapsed.
-
-        Assert the sentence, never its line wrapping. Three assertions in this
-        file have now failed on a phrase that happened to break across two
-        lines in a template — a test that fails on reflow makes every honest
-        edit look like a regression.
-        """
+        """Whitespace collapsed — assert the sentence, never its wrapping."""
         return re.sub(r"\s+", " ", response.content.decode())
 
-    def test_the_contact_form_comes_back_with_their_words_in_it(self):
-        response = self.post_without_token(
-            name="Ruth", email="ruth@example.test",
-            message="We run a pantry in Pickens and would like to talk.")
-        body = self.copy(response)
-
-        self.assertEqual(response.status_code, 403)
-        self.assertIn("Ruth", body)
-        self.assertIn("ruth@example.test", body)
-        self.assertIn("pantry in Pickens", body)
-
     def test_it_says_what_happened_without_jargon(self):
-        body = self.copy(self.post_without_token(
-            name="Ruth", email="r@example.test", message="hello"))
-        # Literal text in a template is not HTML-escaped — only variable
-        # output is — so the apostrophe stays plain.
+        body = self.copy(self.post_without_token())
         self.assertIn("didn't go through", body)
         self.assertNotIn("CSRF", body)
         self.assertNotIn("Request aborted", body)
 
-    def test_a_fresh_token_comes_with_it(self):
-        """Otherwise pressing send again fails identically, forever."""
-        body = self.copy(self.post_without_token(
-            name="Ruth", email="r@example.test", message="hello"))
-        self.assertIn("csrfmiddlewaretoken", body)
-
-    def test_nothing_is_sent_and_no_budget_is_spent(self):
-        from unittest.mock import patch
-
-        with patch("kjerne_platform.email.send") as send, \
-             patch("kjerne_platform.rate_limit.check") as limit:
-            self.post_without_token(name="Ruth", email="r@example.test",
-                                    message="hello")
-        send.assert_not_called()
-        limit.assert_not_called()
-
-    def test_the_honeypot_is_not_handed_back(self):
-        """Repopulating the field that caught a bot would teach it the answer."""
-        body = self.copy(self.post_without_token(
-            name="Ruth", email="r@example.test", message="hello",
-            website="http://spam.example"))
-        self.assertNotIn("spam.example", body)
-
-    def test_a_reflected_cross_site_post_is_inert(self):
-        """The form is repopulated, so whatever was posted is rendered. It is
-        escaped like any other input and nothing is acted on."""
-        body = self.post_without_token(
-            name="<script>alert(1)</script>", email="r@example.test",
-            message="hello").content.decode()
-        self.assertNotIn("<script>alert(1)</script>", body)
-        self.assertIn("&lt;script&gt;", body)
-
     def test_a_browser_with_no_cookies_is_not_told_to_try_again(self):
-        """The advice has to match the failure. If nothing came back, nothing
-        will come back next time either, and "press send again" sends somebody
-        round a loop that cannot end."""
-        body = self.copy(self.post_without_token(
-            name="Ruth", email="r@example.test", message="hello"))
-
+        """If nothing came back, nothing will come back next time either."""
+        body = self.copy(self.post_without_token())
         self.assertIn("won't help", body)
-        self.assertIn("Allow cookies", body)
-        self.assertNotIn("press send again and it should go", body)
 
     def test_a_browser_that_sent_something_is_told_to_try_again(self):
-        """A stale token with a live session is the case a retry does fix."""
         body = self.copy(self.post_without_token(
-            cookies={"sessionid": "whatever"},   # something, just not the token
-            name="Ruth", email="r@example.test", message="hello"))
-
-        self.assertIn("press send again", body)
+            cookies={"sessionid": "whatever"}))
+        self.assertIn("trying once more", body)
         self.assertNotIn("won't help", body)
 
-    def test_either_way_their_words_survive(self):
-        for cookies in ({}, {"sessionid": "whatever"}):
-            body = self.copy(self.post_without_token(
-                cookies=cookies, name="Ruth", email="r@example.test",
-                message="a pantry in Pickens"))
-            self.assertIn("Ruth", body)
-            self.assertIn("a pantry in Pickens", body)
 
-    def test_a_failure_that_is_not_the_contact_form_gets_a_plain_page(self):
+class TheContactFormNeedsNoCookie(TestCase):
+    """A visitor with cookies blocked can now send a message.
+
+    That is the whole point of the exemption: on 2026-08-11 somebody filled in
+    the form, their browser returned nothing, and Django threw their message
+    away. A token on an anonymous form protects nothing — the attack it
+    prevents is riding a logged-in session — so it was costing real people
+    for no security.
+
+    What it incidentally did, keeping out bots that blind-POST without
+    fetching the page, is now done by a signed timestamp that needs no cookie.
+    """
+
+    def client_without_cookies(self):
         from django.test import Client
 
-        response = Client(enforce_csrf_checks=True).post("/login/", {})
+        return Client(enforce_csrf_checks=True)
+
+    def send(self, client=None, stamp=None, **over):
+        data = {"name": "Ruth", "email": "ruth@example.test",
+                "message": "We run a pantry in Pickens.",
+                "t": ContactForm.stamp() if stamp is None else stamp}
+        data.update(over)
+        return (client or self.client_without_cookies()).post("/", data)
+
+    def aged(self, seconds):
+        """A stamp as though it were issued `seconds` ago."""
+        import time
+
+        from django.core import signing
+
+        return signing.Signer(salt=ContactForm.STAMP_SALT).sign(
+            str(int(time.time()) - seconds))
+
+    def test_a_browser_with_no_cookies_can_send(self):
+        from unittest.mock import patch
+
+        with patch("kjerne_platform.email.send") as send:
+            response = self.send(stamp=self.aged(30))
+
+        self.assertEqual(response.status_code, 302)
+        send.assert_called_once()
+
+    def test_the_message_reaches_the_inbox_intact(self):
+        from unittest.mock import patch
+
+        with patch("kjerne_platform.email.send") as send:
+            self.send(stamp=self.aged(30))
+
+        body = send.call_args.kwargs["body"]
+        self.assertIn("pantry in Pickens", body)
+        self.assertIn("ruth@example.test", body)
+
+    def test_a_blind_post_with_no_stamp_is_refused(self):
+        """What CSRF was incidentally doing, without the cookie."""
+        from unittest.mock import patch
+
+        with patch("kjerne_platform.email.send") as send:
+            response = self.send(stamp="")
+
+        self.assertEqual(response.status_code, 200)   # redisplayed, not sent
+        send.assert_not_called()
+
+    def test_a_forged_stamp_is_refused(self):
+        from unittest.mock import patch
+
+        with patch("kjerne_platform.email.send") as send:
+            self.send(stamp="1754900000:forged")
+        send.assert_not_called()
+
+    def test_a_stamp_from_yesterday_is_refused(self):
+        from unittest.mock import patch
+
+        with patch("kjerne_platform.email.send") as send:
+            self.send(stamp=self.aged(60 * 60 * 25))
+        send.assert_not_called()
+
+    def test_an_instant_submission_is_refused(self):
+        """Nobody types a name, an address and a sentence in under a second."""
+        from unittest.mock import patch
+
+        with patch("kjerne_platform.email.send") as send:
+            self.send(stamp=self.aged(0))
+        send.assert_not_called()
+
+    def test_too_fast_and_too_old_read_identically(self):
+        """Telling a script it was too quick tells it what to change."""
+        fast = self.copy_text(self.send(stamp=self.aged(0)))
+        stale = self.copy_text(self.send(stamp=self.aged(60 * 60 * 25)))
+        self.assertIn("went stale", fast)
+        self.assertNotIn("too quick", fast)
+        self.assertNotIn("too fast", fast)
+        self.assertTrue(stale)
+
+    def test_the_honeypot_still_catches_a_bot(self):
+        from unittest.mock import patch
+
+        with patch("kjerne_platform.email.send") as send:
+            self.send(stamp=self.aged(30), website="http://spam.example")
+        send.assert_not_called()
+
+    def test_a_rejected_form_comes_back_with_a_fresh_stamp(self):
+        """Otherwise fixing a typo is judged on when the FIRST page was drawn,
+        and the anti-spam check becomes its own dead end."""
+        import re
+
+        response = self.send(stamp=self.aged(30), email="not-an-address")
+        body = response.content.decode()
+        stamp = re.search(r'name="t" value="([^"]+)"', body).group(1)
+
+        from django.core import signing
+        import time
+
+        issued = int(signing.Signer(salt=ContactForm.STAMP_SALT).unsign(stamp))
+        self.assertLess(int(time.time()) - issued, 5)
+
+    def test_the_page_still_renders_a_stamp_for_a_first_visit(self):
+        import re
+
+        body = self.client.get("/").content.decode()
+        self.assertRegex(body, r'name="t" value="\d+:')
+
+    def test_authenticated_forms_still_require_csrf(self):
+        """The exemption is one anonymous view, not a posture."""
+        from django.test import Client
+
+        response = Client(enforce_csrf_checks=True).post(
+            "/login/", {"username": "x", "password": "y"})
         self.assertEqual(response.status_code, 403)
-        self.assertIn("didn't go through", self.copy(response))
+
+    @staticmethod
+    def copy_text(response):
+        return re.sub(r"\s+", " ", response.content.decode())

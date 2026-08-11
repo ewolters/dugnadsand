@@ -4,7 +4,30 @@ from django import forms
 
 
 class ContactForm(forms.Form):
-    """Front-page contact form. Delivered by kjerne_platform.email."""
+    """Front-page contact form. Delivered by kjerne_platform.email.
+
+    CSRF-EXEMPT, AND THIS IS WHAT REPLACES IT.
+
+    A token on an anonymous form protects nothing — the attack CSRF prevents
+    is riding a logged-in session, and anybody wanting to send mail through
+    here would POST from their own machine. What it did do, incidentally, was
+    turn away bots that blind-POST without ever fetching the page. And it
+    turned away real people whose browsers do not return cookies, which is
+    what actually happened on 2026-08-11.
+
+    So the "you must have loaded the page" property is kept and the cookie is
+    dropped: a signed timestamp in the form. It proves the form came from a
+    page this server rendered, and when — no cookie, no session, works for
+    somebody with everything blocked.
+
+    Rejecting too FAST as well as too old is the part that catches scripts. A
+    person typing a name, an address and a sentence takes longer than two
+    seconds; something that fetches and immediately posts does not.
+    """
+
+    STAMP_SALT = "dugnadsand.contact"
+    MIN_SECONDS = 2          # faster than a person can fill three fields
+    MAX_SECONDS = 60 * 60 * 24
 
     name = forms.CharField(max_length=120)
     email = forms.EmailField(max_length=254)
@@ -13,10 +36,59 @@ class ContactForm(forms.Form):
     # Bots fill every field they find. People never see this one.
     website = forms.CharField(required=False, widget=forms.HiddenInput)
 
+    # Signed server-side, so it cannot be forged or replayed past its window.
+    t = forms.CharField(required=False, widget=forms.HiddenInput)
+
+    @classmethod
+    def stamp(cls):
+        """A fresh signed timestamp, for a form about to be rendered."""
+        import time
+
+        from django.core import signing
+
+        return signing.Signer(salt=cls.STAMP_SALT).sign(str(int(time.time())))
+
     def clean_website(self):
         if self.cleaned_data.get("website"):
             raise forms.ValidationError("")
         return ""
+
+    def _check_stamp(self):
+        import time
+
+        from django.core import signing
+
+        raw = (self.data.get("t") or "").strip()
+        if not raw:
+            raise forms.ValidationError(
+                "This form went stale. Reload the page and send it again.")
+        try:
+            issued = int(signing.Signer(salt=self.STAMP_SALT).unsign(raw))
+        except (signing.BadSignature, ValueError):
+            raise forms.ValidationError(
+                "This form went stale. Reload the page and send it again.")
+
+        age = int(time.time()) - issued
+        if age > self.MAX_SECONDS or age < self.MIN_SECONDS:
+            # One wording for both. Telling a script it was too QUICK tells it
+            # exactly what to change; a person only needs to know to reload.
+            raise forms.ValidationError(
+                "This form went stale. Reload the page and send it again.")
+
+    def clean(self):
+        """The stamp check lands as a NON-FIELD error on purpose.
+
+        `t` is hidden, and the template renders errors for the three visible
+        fields and for non-field errors — so an error attached to `t` was
+        redisplaying the form with no explanation whatsoever. Somebody would
+        press send, watch the page reload unchanged, and have no idea why.
+        """
+        cleaned = super().clean()
+        try:
+            self._check_stamp()
+        except forms.ValidationError as exc:
+            self.add_error(None, exc)
+        return cleaned
 
 
 class MemberLoginForm(forms.Form):
