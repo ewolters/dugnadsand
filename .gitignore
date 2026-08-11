@@ -10,3 +10,7 @@ logs/
 # Secrets live in the deployment environment, never in the tree.
 .env
 *.sqlite3
+
+# Uploaded photographs. Content, not code — and not web-served: /media/ is
+# routed nowhere and every photo is delivered by a view that checks access.
+media/
