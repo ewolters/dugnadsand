@@ -682,3 +682,179 @@ class Pin(TenantScoped):
 
     def __str__(self):
         return f"pin by {self.member}"
+
+
+class WorkDay(TenantScoped):
+    """A day's work, at a place, at a time, that people turn up to.
+
+    A Project is a container with no date and no edge. A river cleanup is not
+    that: it happens on the twelfth, at the Cedar Lane put-in, from eight until
+    two, and somebody has to have asked the county first. This is the model for
+    the second kind of thing.
+
+    It records where and when, and nothing about who is expected. There is no
+    attendee list, no headcount target, no confirmation that somebody said they
+    would come and then did not — those are the machinery of obligation, and
+    no-obligation forbids them here as it does everywhere else. People give
+    time by claiming postings, exactly as they do on any other day.
+
+    Publication is gated on clearance (see Clearance below), and that gate is
+    the one place in this system where something is withheld until a condition
+    is met. It is worth being exact about why it is not the gate this whole
+    design exists to remove:
+
+      no-gating is about members. It forbids the record of what a member has
+      given from deciding what that member may receive. This gate never reads a
+      contribution, never reads a member, and cannot: it asks whether an
+      external party — a county, a landowner, an insurer — has said yes to the
+      organization. That is a fact about the physical world, not authority over
+      a person, and test_events.py asserts the distinction by watching the SQL.
+
+    Project deliberately refuses a needs_approval field for the opposite
+    reason: there, approval would mean somebody inside the organization signing
+    off on somebody else's work. Nothing here does that.
+    """
+
+    # Optional, like Posting.project. A cleanup that belongs to no ongoing
+    # project is a normal thing, not a case to model around.
+    project = models.ForeignKey(
+        Project, on_delete=models.PROTECT, null=True, blank=True,
+        related_name="work_days")
+
+    name = models.CharField(max_length=200)
+    description = models.TextField()
+
+    starts_at = models.DateTimeField()
+    ends_at = models.DateTimeField(null=True, blank=True)
+
+    # Free text, like Warehouse.address. "The Cedar Lane put-in, park on the
+    # grass by the gate" beats any structured address for somebody driving
+    # there, and a structured one would tempt a map integration that leaks the
+    # location of a community's work outside the tenant.
+    place = models.TextField()
+    muster = models.TextField(blank=True)
+
+    called_by = models.ForeignKey(
+        Member, on_delete=models.PROTECT, related_name="work_days_called")
+
+    # Null until it clears. Set once, and never unset by publishing again.
+    published_at = models.DateTimeField(null=True, blank=True)
+
+    # Cancelling is not a status field with a workflow. It is a timestamp and a
+    # reason in somebody's words, because the only thing anybody needs to know
+    # is that it is off and why.
+    cancelled_at = models.DateTimeField(null=True, blank=True)
+    cancelled_because = models.TextField(blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ("starts_at",)
+
+    def __str__(self):
+        return self.name
+
+    # -- clearance -------------------------------------------------------
+    # READ THESE INSIDE A TENANT CONTEXT. They query when accessed, not when
+    # the row is loaded, which is the same trap MaterialNeed.brought carries.
+
+    @property
+    def outstanding(self):
+        """Clearances someone said were needed and nobody has obtained."""
+        return [c for c in self.clearances.all() if c.obtained_on is None]
+
+    @property
+    def lapsed(self):
+        """Obtained, then expired. A permit for last Sunday is not a permit."""
+        return [c for c in self.clearances.all() if c.lapsed]
+
+    @property
+    def blockers(self):
+        return self.outstanding + self.lapsed
+
+    @property
+    def clear(self):
+        """Whether publication is permitted. Nothing about any member."""
+        return not self.blockers
+
+    @property
+    def published(self):
+        return self.published_at is not None and self.cancelled_at is None
+
+
+class Clearance(TenantScoped):
+    """Permission from outside to do the work at all.
+
+    A large group in a river on a Sunday, with tents, needs somebody to have
+    asked: the county, the landowner, an insurer, whoever holds the gate in the
+    real world. That asking happens over the phone and by email and it gets
+    forgotten, and the cost of forgetting is borne by whoever turns up.
+
+    Modelled on MaterialNeed and MaterialGiven rather than as a checkbox: a row
+    exists from the moment somebody says "we will need the county's OK", and
+    carries obtained_on only once it has actually been given. So the same table
+    holds both the requirement and its satisfaction, and an outstanding
+    requirement is visible as a row rather than as an absence nobody notices.
+
+    kind is free text and deliberately not choices=. A shipped taxonomy of
+    permission types would be wrong within a week -- every county names things
+    differently -- and it would be a catalog, which this system does not keep
+    of anything else either.
+
+    RECORDING A CLEARANCE HERE DOES NOT CREATE ONE. This is a note that
+    somebody says permission was given, with a reference so it can be checked.
+    It is evidence of an asking, not the permission itself, and the page says
+    so where somebody might otherwise rely on it.
+    """
+
+    work_day = models.ForeignKey(
+        WorkDay, on_delete=models.CASCADE, related_name="clearances")
+
+    kind = models.CharField(max_length=120)
+
+    # Who has to say yes. Recorded when the requirement is raised, before
+    # anybody has spoken to them.
+    authority = models.TextField()
+
+    # Null while outstanding.
+    obtained_on = models.DateField(null=True, blank=True)
+
+    # A permit number, an email date, a name -- whatever makes it checkable by
+    # somebody who was not on the call.
+    reference = models.CharField(max_length=200, blank=True)
+    note = models.TextField(blank=True)
+
+    # Null means it does not expire, which is the common case for "the owner
+    # said yes". A permit for a date does expire, and a lapsed one blocks.
+    expires_on = models.DateField(null=True, blank=True)
+
+    # ONE member link, and the manifest is why. The first version of this
+    # model also carried obtained_by, and no-exchange refused it: two Member
+    # FKs on one row is the shape of "A gave to B", which is the relation this
+    # system does not keep. Semantically it was a false positive -- both were
+    # just who did the paperwork -- but every other table here carries exactly
+    # one member link, and two names on a permit invites the question of who
+    # is responsible for it, which Project refuses on purpose. Who spoke to
+    # the county goes in note, and reference is what makes it checkable.
+    raised_by = models.ForeignKey(
+        Member, on_delete=models.PROTECT, related_name="clearances_raised")
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ("obtained_on", "created_at")
+
+    def __str__(self):
+        return f"{self.kind} from {self.authority}"
+
+    @property
+    def obtained(self):
+        return self.obtained_on is not None
+
+    @property
+    def lapsed(self):
+        from django.utils import timezone
+
+        if self.obtained_on is None or self.expires_on is None:
+            return False
+        return self.expires_on < timezone.localdate()
