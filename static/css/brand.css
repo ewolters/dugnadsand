@@ -74,3 +74,14 @@ a {
   --brand-measure: 40rem;
   --brand-measure-wide: 68rem;
 }
+
+/* Footer links. Four public pages each style `body > footer` in their own
+   <style> block, so putting this there would mean four copies drifting apart.
+   brand.css is the one file all of them already load. */
+body > footer a {
+  color: inherit;
+  text-decoration: none;
+  border-bottom: 1px solid var(--brand-rule-strong);
+}
+body > footer a:hover { color: var(--brand-ink); }
+body > footer .sep { padding: 0 .55rem; opacity: .55; }

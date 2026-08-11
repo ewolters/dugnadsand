@@ -936,3 +936,38 @@ class TheMigrationsMatchTheModels(TestCase):
                 "    python3 manage.py makemigrations site_app\n"
                 "and read what it wants before accepting it:\n\n"
                 + out.getvalue())
+
+
+class TheFooterReachesTheStatements(TestCase):
+    """Four public pages, one footer, and the three documents worth finding.
+
+    The commitments, the mechanics and the live proof are the whole argument
+    for trusting this thing, and until now two of the three were reachable
+    only from a page you had already found.
+    """
+
+    PUBLIC = ["/", "/how-it-works/", "/policy/", "/attestation/"]
+    LINKS = ["/how-it-works/", "/policy/", "/attestation/"]
+
+    def test_every_public_page_carries_them(self):
+        for path in self.PUBLIC:
+            body = self.client.get(path).content.decode()
+            footer = re.search(r"<footer.*?</footer>", body, re.S)
+            self.assertIsNotNone(footer, path)
+            for link in self.LINKS:
+                self.assertIn(link, footer.group(0), f"{link} missing from {path}")
+
+    def test_the_links_resolve(self):
+        """A footer link to a 404 is worse than no footer link."""
+        for link in self.LINKS:
+            self.assertEqual(self.client.get(link).status_code, 200, link)
+
+    def test_the_styling_lives_where_all_four_pages_can_see_it(self):
+        """Each page styles `body > footer` in its own <style> block, so the
+        link styling in a page block would be three copies drifting apart.
+        brand.css is the file all of them already load."""
+        from pathlib import Path
+
+        css = (Path(__file__).resolve().parents[2]
+               / "static" / "css" / "brand.css").read_text()
+        self.assertIn("body > footer a", css)
