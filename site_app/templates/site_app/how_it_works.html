@@ -98,16 +98,15 @@
 
 <p>Hours cannot be spent, are owed by no one to anyone, and purchase nothing.
    <strong>No code path consults a member's contributions when determining what they may
-   receive.</strong> A member who has contributed nothing may receive without restriction.</p>
+   receive.</strong></p>
+
+<p class="pull">A member who has contributed nothing may receive without restriction.</p>
 
 <p>Individual contributions appear in the organization's log under the contributor's name.
    This is intentional and serves as recognition. No <em>total</em> is computed or displayed
-   at any level: not per member, not per project. A figure comparable between members
-   functions as a score regardless of its label, and reintroduces through social pressure
-   what the code excludes.</p>
-
-<p class="pull">This property is load-bearing. The remaining constraints exist to preserve
-   it.</p>
+   at any level: not per member, not per project. That absence is checked by
+   <code>no-aggregate-display</code>, which scans the application source and templates for
+   aggregation over contributions and reports a breach on any match.</p>
 
 <p>Withdrawal is unrestricted. Taking on a posting and then stepping away deletes the claim
    record entirely; it is not flagged as withdrawn and is not counted. A stored record of

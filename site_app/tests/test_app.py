@@ -1073,3 +1073,31 @@ class ThePublicRegisterStaysTechnical(TestCase):
         """Not what this is, and not how it should be described."""
         for path in self.PAGES:
             self.assertNotRegex(self.prose(path), r"\bAI\b")
+
+    def test_no_public_page_argues_that_its_own_design_is_correct(self):
+        """The pages state behaviour. They do not defend it.
+
+        The register sweep removed second person but left a second voice
+        behind it: sentences asserting that a property is important, or that
+        some alternative would "really" be an exchange whatever it was called.
+        That is a position being argued, and it reads as a sermon rather than
+        a specification.
+
+        The reasoning is not deleted, only relocated — it belongs in
+        policy/manifest.toml, docs/design-rules.md and the check docstrings,
+        which are engineering documents and are deliberately not covered here.
+        """
+        preaching = re.compile(
+            r"load-bearing"
+            r"|regardless of (?:its|their)"
+            r"|(?:whatever|no matter) (?:it|they) (?:is|are) called"
+            r"|functions? as a score"
+            r"|exists? to (?:preserve|protect)"
+            r"|social pressure",
+            re.I)
+        offenders = {}
+        for path in self.PAGES:
+            hits = preaching.findall(self.prose(path))
+            if hits:
+                offenders[path] = sorted(set(h.lower() for h in hits))
+        self.assertEqual(offenders, {})

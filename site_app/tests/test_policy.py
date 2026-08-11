@@ -245,6 +245,20 @@ class TheStatementMatchesTheManifest(SignedIn, TestCase):
         return (Path(__file__).resolve().parents[2]
                 / "docs" / "policy-statement.md").read_text()
 
+    @classmethod
+    def flat(cls):
+        """The statement with wrapping collapsed, for phrase assertions.
+
+        Markdown is hard-wrapped, so a phrase that reads as contiguous prose
+        may be split by a newline: "that organization's own\\ncounsel" does not
+        contain "own counsel". Every assertion here that looks for a phrase
+        rather than a token reads through this, so reflowing a paragraph cannot
+        fail a test about what the paragraph says.
+        """
+        import re
+
+        return re.sub(r"\s+", " ", cls.statement()).lower()
+
     @staticmethod
     def manifest():
         from policy.attest import load_manifest
@@ -278,18 +292,25 @@ class TheStatementMatchesTheManifest(SignedIn, TestCase):
             self.assertIn(invariant["claim"], text, invariant["id"])
 
     def test_it_says_which_document_wins(self):
-        text = self.statement().lower()
+        text = self.flat()
         self.assertIn("the manifest is correct and this document is stale", text)
 
     def test_it_refuses_to_be_read_as_legal_advice(self):
-        text = self.statement().lower()
+        """Assert the disclaimer, not the wording it happened to be in.
+
+        This required the literal "your own counsel", which pinned a second
+        person the register sweep had already removed from every public page.
+        A test on a phrase makes the next rewrite look like a regression; what
+        has to hold is that all three refusals are made, however they are put.
+        """
+        text = self.flat()
         for required in ("not legal advice", "not a legal attestation",
-                         "your own counsel"):
+                         "own counsel"):
             self.assertIn(required, text, required)
 
     def test_it_states_what_is_not_promised(self):
         """The section that stops it being marketing."""
-        text = self.statement().lower()
+        text = self.flat()
         self.assertIn("deliberately not promised", text)
         # The specific overclaim the copy sweep caught, named here so it
         # cannot creep back in through this document.
