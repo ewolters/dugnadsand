@@ -190,8 +190,15 @@ def no_routing_by_record():
         f"({', '.join(present)}).")
 
 
+# Measure and Packet are here although neither is material: both describe an
+# outcome in a quantity and a unit, and both are read by somebody who gave
+# something. A value field on either would be the appraisal this check exists
+# to prevent, arriving through the impact packet instead of the warehouse.
+#
+# THIS TUPLE IS STILL HAND-MAINTAINED, which is the standing gap: a new
+# quantity-bearing model nobody adds is unchecked while this reports UPHELD.
 MATERIAL_MODELS = ("Warehouse", "StockLine", "Manifest",
-                   "MaterialNeed", "MaterialGiven")
+                   "MaterialNeed", "MaterialGiven", "Measure", "Packet")
 
 # Field names that would put a value on material, or make it commensurable with
 # hours. Deliberately broad: this is the one place where a plausible-sounding
@@ -345,20 +352,58 @@ def no_money_rails():
 
 
 # Things that would look like a substantiation receipt.
+# [_\s-]? rather than [_-]?: the identifier forms were caught and the PROSE
+# forms were not, so a template heading reading "Donation receipt" walked
+# straight past a check whose whole job is documents. The impact packet is
+# exactly the page that would grow one.
 _TAX_ARTIFACT = re.compile(
-    r"\b(1099|tax[_-]?receipt|donation[_-]?receipt|substantiation|deduct|"
-    r"annual[_-]?statement|total[_-]?value|fair[_-]?market)\b", re.I
+    r"\b(1099|tax[_\s-]?receipt|donation[_\s-]?receipt|substantiation|deduct|"
+    r"annual[_\s-]?statement|total[_\s-]?value|fair[_\s-]?market)\b", re.I
 )
 
 
+# A sentence that DENIES producing one of the above is not one of the above.
+# Without this the check cannot be satisfied by any honest disclaimer: the
+# impact packet has to be able to say, in words, that it cannot substantiate a
+# deduction — and a check that forces a choice between honest copy and a green
+# build will lose to the green build eventually.
+#
+# The same lesson as no-aggregate-display, which once matched a docstring
+# explaining why .aggregate() is avoided. A text-scanning guard cannot tell a
+# thing from prose about the thing, so it has to be told.
+_DENIAL = re.compile(
+    r"\b(no|not|never|cannot|can\'t|nothing|neither|nor|without|refuses?|"
+    r"refused|prevents?|forbids?)\b", re.I)
+
+
+def _sentence_around(text, position):
+    """The clause a match sits in, bounded by punctuation or by markup.
+
+    Angle brackets are boundaries so an HTML text node does not borrow a
+    denial from the attribute of the tag before it.
+    """
+    starts = [text.rfind(c, 0, position) for c in (".", "\n", ">", ";")]
+    start = max(starts) + 1
+    ends = [text.find(c, position) for c in (".", "\n", "<", ";")]
+    ends = [e for e in ends if e != -1]
+    return text[start:min(ends) if ends else len(text)]
+
+
 def no_tax_artifact():
-    """Enforceable today: nothing renders a per-member total or valuation."""
+    """Enforceable today: nothing RENDERS a per-member total or valuation.
+
+    Denials are skipped — see _DENIAL. test_policy.py holds the other half by
+    planting a real artifact and asserting this still catches it, because a
+    skip rule with nothing testing it is a hole with a comment over it.
+    """
     hits = []
     for path in list(_python_sources()) + list(BASE_DIR.rglob("*.html")):
         if "staticfiles" in path.parts or "docs" in path.parts:
             continue
         text = path.read_text(errors="ignore")
         for m in _TAX_ARTIFACT.finditer(text):
+            if _DENIAL.search(_sentence_around(text, m.start())):
+                continue
             line = text[: m.start()].count("\n") + 1
             hits.append(f"{path.relative_to(BASE_DIR)}:{line} '{m.group(0)}'")
 

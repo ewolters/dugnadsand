@@ -1188,3 +1188,129 @@ class Screening(models.Model):
 
     def __str__(self):
         return f"{self.source} on {self.searched_on}"
+
+
+def _photo_path(instance, filename):
+    """packets/<uuid>.<ext>. The original name is discarded on purpose.
+
+    An uploaded filename is somebody's phone's idea of a name and frequently
+    carries a date, a location or a person. It is also attacker-controlled.
+    """
+    import os
+    import uuid as _uuid
+
+    ext = os.path.splitext(filename or "")[1].lower()[:8]
+    return f"packets/{_uuid.uuid4().hex}{ext}"
+
+
+class Measure(TenantScoped):
+    """Something true about the world after the work, in somebody's own words.
+
+    This is what a project reports at the end, and it is deliberately NOT
+    computed from anything. "Three point two tons of debris removed" is a fact
+    a person establishes and types in; it is not a sum over the ledger.
+
+    That distinction is the whole reason this model can exist. A per-project
+    total of contributed hours looks safe, because it describes work rather
+    than a person -- but a project with one contributor is that contributor's
+    total, and no-aggregate-display exists to prevent exactly that number.
+    A measure describes the OUTCOME, so it stays a fact about a river rather
+    than about anybody who stood in it.
+
+    unit is refused if it names money or hours; see services_packet.check_unit.
+    Free text otherwise, like every other unit in this system.
+    """
+
+    project = models.ForeignKey(
+        Project, on_delete=models.PROTECT, related_name="measures")
+
+    label = models.CharField(max_length=200)
+    quantity = models.DecimalField(max_digits=12, decimal_places=2)
+    unit = models.CharField(max_length=40)
+    note = models.TextField(blank=True)
+
+    recorded_by = models.ForeignKey(
+        Member, on_delete=models.PROTECT, related_name="measures_recorded")
+    recorded_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ("recorded_at",)
+
+    def __str__(self):
+        return f"{self.label}: {self.quantity} {self.unit}"
+
+
+class Photo(TenantScoped):
+    """A picture of the work.
+
+    Stored under MEDIA_ROOT, which is NOT web-served: /media/ is routed
+    nowhere, and every photo is delivered by a view that decides whether the
+    requester may have it. A file under a guessable URL would be public the
+    moment it was uploaded, published packet or not.
+    """
+
+    project = models.ForeignKey(
+        Project, on_delete=models.PROTECT, related_name="photos")
+
+    image = models.FileField(upload_to=_photo_path)
+    caption = models.CharField(max_length=300, blank=True)
+
+    added_by = models.ForeignKey(
+        Member, on_delete=models.PROTECT, related_name="photos_added")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ("created_at",)
+
+    def __str__(self):
+        return self.caption or "photo"
+
+
+class Packet(TenantScoped):
+    """What a project sends back to everybody who helped.
+
+    The consideration in this system is documented outcome, not a receipt.
+    Somebody who gives a pallet of shingles gets back evidence of what the
+    work achieved, with photographs -- and never a figure they could put on a
+    tax return, because this system does not know what anything was worth and
+    is built so it cannot learn.
+
+    So the packet carries measures, material described and counted, photos,
+    and an acknowledgement written by the organization. It carries NO value,
+    NO price, and NO total of contributed hours. The page says so itself,
+    where somebody might otherwise rely on it.
+
+    Acknowledgement is prose, not a computed list of contributors. Who a
+    community thanks is a human act; generating it would rank people by what
+    they gave, which is the score the whole system exists without.
+    """
+
+    project = models.OneToOneField(
+        Project, on_delete=models.PROTECT, related_name="packet")
+
+    title = models.CharField(max_length=200)
+    summary = models.TextField()
+    acknowledgements = models.TextField(blank=True)
+
+    # Minted when published, cleared when withdrawn. Unguessable and durable:
+    # unlike a receipt link this is meant to be kept and revisited, so it is
+    # not single-use -- but withdrawing publication kills the old link for
+    # good rather than leaving it working quietly.
+    token = models.CharField(max_length=64, blank=True, editable=False)
+
+    published_at = models.DateTimeField(null=True, blank=True)
+    published_by = models.ForeignKey(
+        Member, on_delete=models.PROTECT, null=True, blank=True,
+        related_name="packets_published")
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ("-created_at",)
+
+    def __str__(self):
+        return self.title
+
+    @property
+    def published(self):
+        return bool(self.published_at and self.token)

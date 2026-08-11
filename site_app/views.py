@@ -4,8 +4,8 @@ from hmac import compare_digest
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.http import (HttpResponseBadRequest, HttpResponseForbidden,
-                         JsonResponse)
+from django.http import (Http404, HttpResponseBadRequest,
+                         HttpResponseForbidden, JsonResponse)
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
@@ -1568,3 +1568,169 @@ def chapter(request):
 
     return render(request, "site_app/chapter.html",
                   {"regions": regions, "member": _member(request)})
+
+
+# --------------------------------------------------------------------------
+# The impact packet. What a project sends back to everybody who helped: an
+# outcome, described and photographed, and never a figure for a tax return.
+# --------------------------------------------------------------------------
+
+@login_required
+def project_packet(request, project_id):
+    """Build the packet: measures, photos, and the words around them."""
+    from .forms import MeasureForm, PacketForm, PhotoForm
+    from .models import Project
+    from .services_packet import (UnitRefused, add_photo, build_packet,
+                                  material_for, record_measure)
+
+    member = _member(request)
+    if member is None:
+        return HttpResponseForbidden("Not a member of any organization.")
+
+    project = get_object_or_404(Project, pk=project_id)
+    packet = getattr(project, "packet", None)
+
+    measure_form = MeasureForm()
+    photo_form = PhotoForm()
+    packet_form = PacketForm(initial={
+        "title": packet.title if packet else project.name,
+        "summary": packet.summary if packet else "",
+        "acknowledgements": packet.acknowledgements if packet else ""})
+
+    if request.method == "POST":
+        what = request.POST.get("what")
+        if what == "measure":
+            measure_form = MeasureForm(request.POST)
+            if measure_form.is_valid():
+                try:
+                    record_measure(project=project, member=member,
+                                   **measure_form.cleaned_data)
+                    return redirect(f"/projects/{project.id}/packet/")
+                except UnitRefused as refused:
+                    measure_form.add_error("unit", str(refused))
+        elif what == "photo":
+            photo_form = PhotoForm(request.POST, request.FILES)
+            if photo_form.is_valid():
+                try:
+                    add_photo(project=project, member=member,
+                              upload=photo_form.cleaned_data["image"],
+                              caption=photo_form.cleaned_data["caption"])
+                    return redirect(f"/projects/{project.id}/packet/")
+                except ValueError as refused:
+                    photo_form.add_error("image", str(refused))
+        elif what == "packet":
+            packet_form = PacketForm(request.POST)
+            if packet_form.is_valid():
+                build_packet(project=project, member=member,
+                             **packet_form.cleaned_data)
+                return redirect(f"/projects/{project.id}/packet/")
+
+    return render(request, "site_app/packet_build.html", {
+        "member": member, "section": "projects", "project": project,
+        "packet": packet, "measures": project.measures.all(),
+        "photos": project.photos.all(), "material": material_for(project),
+        "measure_form": measure_form, "photo_form": photo_form,
+        "packet_form": packet_form,
+    })
+
+
+@login_required
+@require_POST
+def packet_publish(request, project_id):
+    from .models import Project
+    from .services_packet import publish_packet, withdraw_packet
+
+    member = _member(request)
+    if member is None:
+        return HttpResponseForbidden("Not a member of any organization.")
+
+    project = get_object_or_404(Project, pk=project_id)
+    packet = getattr(project, "packet", None)
+    if packet is None:
+        return HttpResponseBadRequest("There is no packet to publish yet.")
+
+    if request.POST.get("withdraw"):
+        withdraw_packet(packet)
+        messages.success(
+            request, "Withdrawn. The link that was sent out no longer works, "
+                     "and publishing again mints a different one.")
+    else:
+        publish_packet(packet=packet, member=member)
+        messages.success(request, "Published.")
+    return redirect(f"/projects/{project.id}/packet/")
+
+
+def packet(request, token):
+    """The published packet. No account, deliberately.
+
+    Whoever this was sent to has no login and should not need one — the whole
+    point is to hand somebody evidence of what their help became. What
+    protects it is the token: unguessable, and dead the moment the packet is
+    withdrawn.
+
+    Reads through bypass_rls to find the packet, because an anonymous reader
+    sets no tenant and RLS correctly hides everything. It then re-enters that
+    packet's OWN tenant for the rest, so nothing wider is ever in scope.
+    """
+    from .models import Packet
+    from .services_packet import material_for
+    from .tenancy import bypass_rls, tenant_context
+
+    if not token:
+        raise Http404
+
+    with bypass_rls():
+        found = (Packet.objects.filter(token=token)
+                 .exclude(token="")
+                 .select_related("project", "organization").first())
+        if found is None or not found.published:
+            raise Http404
+
+        organization = found.organization
+
+    with tenant_context(organization):
+        return render(request, "site_app/packet.html", {
+            "packet": found, "project": found.project,
+            "organization": organization,
+            "measures": found.project.measures.all(),
+            "photos": found.project.photos.all(),
+            "material": material_for(found.project),
+        })
+
+
+def packet_photo(request, photo_id):
+    """Serve a photo, and decide first whether the requester may have it.
+
+    /media/ is routed nowhere on purpose. A file sitting under a web-served
+    directory is public from the moment it is written, published packet or
+    not, and "the URL is a UUID" is not an access rule.
+
+    Two ways in: a member of the photo's own organization, or anybody at all
+    once that project's packet is published. Withdrawing the packet closes the
+    second door again.
+    """
+    from django.http import FileResponse
+
+    from .models import Photo
+    from .tenancy import bypass_rls
+
+    with bypass_rls():
+        photo = (Photo.objects.filter(pk=photo_id)
+                 .select_related("project", "organization").first())
+        if photo is None:
+            raise Http404
+
+        packet_of = getattr(photo.project, "packet", None)
+        published = bool(packet_of and packet_of.published)
+        organization_id = photo.organization_id
+        image = photo.image
+
+    member = _member(request)
+    if not published and (member is None
+                          or member.organization_id != organization_id):
+        raise Http404
+
+    try:
+        return FileResponse(image.open("rb"))
+    except FileNotFoundError:
+        raise Http404

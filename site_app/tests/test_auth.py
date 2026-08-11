@@ -315,6 +315,12 @@ class EveryRouteIsAccountedFor(TestCase):
                    "requiring one to ask for admission is a closed door "
                    "wearing a form"),
         "act/<str:token>/": "the holder has no account — that is the whole point",
+        "packet/<str:token>/": ("the impact packet; whoever it was sent to gave "
+                                "something and has no login. Dead without a valid "
+                                "token, and dead again once withdrawn"),
+        "photo/<uuid:photo_id>/": ("photographs in a published packet. /media/ is "
+                                   "routed nowhere, so this view IS the access rule: "
+                                   "404 unless published or a member of that tenant"),
         "setup/<str:token>/": "used before an account has a password",
         "sso/": "the assertion IS the credential",
         "mfa/": "reached while signed in but not yet verified",

@@ -567,3 +567,54 @@ class ApplicationForm(StampedPublicForm, forms.Form):
             "IRS determination letter": {
                 "reference": c.get("determination_reference", "")},
         }
+
+
+class MeasureForm(forms.Form):
+    """Something true about the world after the work.
+
+    There is no field for a value and none for hours, and the unit is checked
+    in services_packet.check_unit rather than here so the refusal holds for
+    every caller — the form is one way in, not the rule.
+    """
+
+    label = forms.CharField(
+        max_length=200, label="What was measured",
+        help_text="“Debris removed”, “Riverbank cleared”, "
+                  "“Roofs made watertight”.")
+    quantity = forms.DecimalField(max_digits=12, decimal_places=2, label="How much")
+    unit = forms.CharField(
+        max_length=40, label="Counted in what",
+        help_text="Tons, metres, houses, bags — whatever it was actually "
+                  "counted in. Not money, and not hours.")
+    note = forms.CharField(
+        max_length=2000, required=False, widget=forms.Textarea(attrs={"rows": 2}),
+        label="Anything worth saying about it (optional)")
+
+
+class PhotoForm(forms.Form):
+    image = forms.FileField(label="Photograph")
+    caption = forms.CharField(
+        max_length=300, required=False, label="Caption (optional)",
+        help_text="What is happening in it. Naming people is a decision for "
+                  "the people in the picture.")
+
+
+class PacketForm(forms.Form):
+    """The words around the evidence.
+
+    acknowledgements is prose somebody writes, not a generated list. Who a
+    community thanks is a human act; generating it would rank people by what
+    they gave, which is the score this system exists without.
+    """
+
+    title = forms.CharField(max_length=200, label="Title")
+    summary = forms.CharField(
+        widget=forms.Textarea(attrs={"rows": 6}), max_length=8000,
+        label="What happened",
+        help_text="Written for somebody who was not there and gave something "
+                  "to it.")
+    acknowledgements = forms.CharField(
+        required=False, widget=forms.Textarea(attrs={"rows": 4}), max_length=4000,
+        label="Who to thank (optional)",
+        help_text="In your own words. Nothing here is generated, and nothing "
+                  "is ranked.")

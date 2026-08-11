@@ -393,3 +393,61 @@ class ThePublicPolicyPage(SignedIn, TestCase):
                          "own counsel", "What is not claimed",
                          "Individual contributions are visible"):
             self.assertIn(required, page, required)
+
+
+class TheDenialSkipIsNotALoophole(SignedIn, TestCase):
+    """no-tax-artifact skips sentences that DENY producing one.
+
+    It has to: the impact packet must be able to say in words that it cannot
+    substantiate a deduction, and a check that forces a choice between honest
+    copy and a green build loses to the green build eventually.
+
+    But a skip rule with nothing testing it is a hole with a comment over it.
+    So this plants a real artifact and asserts the check still catches it.
+    """
+
+    def setUp(self):
+        from policy import checks
+
+        self.checks = checks
+
+    def test_a_plain_artifact_is_still_caught(self):
+        from pathlib import Path
+
+        planted = (self.checks.BASE_DIR / "site_app" / "templates"
+                   / "site_app" / "_planted_artifact.html")
+        planted.write_text(
+            "<p>Your donation receipt for the year</p>\n"
+            "<p>Total value of goods given: see attached</p>\n")
+        try:
+            result = self.checks.no_tax_artifact()
+            self.assertEqual(result.status, self.checks.BREACHED,
+                             "a real artifact walked past the denial skip")
+            self.assertTrue(
+                any("_planted_artifact" in e for e in result.evidence),
+                result.evidence)
+        finally:
+            Path(planted).unlink()
+
+    def test_the_real_disclaimer_does_not_trip_it(self):
+        """The packet says it cannot serve as substantiation for a deduction.
+        Saying so is the opposite of doing it."""
+        result = self.checks.no_tax_artifact()
+        self.assertEqual(result.status, self.checks.UPHELD, result.evidence)
+
+    def test_a_denial_and_an_artifact_on_one_line_still_reports(self):
+        """The known limit, asserted rather than assumed: the skip is clause
+        scoped, so a denial in one clause does not cover an artifact in the
+        next."""
+        from pathlib import Path
+
+        planted = (self.checks.BASE_DIR / "site_app" / "templates"
+                   / "site_app" / "_planted_mixed.html")
+        planted.write_text(
+            "<p>This is not a valuation.</p>\n"
+            "<p>Donation receipt enclosed</p>\n")
+        try:
+            result = self.checks.no_tax_artifact()
+            self.assertEqual(result.status, self.checks.BREACHED)
+        finally:
+            Path(planted).unlink()

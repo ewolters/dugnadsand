@@ -31,8 +31,31 @@ class AvatarBase(SignedIn, TestCase):
                 organization=self.org, display_name="Ola")
 
 
-class ThereAreNoPhotographs(AvatarBase):
-    def test_no_model_stores_an_image(self):
+class NoPersonIsPhotographed(AvatarBase):
+    """NARROWED, DELIBERATELY, WHEN THE IMPACT PACKET LANDED.
+
+    This class used to assert that NO model anywhere stored an image and that
+    no route contained the word "photo". That was the right shape while the
+    only reason to want an image was a profile picture, and the decision it
+    guarded is unchanged: a face next to a name reintroduces judgement of a
+    PERSON through a channel no invariant covers, so members are drawn from
+    their id and choose a colour.
+
+    A photograph of a riverbank in an impact packet is a different object. It
+    depicts the work; it is not anybody's representation in the application,
+    it never appears beside a contribution, and the packet is the one thing
+    this system sends to somebody who helped.
+
+    So the rule is stated properly rather than approximated: an image may
+    describe WORK and may never be the representation of a MEMBER. The blanket
+    ban was a proxy for that, and a proxy that now forbids something Eric
+    asked for is worse than the rule it stood in for.
+    """
+
+    #: The only model permitted to hold a file, and what it must hang off.
+    IMAGE_BEARING = {"Photo": "project"}
+
+    def test_no_model_outside_the_packet_stores_an_image(self):
         from django.apps import apps
 
         for model in apps.get_models():
@@ -40,14 +63,36 @@ class ThereAreNoPhotographs(AvatarBase):
                 continue
             for f in model._meta.get_fields():
                 kind = getattr(f, "get_internal_type", lambda: "")()
-                self.assertNotIn(kind, ("ImageField", "FileField"),
-                                 f"{model.__name__}.{getattr(f, 'name', '')}")
+                if kind not in ("ImageField", "FileField"):
+                    continue
+                self.assertIn(
+                    model.__name__, self.IMAGE_BEARING,
+                    f"{model.__name__}.{getattr(f, 'name', '')} stores a file; "
+                    f"only {sorted(self.IMAGE_BEARING)} may")
 
-    def test_no_route_accepts_an_upload(self):
+    def test_an_image_hangs_off_the_work_never_off_a_person(self):
+        """The line that matters. A Photo whose subject was a Member would be
+        a profile picture with a different table name."""
+        from django.apps import apps
+
+        for name, subject in self.IMAGE_BEARING.items():
+            model = apps.get_model("site_app", name)
+            field = model._meta.get_field(subject)
+            self.assertEqual(field.related_model.__name__, "Project",
+                             f"{name}.{subject} no longer points at the work")
+
+    def test_no_member_carries_an_image_of_any_kind(self):
+        for f in Member._meta.get_fields():
+            kind = getattr(f, "get_internal_type", lambda: "")()
+            self.assertNotIn(kind, ("ImageField", "FileField"),
+                             f"Member.{getattr(f, 'name', '')}")
+
+    def test_no_route_sets_a_picture_of_a_member(self):
         from site_app import urls
 
         routes = " ".join(str(p.pattern) for p in urls.urlpatterns)
-        for forbidden in ("upload", "photo", "avatar/set", "image"):
+        for forbidden in ("avatar/set", "avatar/upload", "profile-photo",
+                          "members/<uuid:member_id>/photo"):
             self.assertNotIn(forbidden, routes)
 
     def test_the_only_thing_stored_is_a_colour_name(self):

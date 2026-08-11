@@ -1,0 +1,86 @@
+{% extends "app_base.html" %}
+{% block title %}Packet — {{ project.name }} — Dugnadsand{% endblock %}
+{% block content %}
+<p class="crumb"><a href="/projects/{{ project.id }}/">{{ project.name }}</a></p>
+
+{% comment %}
+  Messages render here rather than in the shell. board.html is the only
+  template that renders them, so a refusal raised in the view would otherwise
+  be swallowed and the button would look as though it did nothing.
+{% endcomment %}
+{% if messages %}{% for m in messages %}<p class="said">{{ m }}</p>{% endfor %}{% endif %}
+
+<h1>Impact packet</h1>
+<p class="lede">What this project sends back to everybody who helped: what the work
+   achieved, what arrived, and photographs of it. No value, no price, and no total of
+   anybody's hours — the packet is evidence of an outcome, not a receipt.</p>
+
+{% if packet.published %}
+  <p class="said">Published. The link is
+     <a href="/packet/{{ packet.token }}/">/packet/{{ packet.token }}/</a> — it needs no
+     account, and it stops working if this is withdrawn.</p>
+  <form method="post" action="/projects/{{ project.id }}/packet/publish/">{% csrf_token %}
+    <input type="hidden" name="withdraw" value="1">
+    <button class="act quiet" type="submit">Withdraw it</button>
+  </form>
+{% elif packet %}
+  <form method="post" action="/projects/{{ project.id }}/packet/publish/">{% csrf_token %}
+    <button class="act" type="submit">Publish it</button>
+  </form>
+{% endif %}
+
+<h2>What the work achieved</h2>
+{% for m in measures %}
+  <div class="card">
+    <p class="who">{{ m.recorded_by.display_name }}</p>
+    <h3 class="proj">{{ m.label }}</h3>
+    <p class="qty">{{ m.quantity }} {{ m.unit }}</p>
+    {% if m.note %}<p>{{ m.note|linebreaksbr }}</p>{% endif %}
+  </div>
+{% empty %}
+  <p class="empty">Nothing recorded yet. A measure is something true about the world
+     after the work — not a sum of what anybody gave.</p>
+{% endfor %}
+
+<h3>Add a measure</h3>
+<form method="post" action="/projects/{{ project.id }}/packet/">{% csrf_token %}
+  <input type="hidden" name="what" value="measure">
+  {{ measure_form.as_p }}
+  <button class="act" type="submit">Record it</button>
+</form>
+
+<h2>What arrived</h2>
+{% for g in material %}
+  <div class="card">
+    <p class="who">{{ g.recorded_at|date:"j F Y" }}</p>
+    <p>{{ g.quantity }} {{ g.need.unit }} — {{ g.need.description }}</p>
+    {% if g.note %}<p class="note">{{ g.note|linebreaksbr }}</p>{% endif %}
+  </div>
+{% empty %}
+  <p class="empty">Nothing recorded against this project's list.</p>
+{% endfor %}
+
+<h2>Photographs</h2>
+{% for p in photos %}
+  <div class="card">
+    <img src="/photo/{{ p.id }}/" alt="{{ p.caption }}" style="max-width:100%;height:auto">
+    {% if p.caption %}<p class="note">{{ p.caption }}</p>{% endif %}
+  </div>
+{% empty %}
+  <p class="empty">None yet.</p>
+{% endfor %}
+
+<h3>Add a photograph</h3>
+<form method="post" action="/projects/{{ project.id }}/packet/" enctype="multipart/form-data">{% csrf_token %}
+  <input type="hidden" name="what" value="photo">
+  {{ photo_form.as_p }}
+  <button class="act" type="submit">Add it</button>
+</form>
+
+<h2>The words</h2>
+<form method="post" action="/projects/{{ project.id }}/packet/">{% csrf_token %}
+  <input type="hidden" name="what" value="packet">
+  {{ packet_form.as_p }}
+  <button class="act" type="submit">Save</button>
+</form>
+{% endblock %}
