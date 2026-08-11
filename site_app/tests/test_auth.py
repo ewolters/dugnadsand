@@ -309,6 +309,9 @@ class EveryRouteIsAccountedFor(TestCase):
         "policy/": "the operating policy; a board reads it before anybody has an account",
         "virtual-warehouse/": "how material moves; a business reads it before listing anything",
         "attestation/": "the proof; publishing it privately would defeat it",
+        "apply/": ("the ingress; an applicant has no account yet, and "
+                   "requiring one to ask for admission is a closed door "
+                   "wearing a form"),
         "act/<str:token>/": "the holder has no account — that is the whole point",
         "setup/<str:token>/": "used before an account has a password",
         "sso/": "the assertion IS the credential",

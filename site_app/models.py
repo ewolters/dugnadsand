@@ -953,3 +953,212 @@ class RegionRole(models.Model):
 
     def __str__(self):
         return f"{self.get_role_display()} of {self.region}"
+
+
+class Application(models.Model):
+    """Somebody asking to join the network. Outside every tenant, necessarily.
+
+    An applicant has no organization yet, so this cannot be TenantScoped --
+    the same reason SetupLink is not. Nothing here is protected by row-level
+    security; it is reachable only by whoever runs the review.
+
+    /policy/ says there is no self-service signup, and that stays true. An
+    application is a request. Admission is still a decision a person makes,
+    and it is still made with a command rather than a button.
+
+    CONTAINS PERSONAL DATA AND, FOR BUSINESSES, A TAX NUMBER. Nothing in this
+    model is encrypted at rest today, which is a gap recorded rather than
+    papered over: kjerne-services solved the same problem with Fernet field
+    encryption and this should follow it before the first real application
+    lands.
+    """
+
+    CHAPTER = "chapter"
+    BUSINESS = "business"
+    NONPROFIT = "nonprofit"
+    INDIVIDUAL = "individual"
+    KINDS = [
+        (CHAPTER, "A new chapter"),
+        (BUSINESS, "A business"),
+        (NONPROFIT, "A not-for-profit"),
+        (INDIVIDUAL, "An individual"),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    kind = models.CharField(max_length=12, choices=KINDS)
+
+    # Which chapter they are applying to. Null for a chapter application, and
+    # null when somebody applies before any chapter covers them.
+    region = models.ForeignKey(
+        Region, on_delete=models.PROTECT, null=True, blank=True,
+        related_name="applications")
+
+    # The name on the paperwork, which is frequently not the trading name.
+    legal_name = models.CharField(max_length=200)
+    contact_name = models.CharField(max_length=200)
+    email = models.EmailField()
+    phone = models.CharField(max_length=60, blank=True)
+    locality = models.CharField(max_length=200, blank=True)
+
+    # Why they want in, in their own words. Deliberately not "what do you
+    # offer": an applicant proves they are legitimate, never that their help
+    # is worth having.
+    statement = models.TextField()
+
+    # Which version of the manifest they agreed to. Recording the version
+    # rather than a bare boolean means a later change to the commitments does
+    # not silently re-characterise what somebody signed up to.
+    agreed_policy_version = models.CharField(max_length=40, blank=True)
+    agreed_at = models.DateTimeField(null=True, blank=True)
+
+    submitted_at = models.DateTimeField(auto_now_add=True)
+
+    # Undecided while null. True admitted, False declined -- one nullable
+    # field rather than a status with a workflow, following the house style.
+    admitted = models.BooleanField(null=True, blank=True)
+    decided_at = models.DateTimeField(null=True, blank=True)
+    decided_by = models.ForeignKey(
+        "auth.User", on_delete=models.PROTECT, null=True, blank=True,
+        related_name="application_decisions")
+    decision_note = models.TextField(blank=True)
+
+    # Set when admitting created a tenant, so the two are not reconciled by
+    # hand later.
+    organization = models.ForeignKey(
+        Organization, on_delete=models.PROTECT, null=True, blank=True,
+        related_name="applications")
+
+    class Meta:
+        ordering = ("-submitted_at",)
+
+    def __str__(self):
+        return f"{self.get_kind_display()}: {self.legal_name}"
+
+    @property
+    def decided(self):
+        return self.admitted is not None
+
+    @property
+    def outstanding(self):
+        """Required proof nobody has verified yet."""
+        return [c for c in self.credentials.all() if not c.verified_on]
+
+    @property
+    def lapsed(self):
+        return [c for c in self.credentials.all() if c.lapsed]
+
+    @property
+    def unscreened(self):
+        """An individual must have been looked for before being admitted."""
+        if self.kind != self.INDIVIDUAL:
+            return False
+        return not self.screenings.filter(clear=True).exists()
+
+    @property
+    def blockers(self):
+        reasons = [f"{c.kind} not verified" for c in self.outstanding]
+        reasons += [f"{c.kind} expired {c.expires_on}" for c in self.lapsed]
+        if self.unscreened:
+            reasons.append("no clear screening on file")
+        if not self.agreed_at:
+            reasons.append("the policy has not been agreed")
+        return reasons
+
+    @property
+    def ready(self):
+        return not self.blockers
+
+
+class Credential(models.Model):
+    """Proof that an applicant is who they say they are.
+
+    The same shape as Clearance one level up: a row exists because something
+    is required, and carries verified_on only once a person has actually
+    looked at it. An expired credential blocks exactly as a lapsed permit
+    blocks a work day -- a licence that ran out in March is not a licence, and
+    the failure nobody catches is the row that was filled in correctly two
+    years ago.
+
+    Note what is NOT proved: what the applicant offers, or how good they are
+    at it. An electrician proves a licence and insurance. Nothing asks them to
+    justify the value of their help, because this system does not value help.
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    application = models.ForeignKey(
+        Application, on_delete=models.CASCADE, related_name="credentials")
+
+    # Free text. "Business license", "Certificate of insurance", "IRS
+    # determination letter" -- named differently in every state, and a shipped
+    # vocabulary would be wrong within a year.
+    kind = models.CharField(max_length=120)
+
+    # Who issued it, and the number on it.
+    authority = models.CharField(max_length=200, blank=True)
+    reference = models.CharField(max_length=200, blank=True)
+
+    issued_on = models.DateField(null=True, blank=True)
+    expires_on = models.DateField(null=True, blank=True)
+
+    # Set when a person has checked it against the issuer, not when the
+    # applicant typed it in.
+    verified_on = models.DateField(null=True, blank=True)
+    verified_by = models.ForeignKey(
+        "auth.User", on_delete=models.PROTECT, null=True, blank=True,
+        related_name="credentials_verified")
+    note = models.TextField(blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ("kind",)
+
+    def __str__(self):
+        return f"{self.kind} for {self.application.legal_name}"
+
+    @property
+    def lapsed(self):
+        from django.utils import timezone
+
+        return bool(self.expires_on and self.expires_on < timezone.localdate())
+
+
+class Screening(models.Model):
+    """A record that somebody looked, and what they searched.
+
+    THIS MODEL DOES NOT SEARCH ANYTHING, AND DELIBERATELY SO. Matching a name
+    against a public registry produces false positives on common names, and
+    wiring an automatic match into a refusal means a person is turned away by
+    a string comparison nobody reviewed. Registries also disagree, lag, and
+    publish in formats that change without notice.
+
+    So a person does the search and records what they did: which registry, on
+    what date, under what name, and what they found. That is evidence, it can
+    be re-checked, and it puts the judgement with somebody who can be asked
+    about it afterwards.
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    application = models.ForeignKey(
+        Application, on_delete=models.CASCADE, related_name="screenings")
+
+    # Which registry, in words. There is no single one, and the set differs by
+    # state and by what the chapter has decided it checks.
+    source = models.CharField(max_length=200)
+    searched_name = models.CharField(max_length=200)
+    searched_on = models.DateField()
+    searched_by = models.ForeignKey(
+        "auth.User", on_delete=models.PROTECT, related_name="screenings_run")
+
+    # False means something came back that needs a person, NOT that the
+    # applicant is refused. The decision stays with the reviewer.
+    clear = models.BooleanField()
+    note = models.TextField(blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ("-searched_on",)
+
+    def __str__(self):
+        return f"{self.source} on {self.searched_on}"

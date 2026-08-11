@@ -3,7 +3,74 @@ from decimal import Decimal
 from django import forms
 
 
-class ContactForm(forms.Form):
+class StampedPublicForm:
+    """The "you must have loaded the page" check, without a cookie.
+
+    Extracted from ContactForm when the application ingress needed the same
+    defence. Both are anonymous POSTs where CSRF protects nothing -- there is
+    no session to ride -- but where the incidental property of CSRF, that a
+    blind POST is refused, is worth keeping.
+
+    A subclass sets its own STAMP_SALT so a stamp minted for one form cannot
+    be replayed against the other.
+    """
+
+    STAMP_SALT = "dugnadsand.public"
+    MIN_SECONDS = 2
+    MAX_SECONDS = 60 * 60 * 24
+
+    STALE = "This form went stale. Reload the page and send it again."
+
+    @classmethod
+    def stamp(cls):
+        """A fresh signed timestamp, for a form about to be rendered."""
+        import time
+
+        from django.core import signing
+
+        return signing.Signer(salt=cls.STAMP_SALT).sign(str(int(time.time())))
+
+    def clean_website(self):
+        if self.cleaned_data.get("website"):
+            raise forms.ValidationError("")
+        return ""
+
+    def _check_stamp(self):
+        import time
+
+        from django.core import signing
+
+        raw = (self.data.get("t") or "").strip()
+        if not raw:
+            raise forms.ValidationError(self.STALE)
+        try:
+            issued = int(signing.Signer(salt=self.STAMP_SALT).unsign(raw))
+        except (signing.BadSignature, ValueError):
+            raise forms.ValidationError(self.STALE)
+
+        age = int(time.time()) - issued
+        if age > self.MAX_SECONDS or age < self.MIN_SECONDS:
+            # One wording for both. Telling a script it was too QUICK tells it
+            # exactly what to change; a person only needs to know to reload.
+            raise forms.ValidationError(self.STALE)
+
+    def clean(self):
+        """The stamp check lands as a NON-FIELD error on purpose.
+
+        `t` is hidden, and templates render errors for the visible fields and
+        for non-field errors -- so an error attached to `t` redisplayed the
+        form with no explanation whatsoever. Somebody would press send, watch
+        the page reload unchanged, and have no idea why.
+        """
+        cleaned = super().clean()
+        try:
+            self._check_stamp()
+        except forms.ValidationError as exc:
+            self.add_error(None, exc)
+        return cleaned
+
+
+class ContactForm(StampedPublicForm, forms.Form):
     """Front-page contact form. Delivered by kjerne_platform.email.
 
     CSRF-EXEMPT, AND THIS IS WHAT REPLACES IT.
@@ -38,57 +105,6 @@ class ContactForm(forms.Form):
 
     # Signed server-side, so it cannot be forged or replayed past its window.
     t = forms.CharField(required=False, widget=forms.HiddenInput)
-
-    @classmethod
-    def stamp(cls):
-        """A fresh signed timestamp, for a form about to be rendered."""
-        import time
-
-        from django.core import signing
-
-        return signing.Signer(salt=cls.STAMP_SALT).sign(str(int(time.time())))
-
-    def clean_website(self):
-        if self.cleaned_data.get("website"):
-            raise forms.ValidationError("")
-        return ""
-
-    def _check_stamp(self):
-        import time
-
-        from django.core import signing
-
-        raw = (self.data.get("t") or "").strip()
-        if not raw:
-            raise forms.ValidationError(
-                "This form went stale. Reload the page and send it again.")
-        try:
-            issued = int(signing.Signer(salt=self.STAMP_SALT).unsign(raw))
-        except (signing.BadSignature, ValueError):
-            raise forms.ValidationError(
-                "This form went stale. Reload the page and send it again.")
-
-        age = int(time.time()) - issued
-        if age > self.MAX_SECONDS or age < self.MIN_SECONDS:
-            # One wording for both. Telling a script it was too QUICK tells it
-            # exactly what to change; a person only needs to know to reload.
-            raise forms.ValidationError(
-                "This form went stale. Reload the page and send it again.")
-
-    def clean(self):
-        """The stamp check lands as a NON-FIELD error on purpose.
-
-        `t` is hidden, and the template renders errors for the three visible
-        fields and for non-field errors — so an error attached to `t` was
-        redisplaying the form with no explanation whatsoever. Somebody would
-        press send, watch the page reload unchanged, and have no idea why.
-        """
-        cleaned = super().clean()
-        try:
-            self._check_stamp()
-        except forms.ValidationError as exc:
-            self.add_error(None, exc)
-        return cleaned
 
 
 class MemberLoginForm(forms.Form):
@@ -433,3 +449,121 @@ class ClearanceObtainedForm(forms.Form):
         if obtained and expires and expires < obtained:
             self.add_error("expires_on", "That is before it was given.")
         return cleaned
+
+
+class ApplicationForm(StampedPublicForm, forms.Form):
+    """Applying to join the network.
+
+    What is asked for changes with the kind, and clean() enforces it, because
+    a business that never entered a licence number should be told so on the
+    page rather than becoming an outstanding row somebody chases by email.
+
+    NOTHING HERE ASKS WHAT THE APPLICANT OFFERS, OR HOW GOOD THEY ARE AT IT.
+    An electrician proves a licence and insurance. No field rates, tiers or
+    describes their work, because a system that graded offers would be
+    pricing them.
+    """
+
+    STAMP_SALT = "dugnadsand.apply"
+
+    kind = forms.ChoiceField(label="What is applying")
+    region = forms.ModelChoiceField(
+        queryset=None, required=False, label="Which chapter (optional)",
+        empty_label="Not sure, or none covers us yet")
+
+    legal_name = forms.CharField(
+        max_length=200, label="Name on the paperwork",
+        help_text="The registered name, which is often not the trading name.")
+    contact_name = forms.CharField(max_length=200, label="Contact person")
+    email = forms.EmailField(max_length=254, label="Email")
+    phone = forms.CharField(max_length=60, required=False, label="Phone (optional)")
+    locality = forms.CharField(
+        max_length=200, required=False, label="Location (optional)")
+
+    statement = forms.CharField(
+        max_length=4000, widget=forms.Textarea(attrs={"rows": 5}),
+        label="Reason for applying")
+
+    # Businesses and not-for-profits. Required per kind in clean().
+    license_authority = forms.CharField(
+        max_length=200, required=False, label="Licence issued by")
+    license_reference = forms.CharField(
+        max_length=200, required=False, label="Licence number")
+    license_expires = forms.DateField(
+        required=False, label="Licence runs out",
+        widget=forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"))
+
+    insurance_authority = forms.CharField(
+        max_length=200, required=False, label="Insurer")
+    insurance_reference = forms.CharField(
+        max_length=200, required=False, label="Policy number")
+    insurance_expires = forms.DateField(
+        required=False, label="Cover runs out",
+        widget=forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"))
+
+    tax_reference = forms.CharField(
+        max_length=200, required=False, label="Tax identification number")
+    determination_reference = forms.CharField(
+        max_length=200, required=False,
+        label="IRS determination letter reference")
+
+    agreed = forms.BooleanField(
+        required=False,
+        label="The statement of operating policy has been read and is agreed")
+
+    website = forms.CharField(required=False, widget=forms.HiddenInput)
+    t = forms.CharField(required=False, widget=forms.HiddenInput)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        from .models import Application, Region
+
+        self.fields["kind"].choices = Application.KINDS
+        self.fields["region"].queryset = Region.objects.filter(active=True)
+
+    def clean(self):
+        cleaned = super().clean()
+        from .models import Application
+
+        kind = cleaned.get("kind")
+
+        if not cleaned.get("agreed"):
+            self.add_error(
+                "agreed",
+                "Agreement to the operating policy is required of every party in "
+                "the network.")
+
+        if kind == Application.BUSINESS:
+            for field, label in (("license_reference", "licence number"),
+                                 ("license_expires", "date the licence runs out"),
+                                 ("insurance_reference", "policy number"),
+                                 ("insurance_expires", "date the cover runs out"),
+                                 ("tax_reference", "tax identification number")):
+                if not cleaned.get(field):
+                    self.add_error(field, f"A business needs its {label}.")
+
+        if kind == Application.NONPROFIT:
+            for field, label in (("determination_reference", "determination letter"),
+                                 ("tax_reference", "tax identification number")):
+                if not cleaned.get(field):
+                    self.add_error(field, f"A not-for-profit needs its {label}.")
+
+        return cleaned
+
+    def credentials(self):
+        """What the applicant typed, keyed by the names in REQUIRED."""
+        c = self.cleaned_data
+        return {
+            "Business license": {
+                "authority": c.get("license_authority", ""),
+                "reference": c.get("license_reference", ""),
+                "expires_on": c.get("license_expires")},
+            "Certificate of insurance": {
+                "authority": c.get("insurance_authority", ""),
+                "reference": c.get("insurance_reference", ""),
+                "expires_on": c.get("insurance_expires")},
+            "Tax identification number": {
+                "reference": c.get("tax_reference", "")},
+            "IRS determination letter": {
+                "reference": c.get("determination_reference", "")},
+        }

@@ -1409,3 +1409,50 @@ def work_day_cancel(request, work_day_id):
     cancel(day, because=(request.POST.get("because") or "").strip())
     messages.success(request, "Called off.")
     return redirect(f"/days/{day.id}/")
+
+
+@csrf_exempt
+def apply(request):
+    """Applying to join the network.
+
+    CSRF-exempt with a signed stamp instead, exactly as the contact form is
+    and for the same reason: this is an anonymous POST, so there is no session
+    to ride, and the cookie requirement turned away real people on
+    2026-08-11 while a blind-POSTing script was never troubled by it.
+
+    Submitting an application admits nobody. /policy/ says there is no
+    self-service signup and that stays true — this records a request, and the
+    decision is still made by a person running a command.
+    """
+    from .forms import ApplicationForm
+    from .services_applications import submit
+
+    if request.method != "POST":
+        form = ApplicationForm(initial={"t": ApplicationForm.stamp()})
+        return render(request, "site_app/apply.html", {"form": form})
+
+    form = ApplicationForm(request.POST)
+    if not form.is_valid():
+        form.data = form.data.copy()
+        form.data["t"] = ApplicationForm.stamp()
+        return render(request, "site_app/apply.html", {"form": form})
+
+    application = submit(
+        kind=form.cleaned_data["kind"],
+        region=form.cleaned_data["region"],
+        legal_name=form.cleaned_data["legal_name"],
+        contact_name=form.cleaned_data["contact_name"],
+        email=form.cleaned_data["email"],
+        phone=form.cleaned_data["phone"],
+        locality=form.cleaned_data["locality"],
+        statement=form.cleaned_data["statement"],
+        agreed=form.cleaned_data["agreed"],
+        credentials=form.credentials())
+
+    # The applicant's own words are NOT carried outside the boundary, the same
+    # rule notifications follow: the fact of a record and nothing in it.
+    logger.info("application received: %s (%s)",
+                application.kind, application.id)
+
+    return render(request, "site_app/apply_received.html",
+                  {"kind": application.get_kind_display()})

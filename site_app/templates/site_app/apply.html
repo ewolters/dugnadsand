@@ -1,0 +1,202 @@
+{% extends "base.html" %}
+
+{% block title %}Applying to the network — Dugnadsand{% endblock %}
+
+{% block extra_css %}
+<style>
+  /* The register of /policy/ and /attestation/: a form on a document, not a
+     signup page. Every value is a --brand-* token; brand-lint fails the build
+     on a literal. */
+  body { margin:0; background:var(--brand-birch); color:var(--brand-ink);
+         font-family:var(--brand-font-serif); line-height:1.65; }
+  body > header { border-bottom:1px solid var(--brand-rule); }
+  body > header nav { max-width:46rem; margin-inline:auto; padding:1.1rem var(--brand-gutter);
+    display:flex; align-items:baseline; justify-content:space-between; gap:1rem; flex-wrap:wrap; }
+  body > header .nav-right { display:flex; align-items:baseline; gap:1.25rem; }
+  body > header .place, body > header .signin {
+    font-family:var(--brand-font-mono); font-size:.6875rem; letter-spacing:.1em;
+    text-transform:uppercase; color:var(--brand-moss); }
+  body > header .signin { color:var(--brand-ochre); text-decoration:none; }
+  body > header .brand-name { font-family:var(--brand-font-sans); font-weight:600;
+    letter-spacing:.07em; text-transform:uppercase; text-decoration:none; color:var(--brand-ink); }
+  .mark { height:.7em; width:auto; margin-right:.55rem; vertical-align:baseline; opacity:.75; }
+  body > footer { border-top:1px solid var(--brand-rule); margin-top:4.5rem;
+    font-family:var(--brand-font-mono); font-size:.75rem; color:var(--brand-moss); }
+  body > footer p { max-width:46rem; margin:0 auto; padding:1.5rem var(--brand-gutter); }
+
+  main { max-width:46rem; margin-inline:auto; padding:0 var(--brand-gutter); }
+
+  h1 { color:var(--brand-ink); font-family:var(--brand-font-sans); font-weight:600;
+       font-size:clamp(1.8rem,4.5vw,2.4rem); line-height:1.12; letter-spacing:-.02em;
+       margin:3.5rem 0 .4rem; text-wrap:balance; }
+  .sub { color:var(--brand-moss); margin:0 0 2.5rem; font-size:1.0625rem; }
+  h2 { color:var(--brand-ink); font-family:var(--brand-font-sans); font-weight:600;
+       font-size:1.25rem; margin:2.5rem 0 .5rem; letter-spacing:-.01em; }
+  p { margin:0 0 1rem; }
+  a { color:var(--brand-spruce); }
+
+  .scroll { overflow-x:auto; border:1px solid var(--brand-rule);
+    background:var(--brand-surface); margin:1.25rem 0 2rem; }
+  table { border-collapse:collapse; width:100%; min-width:30rem; font-size:.9375rem; }
+  th,td { text-align:left; padding:.6rem .8rem; border-bottom:1px solid var(--brand-rule);
+    vertical-align:top; }
+  thead th { font-family:var(--brand-font-mono); font-size:.6875rem; letter-spacing:.11em;
+    text-transform:uppercase; color:var(--brand-moss); font-weight:400;
+    background:var(--brand-table-head); white-space:nowrap; }
+  tbody tr:last-child td { border-bottom:0; }
+  td.id { font-family:var(--brand-font-mono); white-space:nowrap; color:var(--brand-spruce); }
+
+  form { margin:1.5rem 0 0; }
+  fieldset { border:1px solid var(--brand-rule); background:var(--brand-surface);
+    padding:1.1rem 1.25rem; margin:0 0 1.5rem; }
+  legend { font-family:var(--brand-font-mono); font-size:.6875rem; letter-spacing:.11em;
+    text-transform:uppercase; color:var(--brand-moss); padding:0 .4rem; }
+  label { display:block; font-family:var(--brand-font-sans); font-size:.9375rem;
+    font-weight:600; margin:1rem 0 .3rem; }
+  .hint { font-size:.875rem; color:var(--brand-moss); margin:.2rem 0 0; }
+  input[type=text], input[type=email], input[type=date], select, textarea {
+    width:100%; box-sizing:border-box; font:inherit; font-size:.9375rem;
+    padding:.5rem .6rem; border:1px solid var(--brand-rule);
+    background:var(--brand-paper); color:var(--brand-ink); border-radius:2px; }
+  textarea { resize:vertical; }
+  .agree { display:flex; gap:.6rem; align-items:flex-start; margin:1.25rem 0 0; }
+  .agree input { margin-top:.35rem; }
+  .agree label { margin:0; font-weight:400; }
+  .err { color:var(--brand-error); font-size:.875rem; margin:.25rem 0 0; }
+  button { font-family:var(--brand-font-sans); font-size:.9375rem; font-weight:600;
+    padding:.6rem 1.1rem; border:0; border-radius:2px; cursor:pointer;
+    background:var(--brand-spruce); color:var(--brand-paper); }
+  button:hover { background:var(--brand-spruce-hover); }
+
+  .caveat { border:1px solid var(--brand-ochre); background:var(--brand-warn-wash);
+    padding:1.15rem 1.25rem; margin:2rem 0; font-size:.9375rem; }
+  .caveat b { font-family:var(--brand-font-mono); font-size:.75rem; letter-spacing:.1em;
+    text-transform:uppercase; color:var(--brand-warn); display:block; margin-bottom:.5rem; }
+  .caveat p:last-child { margin-bottom:0; }
+</style>
+{% endblock %}
+
+{% block content %}
+<h1>Applying to the network</h1>
+<p class="sub">An application is a request to be admitted to a chapter. It is read by a
+   person, and admission is a decision that person makes.</p>
+
+<p>An applicant establishes that they are a real and identifiable party. Nothing here
+   asks what an applicant offers, or assesses how well they do it — a system that graded
+   offers would be pricing them, and this one prices nothing.</p>
+
+<h2>What each kind establishes</h2>
+<div class="scroll">
+  <table>
+    <thead><tr><th>Applying as</th><th>What is checked</th></tr></thead>
+    <tbody>
+      <tr><td class="id">A business</td>
+          <td>A trade or business licence and a certificate of insurance, both with the
+              date they run out, and a tax identification number.</td></tr>
+      <tr><td class="id">A not-for-profit</td>
+          <td>A determination letter and a tax identification number.</td></tr>
+      <tr><td class="id">An individual</td>
+          <td>No documents. Agreement to the operating policy, and a search of the
+              public registries a chapter checks, run and recorded by a person.</td></tr>
+      <tr><td class="id">A new chapter</td>
+          <td>A conversation. Nothing on this form substitutes for one.</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="caveat">
+  <b>What submitting this does</b>
+  <p>It records a request. It admits nobody, and it creates no account. Every credential
+     given below is checked against whoever issued it before any decision is made, and a
+     credential that has run out is treated as absent.</p>
+  <p>The details submitted here are held to run the review. They are not published, and
+     they are not shared with any admitted organization.</p>
+</div>
+
+<form method="post" action="/apply/" novalidate>
+  {{ form.t }}
+  {{ form.website }}
+
+  {% if form.non_field_errors %}<p class="err">{{ form.non_field_errors.0 }}</p>{% endif %}
+
+  <fieldset>
+    <legend>The applicant</legend>
+
+    <label for="{{ form.kind.id_for_label }}">{{ form.kind.label }}</label>
+    {{ form.kind }}
+    {% if form.kind.errors %}<p class="err">{{ form.kind.errors.0 }}</p>{% endif %}
+
+    <label for="{{ form.region.id_for_label }}">{{ form.region.label }}</label>
+    {{ form.region }}
+
+    <label for="{{ form.legal_name.id_for_label }}">{{ form.legal_name.label }}</label>
+    {{ form.legal_name }}
+    <p class="hint">{{ form.legal_name.help_text }}</p>
+    {% if form.legal_name.errors %}<p class="err">{{ form.legal_name.errors.0 }}</p>{% endif %}
+
+    <label for="{{ form.locality.id_for_label }}">{{ form.locality.label }}</label>
+    {{ form.locality }}
+  </fieldset>
+
+  <fieldset>
+    <legend>Contact</legend>
+    <label for="{{ form.contact_name.id_for_label }}">{{ form.contact_name.label }}</label>
+    {{ form.contact_name }}
+    {% if form.contact_name.errors %}<p class="err">{{ form.contact_name.errors.0 }}</p>{% endif %}
+
+    <label for="{{ form.email.id_for_label }}">{{ form.email.label }}</label>
+    {{ form.email }}
+    {% if form.email.errors %}<p class="err">{{ form.email.errors.0 }}</p>{% endif %}
+
+    <label for="{{ form.phone.id_for_label }}">{{ form.phone.label }}</label>
+    {{ form.phone }}
+  </fieldset>
+
+  <fieldset>
+    <legend>Credentials — businesses and not-for-profits</legend>
+    <p class="hint">An individual leaves this section empty.</p>
+
+    <label for="{{ form.license_authority.id_for_label }}">{{ form.license_authority.label }}</label>
+    {{ form.license_authority }}
+    <label for="{{ form.license_reference.id_for_label }}">{{ form.license_reference.label }}</label>
+    {{ form.license_reference }}
+    {% if form.license_reference.errors %}<p class="err">{{ form.license_reference.errors.0 }}</p>{% endif %}
+    <label for="{{ form.license_expires.id_for_label }}">{{ form.license_expires.label }}</label>
+    {{ form.license_expires }}
+    {% if form.license_expires.errors %}<p class="err">{{ form.license_expires.errors.0 }}</p>{% endif %}
+
+    <label for="{{ form.insurance_authority.id_for_label }}">{{ form.insurance_authority.label }}</label>
+    {{ form.insurance_authority }}
+    <label for="{{ form.insurance_reference.id_for_label }}">{{ form.insurance_reference.label }}</label>
+    {{ form.insurance_reference }}
+    {% if form.insurance_reference.errors %}<p class="err">{{ form.insurance_reference.errors.0 }}</p>{% endif %}
+    <label for="{{ form.insurance_expires.id_for_label }}">{{ form.insurance_expires.label }}</label>
+    {{ form.insurance_expires }}
+    {% if form.insurance_expires.errors %}<p class="err">{{ form.insurance_expires.errors.0 }}</p>{% endif %}
+
+    <label for="{{ form.tax_reference.id_for_label }}">{{ form.tax_reference.label }}</label>
+    {{ form.tax_reference }}
+    {% if form.tax_reference.errors %}<p class="err">{{ form.tax_reference.errors.0 }}</p>{% endif %}
+
+    <label for="{{ form.determination_reference.id_for_label }}">{{ form.determination_reference.label }}</label>
+    {{ form.determination_reference }}
+    {% if form.determination_reference.errors %}<p class="err">{{ form.determination_reference.errors.0 }}</p>{% endif %}
+  </fieldset>
+
+  <fieldset>
+    <legend>The application</legend>
+    <label for="{{ form.statement.id_for_label }}">{{ form.statement.label }}</label>
+    {{ form.statement }}
+    {% if form.statement.errors %}<p class="err">{{ form.statement.errors.0 }}</p>{% endif %}
+
+    <div class="agree">
+      {{ form.agreed }}
+      <label for="{{ form.agreed.id_for_label }}">{{ form.agreed.label }} —
+        <a href="/policy/">read it</a>.</label>
+    </div>
+    {% if form.agreed.errors %}<p class="err">{{ form.agreed.errors.0 }}</p>{% endif %}
+  </fieldset>
+
+  <button type="submit">Submit the application</button>
+</form>
+{% endblock %}
