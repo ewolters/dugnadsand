@@ -3,11 +3,15 @@
 {% block content %}
 <main style="max-width:34rem;margin-inline:auto;padding:4rem var(--brand-gutter)">
   <h1>That didn't go through</h1>
-  <p>Your browser didn't send us something we needed to check the form was really
-     coming from this page. It usually means cookies are turned off, or the page had
-     been open a long while.</p>
-  <p>Going back and trying once more normally sorts it. If it keeps happening,
-     nothing is wrong on your end that matters — write to us however is easiest.</p>
+  {% if cookies_off %}
+    <p>Your browser is turning away cookies from this site, and we need one to check that
+       a form really came from this page. Trying again won't help until cookies are
+       allowed for dugnadsand.org.</p>
+  {% else %}
+    <p>Your browser didn't send us something we needed to check the form was really
+       coming from this page — usually because the page had been open a long while.
+       Going back and trying once more normally sorts it.</p>
+  {% endif %}
   <p><a href="/">Back to the front page</a></p>
 </main>
 {% endblock %}

@@ -746,18 +746,32 @@ class ACsrfFailureIsRecoverable(TestCase):
     somebody tried, failed, went back, tried again, failed, left.
     """
 
-    def post_without_token(self, **data):
+    def post_without_token(self, cookies=None, **data):
         from django.test import Client
 
         # enforce_csrf_checks makes the test client behave like a browser that
         # sent no token, which is exactly the reported failure.
-        return Client(enforce_csrf_checks=True).post("/", data)
+        client = Client(enforce_csrf_checks=True)
+        for name, value in (cookies or {}).items():
+            client.cookies[name] = value
+        return client.post("/", data)
+
+    @staticmethod
+    def copy(response):
+        """Rendered text with whitespace collapsed.
+
+        Assert the sentence, never its line wrapping. Three assertions in this
+        file have now failed on a phrase that happened to break across two
+        lines in a template — a test that fails on reflow makes every honest
+        edit look like a regression.
+        """
+        return re.sub(r"\s+", " ", response.content.decode())
 
     def test_the_contact_form_comes_back_with_their_words_in_it(self):
         response = self.post_without_token(
             name="Ruth", email="ruth@example.test",
             message="We run a pantry in Pickens and would like to talk.")
-        body = response.content.decode()
+        body = self.copy(response)
 
         self.assertEqual(response.status_code, 403)
         self.assertIn("Ruth", body)
@@ -765,8 +779,8 @@ class ACsrfFailureIsRecoverable(TestCase):
         self.assertIn("pantry in Pickens", body)
 
     def test_it_says_what_happened_without_jargon(self):
-        body = self.post_without_token(
-            name="Ruth", email="r@example.test", message="hello").content.decode()
+        body = self.copy(self.post_without_token(
+            name="Ruth", email="r@example.test", message="hello"))
         # Literal text in a template is not HTML-escaped — only variable
         # output is — so the apostrophe stays plain.
         self.assertIn("didn't go through", body)
@@ -775,8 +789,8 @@ class ACsrfFailureIsRecoverable(TestCase):
 
     def test_a_fresh_token_comes_with_it(self):
         """Otherwise pressing send again fails identically, forever."""
-        body = self.post_without_token(
-            name="Ruth", email="r@example.test", message="hello").content.decode()
+        body = self.copy(self.post_without_token(
+            name="Ruth", email="r@example.test", message="hello"))
         self.assertIn("csrfmiddlewaretoken", body)
 
     def test_nothing_is_sent_and_no_budget_is_spent(self):
@@ -791,9 +805,9 @@ class ACsrfFailureIsRecoverable(TestCase):
 
     def test_the_honeypot_is_not_handed_back(self):
         """Repopulating the field that caught a bot would teach it the answer."""
-        body = self.post_without_token(
+        body = self.copy(self.post_without_token(
             name="Ruth", email="r@example.test", message="hello",
-            website="http://spam.example").content.decode()
+            website="http://spam.example"))
         self.assertNotIn("spam.example", body)
 
     def test_a_reflected_cross_site_post_is_inert(self):
@@ -805,9 +819,37 @@ class ACsrfFailureIsRecoverable(TestCase):
         self.assertNotIn("<script>alert(1)</script>", body)
         self.assertIn("&lt;script&gt;", body)
 
+    def test_a_browser_with_no_cookies_is_not_told_to_try_again(self):
+        """The advice has to match the failure. If nothing came back, nothing
+        will come back next time either, and "press send again" sends somebody
+        round a loop that cannot end."""
+        body = self.copy(self.post_without_token(
+            name="Ruth", email="r@example.test", message="hello"))
+
+        self.assertIn("won't help", body)
+        self.assertIn("Allow cookies", body)
+        self.assertNotIn("press send again and it should go", body)
+
+    def test_a_browser_that_sent_something_is_told_to_try_again(self):
+        """A stale token with a live session is the case a retry does fix."""
+        body = self.copy(self.post_without_token(
+            cookies={"sessionid": "whatever"},   # something, just not the token
+            name="Ruth", email="r@example.test", message="hello"))
+
+        self.assertIn("press send again", body)
+        self.assertNotIn("won't help", body)
+
+    def test_either_way_their_words_survive(self):
+        for cookies in ({}, {"sessionid": "whatever"}):
+            body = self.copy(self.post_without_token(
+                cookies=cookies, name="Ruth", email="r@example.test",
+                message="a pantry in Pickens"))
+            self.assertIn("Ruth", body)
+            self.assertIn("a pantry in Pickens", body)
+
     def test_a_failure_that_is_not_the_contact_form_gets_a_plain_page(self):
         from django.test import Client
 
         response = Client(enforce_csrf_checks=True).post("/login/", {})
         self.assertEqual(response.status_code, 403)
-        self.assertIn("didn", response.content.decode())
+        self.assertIn("didn't go through", self.copy(response))

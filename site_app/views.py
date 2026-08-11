@@ -96,9 +96,15 @@ def csrf_failure(request, reason=""):
         request.headers.get("Origin"), request.headers.get("Referer"),
         (request.headers.get("User-Agent") or "")[:120])
 
+    # Two different truths, and telling somebody the wrong one wastes their
+    # afternoon. If the browser sent NO cookies at all, it is not returning
+    # ours either and pressing send again will fail identically — forever.
+    # "Try once more" is only honest when something came back.
+    cookies_off = not request.COOKIES
+
     if not looks_like_contact:
         return render(request, "site_app/csrf_failed.html",
-                      {"reason": reason}, status=403)
+                      {"reason": reason, "cookies_off": cookies_off}, status=403)
 
     return render(request, "site_app/index.html", {
         "form": ContactForm(initial={
@@ -108,6 +114,7 @@ def csrf_failure(request, reason=""):
         }),
         "sent": False,
         "csrf_retry": True,
+        "cookies_off": cookies_off,
     }, status=403)
 
 

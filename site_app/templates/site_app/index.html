@@ -277,9 +277,16 @@
      first, <a href="/how-it-works/">here's how it works</a>.</p>
 
   {% if csrf_retry %}
-    <p class="note-retry">That didn't go through — your browser didn't send us something
-       we needed to check the form came from this page. Nothing was lost; press send
-       again and it should go.</p>
+    {% if cookies_off %}
+      <p class="note-retry">That didn't go through, and pressing send again won't help —
+         your browser is turning away cookies from this site, and we need one to check the
+         form really came from this page. Allow cookies for dugnadsand.org and it will go
+         first time. Your words are still here.</p>
+    {% else %}
+      <p class="note-retry">That didn't go through — your browser didn't send us something
+         we needed to check the form came from this page. Nothing was lost; press send
+         again and it should go.</p>
+    {% endif %}
   {% endif %}
 
   {% if sent %}
