@@ -1425,7 +1425,7 @@ def apply(request):
     decision is still made by a person running a command.
     """
     from .forms import ApplicationForm
-    from .services_applications import submit
+    from .services_applications import acknowledge, submit, tell_the_reviewer
 
     if request.method != "POST":
         form = ApplicationForm(initial={"t": ApplicationForm.stamp()})
@@ -1453,6 +1453,12 @@ def apply(request):
     # rule notifications follow: the fact of a record and nothing in it.
     logger.info("application received: %s (%s)",
                 application.kind, application.id)
+
+    # After the write, and both swallow their own failures: an application
+    # recorded but unacknowledged is recoverable, one lost to a mail outage
+    # is not.
+    acknowledge(application)
+    tell_the_reviewer(application, inbox=INBOX)
 
     return render(request, "site_app/apply_received.html",
                   {"kind": application.get_kind_display()})

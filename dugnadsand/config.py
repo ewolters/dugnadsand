@@ -28,6 +28,12 @@ class Settings(BaseSettings):
     # Database (optional — leave empty for sqlite)
     database_url: str = Field(default="", description="App connection string")
 
+    # Fernet key for the application-ingress fields. Comma-separated to
+    # rotate: new key first, re-seal, then drop the old one. Empty means the
+    # encrypted fields cannot be read or written, which fails loudly rather
+    # than silently storing plaintext.
+    field_encryption_key: str = ""
+
     # Hosts
     allowed_hosts: str = "localhost,127.0.0.1"
 

@@ -8,6 +8,12 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 config = get_settings()
 
 SECRET_KEY = config.secret_key
+
+# Read by kjerne_platform.crypto for the EncryptedCharField/EncryptedTextField
+# columns on the application-ingress models. Per site: a key shared across the
+# federation would mean one compromised site decrypts every other site's
+# personal data.
+FIELD_ENCRYPTION_KEY = config.field_encryption_key
 DEBUG = config.debug
 ALLOWED_HOSTS = config.get_allowed_hosts()
 

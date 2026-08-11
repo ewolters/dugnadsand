@@ -3,6 +3,7 @@ from decimal import Decimal
 
 from django.conf import settings
 from django.db import models
+from kjerne_platform.crypto import EncryptedCharField, EncryptedTextField
 
 
 class Organization(models.Model):
@@ -993,17 +994,26 @@ class Application(models.Model):
         Region, on_delete=models.PROTECT, null=True, blank=True,
         related_name="applications")
 
-    # The name on the paperwork, which is frequently not the trading name.
-    legal_name = models.CharField(max_length=200)
-    contact_name = models.CharField(max_length=200)
-    email = models.EmailField()
-    phone = models.CharField(max_length=60, blank=True)
-    locality = models.CharField(max_length=200, blank=True)
+    # ENCRYPTED AT REST. Everything below identifies a real person or a real
+    # business, and an application table is the one place in this system that
+    # holds it before any relationship exists. max_length is the CIPHERTEXT
+    # length, which is several times the plaintext -- the widened column is
+    # not a widened field.
+    #
+    # NOTHING ENCRYPTED HERE MAY BE FILTERED, ORDERED OR AGGREGATED IN SQL.
+    # Ciphertext does not compare, and a .filter(email=...) would silently
+    # match nothing forever. kind, admitted and the timestamps stay plaintext
+    # precisely because those are what the review queries on.
+    legal_name = EncryptedCharField(max_length=500, blank=False)
+    contact_name = EncryptedCharField(max_length=500, blank=False)
+    email = EncryptedCharField(max_length=500, blank=False)
+    phone = EncryptedCharField(max_length=500, blank=True)
+    locality = EncryptedCharField(max_length=500, blank=True)
 
     # Why they want in, in their own words. Deliberately not "what do you
     # offer": an applicant proves they are legitimate, never that their help
     # is worth having.
-    statement = models.TextField()
+    statement = EncryptedTextField()
 
     # Which version of the manifest they agreed to. Recording the version
     # rather than a bare boolean means a later change to the commitments does
@@ -1020,7 +1030,7 @@ class Application(models.Model):
     decided_by = models.ForeignKey(
         "auth.User", on_delete=models.PROTECT, null=True, blank=True,
         related_name="application_decisions")
-    decision_note = models.TextField(blank=True)
+    decision_note = EncryptedTextField(blank=True)
 
     # Set when admitting created a tenant, so the two are not reconciled by
     # hand later.
@@ -1093,9 +1103,12 @@ class Credential(models.Model):
     # vocabulary would be wrong within a year.
     kind = models.CharField(max_length=120)
 
-    # Who issued it, and the number on it.
-    authority = models.CharField(max_length=200, blank=True)
-    reference = models.CharField(max_length=200, blank=True)
+    # Who issued it, and the number on it. ENCRYPTED: reference holds a tax
+    # identification number, which is the single most sensitive value this
+    # system stores. kind above stays plaintext because decide_application
+    # looks credentials up by it.
+    authority = EncryptedCharField(max_length=500, blank=True)
+    reference = EncryptedCharField(max_length=500, blank=True)
 
     issued_on = models.DateField(null=True, blank=True)
     expires_on = models.DateField(null=True, blank=True)
@@ -1106,7 +1119,7 @@ class Credential(models.Model):
     verified_by = models.ForeignKey(
         "auth.User", on_delete=models.PROTECT, null=True, blank=True,
         related_name="credentials_verified")
-    note = models.TextField(blank=True)
+    note = EncryptedTextField(blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -1144,8 +1157,10 @@ class Screening(models.Model):
 
     # Which registry, in words. There is no single one, and the set differs by
     # state and by what the chapter has decided it checks.
+    # source stays plaintext: it names a registry, not a person, and being
+    # able to report on which registries were searched is the point.
     source = models.CharField(max_length=200)
-    searched_name = models.CharField(max_length=200)
+    searched_name = EncryptedCharField(max_length=500, blank=False)
     searched_on = models.DateField()
     searched_by = models.ForeignKey(
         "auth.User", on_delete=models.PROTECT, related_name="screenings_run")
@@ -1153,7 +1168,7 @@ class Screening(models.Model):
     # False means something came back that needs a person, NOT that the
     # applicant is refused. The decision stays with the reviewer.
     clear = models.BooleanField()
-    note = models.TextField(blank=True)
+    note = EncryptedTextField(blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
 

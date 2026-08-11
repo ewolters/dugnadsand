@@ -304,3 +304,188 @@ class TheApplicationPage(ApplicationBase):
         for forbidden in ('name="services"', 'name="rate"', 'name="category"',
                           'name="tier"'):
             self.assertNotIn(forbidden, body)
+
+
+class ThePersonalDataIsSealed(ApplicationBase):
+    """Read the raw column, not the model.
+
+    Asserting through the ORM proves nothing: from_db_value decrypts on the
+    way out, so a field that was never encrypted and one that round-trips
+    perfectly look identical from Python. The only honest check is what
+    Postgres is actually holding.
+    """
+
+    def raw(self, table, column, pk):
+        from django.db import connection
+
+        with connection.cursor() as cur:
+            cur.execute(f"SELECT {column} FROM {table} WHERE id = %s", [str(pk)])
+            return cur.fetchone()[0]
+
+    def test_the_applicants_details_are_not_stored_in_the_clear(self):
+        application = self.a_business()
+        for column, plaintext in (("legal_name", "Alderman Electric LLC"),
+                                  ("contact_name", "Dana Alderman"),
+                                  ("email", "dana@example.test"),
+                                  ("statement", "We wire things.")):
+            stored = self.raw("site_app_application", column, application.pk)
+            self.assertNotIn(plaintext, stored, column)
+            self.assertTrue(stored.startswith("gAAAAA"),
+                            f"{column} is not a Fernet token")
+
+    def test_the_tax_number_is_not_stored_in_the_clear(self):
+        """The single most sensitive value this system holds."""
+        application = self.a_business()
+        credential = application.credentials.get(kind="Tax identification number")
+        stored = self.raw("site_app_credential", "reference", credential.pk)
+        self.assertNotIn("57-1234567", stored)
+
+    def test_a_screened_persons_name_is_not_stored_in_the_clear(self):
+        application = submit(
+            kind=Application.INDIVIDUAL, legal_name="Ola Nilsen",
+            contact_name="Ola", email="ola@example.test",
+            statement="A truck.", agreed=True)
+        screening = record_screening(
+            application=application, user=self.reviewer, source="A registry",
+            searched_name="Ola Nilsen", searched_on=date.today(), clear=True)
+        stored = self.raw("site_app_screening", "searched_name", screening.pk)
+        self.assertNotIn("Ola Nilsen", stored)
+
+    def test_it_still_reads_back_correctly(self):
+        """Guard the guard: ciphertext nobody can decrypt is not privacy, it
+        is data loss."""
+        application = self.a_business()
+        fresh = Application.objects.get(pk=application.pk)
+        self.assertEqual(fresh.legal_name, "Alderman Electric LLC")
+        self.assertEqual(fresh.email, "dana@example.test")
+        self.assertEqual(
+            fresh.credentials.get(kind="Tax identification number").reference,
+            "57-1234567")
+
+    def test_what_the_review_queries_on_stays_readable(self):
+        """kind and source are plaintext on purpose. Ciphertext does not
+        compare, so encrypting these would make the lookups in
+        decide_application match nothing, silently, forever."""
+        application = self.a_business()
+        self.assertEqual(
+            self.raw("site_app_credential", "kind",
+                     application.credentials.get(kind="Business license").pk),
+            "Business license")
+        self.assertEqual(
+            self.raw("site_app_application", "kind", application.pk),
+            Application.BUSINESS)
+
+
+class WhoIsTold(ApplicationBase):
+    def test_the_applicant_is_acknowledged_on_submitting(self):
+        from unittest.mock import patch
+
+        from site_app.forms import ApplicationForm
+        import time
+
+        stamp = ApplicationForm.stamp()
+        time.sleep(2.1)
+        with patch("kjerne_platform.email.send", return_value=1) as send:
+            self.client.post("/apply/", {
+                "kind": Application.INDIVIDUAL, "legal_name": "Ola Nilsen",
+                "contact_name": "Ola Nilsen", "email": "ola@example.test",
+                "statement": "I have a truck.", "agreed": "on", "t": stamp})
+
+        recipients = [c.kwargs["to"] for c in send.call_args_list]
+        self.assertIn("ola@example.test", recipients)
+
+    def test_the_acknowledgement_does_not_quote_the_statement_back(self):
+        from unittest.mock import patch
+
+        application = self.a_business()
+        with patch("kjerne_platform.email.send", return_value=1) as send:
+            from site_app.services_applications import acknowledge
+            acknowledge(application)
+
+        self.assertNotIn("We wire things.", send.call_args.kwargs["body"])
+
+    def test_the_reviewer_is_told_a_record_exists_and_nothing_in_it(self):
+        """The same rule the app's own notifications follow. An inbox does not
+        need a second copy of somebody's tax number."""
+        from unittest.mock import patch
+
+        from site_app.services_applications import tell_the_reviewer
+
+        application = self.a_business()
+        with patch("kjerne_platform.email.send", return_value=1) as send:
+            tell_the_reviewer(application, inbox="review@example.test")
+
+        body = send.call_args.kwargs["body"]
+        self.assertIn(str(application.id), body)
+        for leaked in ("Alderman Electric LLC", "Dana Alderman",
+                       "dana@example.test", "57-1234567", "We wire things."):
+            self.assertNotIn(leaked, body, leaked)
+
+    def test_no_reviewer_mail_goes_out_when_no_inbox_is_configured(self):
+        from unittest.mock import patch
+
+        from site_app.services_applications import tell_the_reviewer
+
+        with patch("kjerne_platform.email.send") as send:
+            tell_the_reviewer(self.a_business(), inbox=None)
+        send.assert_not_called()
+
+    def test_an_admitted_applicant_is_told(self):
+        from unittest.mock import patch
+
+        from site_app.services_applications import tell_decision
+
+        application = self.a_business()
+        self.verify_all(application)
+        admit(application=application, user=self.reviewer)
+        with patch("kjerne_platform.email.send", return_value=1) as send:
+            tell_decision(application)
+
+        self.assertEqual(send.call_args.kwargs["to"], "dana@example.test")
+        self.assertIn("accepted", send.call_args.kwargs["body"])
+
+    def test_a_declined_applicant_is_told_without_the_internal_note(self):
+        """decision_note is written for the review, in shorthand, and
+        forwarding it would publish it."""
+        from unittest.mock import patch
+
+        from site_app.services_applications import tell_decision
+
+        application = self.a_business()
+        decline(application=application, user=self.reviewer,
+                note="Could not reach them twice; Dana sounded unsure.")
+        with patch("kjerne_platform.email.send", return_value=1) as send:
+            tell_decision(application)
+
+        body = send.call_args.kwargs["body"]
+        self.assertIn("not been taken forward", body)
+        self.assertNotIn("sounded unsure", body)
+
+    def test_an_undecided_application_tells_nobody(self):
+        from unittest.mock import patch
+
+        from site_app.services_applications import tell_decision
+
+        with patch("kjerne_platform.email.send") as send:
+            tell_decision(self.a_business())
+        send.assert_not_called()
+
+    def test_a_mail_failure_does_not_lose_the_application(self):
+        """The property the ordering exists for. An application recorded but
+        unacknowledged is recoverable; one lost to a mail outage is not."""
+        from unittest.mock import patch
+
+        from site_app.forms import ApplicationForm
+        import time
+
+        stamp = ApplicationForm.stamp()
+        time.sleep(2.1)
+        with patch("kjerne_platform.email.send",
+                   side_effect=RuntimeError("queue is down")):
+            response = self.client.post("/apply/", {
+                "kind": Application.INDIVIDUAL, "legal_name": "Ola Nilsen",
+                "contact_name": "Ola Nilsen", "email": "ola@example.test",
+                "statement": "I have a truck.", "agreed": "on", "t": stamp})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(Application.objects.count(), 1)

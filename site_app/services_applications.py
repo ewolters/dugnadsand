@@ -17,9 +17,13 @@ self-service signup, and an application that admitted itself once the boxes
 went green would make that false while looking like diligence.
 """
 
+import logging
 from datetime import datetime, timezone
 
 from .models import Application, Credential, Screening
+
+logger = logging.getLogger(__name__)
+SITE = "dugnadsand"
 
 
 class NotReady(Exception):
@@ -142,3 +146,107 @@ def decline(*, application, user, note=""):
     application.save(update_fields=["admitted", "decided_at", "decided_by",
                                     "decision_note"])
     return application
+
+
+# --------------------------------------------------------------------------
+# Telling people. Deliberately NOT called from submit(), admit() or decline():
+# those are the record, and a mail outage must not roll back an application
+# somebody has already filled in. The view and the command call these after
+# the write has landed, and every failure here is logged and swallowed.
+# --------------------------------------------------------------------------
+
+
+def _mail(*, to, subject, body):
+    from kjerne_platform import email
+
+    try:
+        return email.send(to=to, subject=subject, body=body, site=SITE,
+                          from_name="Dugnadsand")
+    except Exception:
+        # An application that is recorded but unacknowledged is recoverable.
+        # An application lost because the mail queue was down is not.
+        logger.exception("could not send %r for an application", subject)
+        return None
+
+
+def acknowledge(application):
+    """Tell the applicant it arrived, and what happens next.
+
+    Does not quote their own statement back at them. They wrote it; repeating
+    it puts a copy in a mailbox for no benefit, and the same paragraph would
+    then exist in two places with different retention.
+    """
+    owed = ", ".join(c.kind for c in application.credentials.all())
+    checks = (f"\nWhat will be checked against whoever issued it:\n  {owed}\n"
+              if owed else "")
+    if application.kind == Application.INDIVIDUAL:
+        checks = ("\nA search of the public registries this chapter checks "
+                  "will be run and recorded by a person.\n")
+
+    return _mail(
+        to=application.email,
+        subject="Your application to Dugnadsand",
+        body=(
+            f"Your application was received on "
+            f"{application.submitted_at:%d %B %Y}.\n\n"
+            "It records a request. Nothing has been admitted, and no account "
+            "has been created.\n"
+            f"{checks}\n"
+            "A credential that has run out is treated as absent. The decision "
+            "is made by a person and comes back to this address.\n\n"
+            "If something was entered wrongly, reply to this message rather "
+            "than applying again — two records for one applicant slow the "
+            "review down.\n\n"
+            "The statement of operating policy is at "
+            "https://dugnadsand.org/policy/\n"),
+    )
+
+
+def tell_the_reviewer(application, *, inbox):
+    """Say that one arrived. NOT what is in it.
+
+    The same rule notifications inside the app follow: the existence of a
+    record and a way to reach it, never its content. The reviewer has the
+    database; an inbox does not need a second copy of somebody's tax number.
+    """
+    if not inbox:
+        return None
+    return _mail(
+        to=inbox,
+        subject=f"Application received: {application.get_kind_display()}",
+        body=("An application was submitted.\n\n"
+              f"  kind  {application.kind}\n"
+              f"  id    {application.id}\n\n"
+              "Nothing about the applicant is repeated here. To see it:\n"
+              "  manage.py list_applications\n"),
+    )
+
+
+def tell_decision(application):
+    """The outcome.
+
+    A decline carries no reason. decision_note is written for the review, not
+    for the applicant, and forwarding it would publish an internal note
+    somebody wrote in shorthand. The contact route is given instead, so a
+    person who wants to know can ask and be answered by a person.
+    """
+    if application.admitted is None:
+        return None
+
+    if application.admitted:
+        body = (
+            "Your application to Dugnadsand has been accepted.\n\n"
+            "Somebody will be in touch to set up the account. Until then "
+            "there is nothing to sign into.\n\n"
+            "The statement of operating policy, which this agreed to, is at "
+            "https://dugnadsand.org/policy/\n")
+        subject = "Your application to Dugnadsand"
+    else:
+        body = (
+            "Your application to Dugnadsand has not been taken forward.\n\n"
+            "This is not a judgement about the work anybody does. If it would "
+            "help to know more, reply to this message and a person will "
+            "answer.\n")
+        subject = "Your application to Dugnadsand"
+
+    return _mail(to=application.email, subject=subject, body=body)

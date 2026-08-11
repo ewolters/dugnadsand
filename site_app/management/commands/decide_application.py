@@ -17,7 +17,7 @@ from django.core.management.base import BaseCommand, CommandError
 
 from site_app.models import Application
 from site_app.services_applications import (NotReady, admit, decline,
-                                            record_screening,
+                                            record_screening, tell_decision,
                                             verify_credential)
 
 
@@ -72,7 +72,10 @@ class Command(BaseCommand):
 
         if options["decline"]:
             decline(application=application, user=user, note=options["note"])
-            self.stdout.write(self.style.SUCCESS("Declined."))
+            # After the write. The note stays internal: it is written for the
+            # review, and forwarding it would publish somebody's shorthand.
+            tell_decision(application)
+            self.stdout.write(self.style.SUCCESS("Declined. The applicant has been told."))
             return
 
         if options["admit"]:
@@ -81,7 +84,8 @@ class Command(BaseCommand):
             except NotReady as refused:
                 raise CommandError(
                     "Not admitted. Still needs: " + "; ".join(refused.blockers))
-            self.stdout.write(self.style.SUCCESS("Admitted."))
+            tell_decision(application)
+            self.stdout.write(self.style.SUCCESS("Admitted. The applicant has been told."))
             self.stdout.write(
                 "Create its tenant with:\n"
                 f'  manage.py admit_organization "{application.legal_name}"'
