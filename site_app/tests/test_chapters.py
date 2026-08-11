@@ -24,8 +24,8 @@ class ChapterScreenBase(SignedIn, TestCase):
     def setUp(self):
         self.upstate = Region.objects.create(
             slug="upstate-sc", name="Upstate, SC",
-            covers="Greenville, Spartanburg, Anderson and the counties around them.",
-            map_areas="greenville,spartanburg,anderson,pickens,oconee")
+            covers="The SC Upstate and Western North Carolina.",
+            map_areas="sc-greenville,sc-spartanburg,sc-anderson,nc-buncombe,nc-henderson")
         self.org = Organization.objects.create(
             slug="alpha", name="Alpha Mutual Aid", region=self.upstate)
 
@@ -56,21 +56,31 @@ class ThePublicMap(ChapterScreenBase):
         """Server-side, so a visitor with no JavaScript does not see an empty
         state and read it as "no chapters anywhere"."""
         body = self.client.get("/chapters/").content.decode()
-        self.assertIn('id="c-greenville" class="county held"', body)
+        self.assertIn('id="c-sc-greenville" class="county held"', body)
 
     def test_an_uncovered_county_is_not_shaded(self):
         body = self.client.get("/chapters/").content.decode()
-        self.assertIn('id="c-charleston" class="county"', body)
-        self.assertNotIn('id="c-charleston" class="county held"', body)
+        self.assertIn('id="c-sc-charleston" class="county"', body)
+        self.assertNotIn('id="c-sc-charleston" class="county held"', body)
 
     def test_every_county_is_named_for_a_reader_who_cannot_see_colour(self):
         body = self.client.get("/chapters/").content.decode()
-        self.assertIn("<title>Greenville — Upstate, SC</title>", body)
-        self.assertIn("<title>Charleston — no chapter yet</title>", body)
+        self.assertIn("<title>Greenville, SC — Upstate, SC</title>", body)
+        self.assertIn("<title>Charleston, SC — no chapter yet</title>", body)
 
-    def test_it_says_how_much_of_the_state_is_covered(self):
+    def test_it_says_how_much_is_covered_and_counts_the_map_itself(self):
+        """The total is counted from the SVG. A hardcoded 46 said the wrong
+        thing confidently the moment North Carolina joined the map."""
         body = self.client.get("/chapters/").content.decode()
-        self.assertIn("5 of 46 counties", body)
+        self.assertIn("5 of 146 counties", body)
+
+    def test_the_two_carolinas_do_not_share_county_ids(self):
+        """Beaufort, Cherokee, Lee and Union are county names in BOTH states,
+        and Cherokee and Union are inside this chapter. Unprefixed ids would
+        have shaded a county 250 miles away."""
+        body = self.client.get("/chapters/").content.decode()
+        self.assertIn('id="c-nc-cherokee"', body)
+        self.assertIn('id="c-sc-cherokee"', body)
 
     def test_the_map_needs_nothing_from_anywhere_else(self):
         """A tile provider would receive the address of every visitor who

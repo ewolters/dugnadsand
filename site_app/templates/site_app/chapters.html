@@ -72,8 +72,9 @@
 
 {% block content %}
 <h1>Chapters</h1>
-<p class="sub">A chapter admits organizations in one area and holds the roster for it.
-   Every county below that is not shaded is one where no chapter exists yet.</p>
+<p class="sub">A chapter admits organizations in one area and holds the roster for it. A chapter
+   area is not obliged to follow a state line. Every county below that is not shaded is
+   one where no chapter exists yet.</p>
 
 <div class="map">
   {{ map }}
@@ -81,7 +82,7 @@
 <div class="key">
   <span><i class="held"></i> Covered by a chapter</span>
   <span><i class="open"></i> No chapter yet</span>
-  <span>{{ covered_count }} of 46 counties</span>
+  <span>{{ covered_count }} of {{ county_count }} counties</span>
 </div>
 
 <h2>Where there are chapters</h2>

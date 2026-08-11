@@ -1,4 +1,4 @@
-"""Bake a South Carolina county map into a static SVG.
+"""Bake a county map into a static SVG.
 
 RUN ONCE, BY HAND, AND COMMIT THE RESULT. Nothing here runs at request time
 and nothing the browser loads comes from anywhere but this server: a tile
@@ -8,8 +8,16 @@ chapter map, which is a worse trade than a slightly plainer map.
 Source: the US Census Bureau's TIGERweb service. Census cartographic products
 are works of the United States government and carry no copyright.
 
-    python3 deploy/build_sc_map.py sc.json \
-        > site_app/templates/site_app/_sc_counties.svg
+    python3 deploy/build_county_map.py sc.json nc.json \
+        > site_app/templates/site_app/_counties.svg
+
+Takes one GeoJSON per state and draws them as one map, because a chapter's
+area is not obliged to respect a state line -- Upstate SC and Western North
+Carolina are one chapter.
+
+IDS CARRY THE STATE, and must. Beaufort, Cherokee, Lee and Union are county
+names in BOTH Carolinas, and Cherokee and Union are both inside this very
+chapter: an id of "c-cherokee" would have shaded a county 250 miles away.
 
 It lands in templates rather than static because it is INCLUDED, not linked:
 an <img> cannot be styled per-path, and the whole point is shading the
@@ -29,10 +37,19 @@ PADDING = 8
 TOLERANCE = 0.004    # degrees; roughly 400m, invisible at this size
 
 
-def slug(name):
-    """"Greenville County" -> "greenville". The id a template matches on."""
+# FIPS state code -> postal abbreviation. Only the states we draw.
+STATES = {"37": "nc", "45": "sc"}
+
+
+def slug(state, name):
+    """("45", "Greenville County") -> "sc-greenville".
+
+    The state prefix is not decoration. Four county names occur in both
+    Carolinas, two of them inside this chapter.
+    """
     name = re.sub(r"\s+County$", "", name, flags=re.I)
-    return re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")
+    stem = re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")
+    return f"{STATES.get(state, state)}-{stem}"
 
 
 def rings(geometry):
@@ -70,9 +87,10 @@ def simplify(points, tolerance):
             + simplify(points[index:], tolerance))
 
 
-def main(path):
-    data = json.load(open(path))
-    features = data["features"]
+def main(paths):
+    features = []
+    for path in paths:
+        features.extend(json.load(open(path))["features"])
 
     lons = [x for f in features for r in rings(f["geometry"]) for x, _ in r]
     lats = [y for f in features for r in rings(f["geometry"]) for _, y in r]
@@ -95,8 +113,10 @@ def main(path):
         return round(x, 1), round(y, 1)
 
     paths = []
-    for feature in sorted(features, key=lambda f: f["properties"]["NAME"]):
+    for feature in sorted(features, key=lambda f: (f["properties"]["STATE"],
+                                                   f["properties"]["NAME"])):
         name = feature["properties"]["NAME"]
+        state = feature["properties"]["STATE"]
         d = []
         for ring in rings(feature["geometry"]):
             ring = simplify([tuple(p[:2]) for p in ring], TOLERANCE)
@@ -106,11 +126,12 @@ def main(path):
             d.append("M" + "L".join(f"{x} {y}" for x, y in pts) + "Z")
         if d:
             paths.append(
-                f'<path id="c-{slug(name)}" class="county" '
-                f'data-name="{re.sub(r" County$", "", name)}" d="{"".join(d)}"/>')
+                f'<path id="c-{slug(state, name)}" class="county" '
+                f'data-name="{re.sub(r" County$", "", name)}, '
+                f'{STATES.get(state, state).upper()}" d="{"".join(d)}"/>')
 
     print(f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {WIDTH} {height}" '
-          f'role="img" aria-label="Counties of South Carolina">')
+          f'role="img" aria-label="Counties of the Carolinas">')
     print("<g>")
     print("\n".join(paths))
     print("</g>")
@@ -118,4 +139,5 @@ def main(path):
 
 
 if __name__ == "__main__":
-    main(sys.argv[1])
+    sys.setrecursionlimit(30000)
+    main(sys.argv[1:])

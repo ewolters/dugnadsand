@@ -1485,10 +1485,14 @@ def chapters(request):
         for area in region.areas:
             covered[area] = region
 
+    shaded, total = _shaded_map({f"c-{a}": r.name for a, r in covered.items()})
     return render(request, "site_app/chapters.html", {
         "regions": regions,
-        "map": _shaded_map({f"c-{a}": r.name for a, r in covered.items()}),
+        "map": shaded,
+        # Counted from the map itself. A hardcoded total goes stale the moment
+        # a state is added to it, and says the wrong thing confidently.
         "covered_count": len(covered),
+        "county_count": total,
     })
 
 
@@ -1510,7 +1514,7 @@ def _shaded_map(covered):
     from django.template.loader import render_to_string
     from django.utils.safestring import mark_safe
 
-    svg = render_to_string("site_app/_sc_counties.svg")
+    svg = render_to_string("site_app/_counties.svg")
 
     def mark(match):
         element, ident = match.group(0), match.group(1)
@@ -1524,7 +1528,8 @@ def _shaded_map(covered):
         # A <title> inside the path is the accessible, no-JavaScript tooltip.
         return element[:-2] + f"><title>{html.escape(label)}</title></path>"
 
-    return mark_safe(re.sub(r'<path id="(c-[a-z-]+)"[^>]*/>', mark, svg))
+    marked, count = re.subn(r'<path id="(c-[a-z-]+)"[^>]*/>', mark, svg)
+    return mark_safe(marked), count
 
 
 @login_required
