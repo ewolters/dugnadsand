@@ -1,0 +1,218 @@
+{% extends "base.html" %}
+
+{% block title %}Statement of operating policy — Dugnadsand{% endblock %}
+
+{% block extra_css %}
+<style>
+  /* The same register as /attestation/ and /how-it-works/. This is a document,
+     not an argument, and it should read like one. Every value is a --brand-*
+     token; brand-lint fails the build on a literal. */
+  body { margin:0; background:var(--brand-birch); color:var(--brand-ink);
+         font-family:var(--brand-font-serif); line-height:1.65; }
+  body > header { border-bottom:1px solid var(--brand-rule); }
+  body > header nav { max-width:46rem; margin-inline:auto; padding:1.1rem var(--brand-gutter);
+    display:flex; align-items:baseline; justify-content:space-between; gap:1rem; flex-wrap:wrap; }
+  body > header .nav-right { display:flex; align-items:baseline; gap:1.25rem; }
+  body > header .place, body > header .signin {
+    font-family:var(--brand-font-mono); font-size:.6875rem; letter-spacing:.1em;
+    text-transform:uppercase; color:var(--brand-moss); }
+  body > header .signin { color:var(--brand-ochre); text-decoration:none; }
+  body > header .brand-name { font-family:var(--brand-font-sans); font-weight:600;
+    letter-spacing:.07em; text-transform:uppercase; text-decoration:none; color:var(--brand-ink); }
+  .mark { height:.7em; width:auto; margin-right:.55rem; vertical-align:baseline; opacity:.75; }
+  body > footer { border-top:1px solid var(--brand-rule); margin-top:4.5rem;
+    font-family:var(--brand-font-mono); font-size:.75rem; color:var(--brand-moss); }
+  body > footer p { max-width:46rem; margin:0 auto; padding:1.5rem var(--brand-gutter); }
+
+  main { max-width:46rem; margin-inline:auto; padding:0 var(--brand-gutter); }
+
+  h1 { color:var(--brand-ink); font-family:var(--brand-font-sans); font-weight:600;
+       font-size:clamp(1.8rem,4.5vw,2.4rem); line-height:1.12; letter-spacing:-.02em;
+       margin:3.5rem 0 .4rem; text-wrap:balance; }
+  .issued { font-family:var(--brand-font-mono); font-size:.75rem; letter-spacing:.08em;
+    text-transform:uppercase; color:var(--brand-moss); margin:0 0 2.5rem; }
+
+  h2 { color:var(--brand-ink); font-family:var(--brand-font-sans); font-weight:600;
+       font-size:1.3rem; margin:3rem 0 .6rem; letter-spacing:-.01em; }
+  h3 { color:var(--brand-ink); font-family:var(--brand-font-sans); font-weight:600;
+       font-size:1rem; margin:2rem 0 .5rem; }
+  p { margin:0 0 1rem; }
+  a { color:var(--brand-spruce); }
+  strong { font-weight:600; }
+  .rule { border:0; border-top:1px solid var(--brand-rule); margin:3rem 0 0; }
+
+  /* The one framed block on the page. A statement that reads as an assurance
+     needs its limits to be as hard to skip as its claims. */
+  .caveat { border:1px solid var(--brand-ochre); background:var(--brand-warn-wash);
+    padding:1.15rem 1.25rem; margin:2rem 0; font-size:.9375rem; }
+  .caveat b { font-family:var(--brand-font-mono); font-size:.75rem; letter-spacing:.1em;
+    text-transform:uppercase; color:var(--brand-warn); display:block; margin-bottom:.5rem; }
+  .caveat p:last-child { margin-bottom:0; }
+
+  .scroll { overflow-x:auto; border:1px solid var(--brand-rule);
+    background:var(--brand-surface); margin:1.25rem 0 2rem; }
+  table { border-collapse:collapse; width:100%; min-width:32rem; font-size:.9375rem; }
+  th,td { text-align:left; padding:.65rem .85rem; border-bottom:1px solid var(--brand-rule);
+    vertical-align:top; }
+  thead th { font-family:var(--brand-font-mono); font-size:.6875rem; letter-spacing:.11em;
+    text-transform:uppercase; color:var(--brand-moss); font-weight:400;
+    background:var(--brand-table-head); white-space:nowrap; }
+  tbody tr:last-child td { border-bottom:0; }
+  td.id { font-family:var(--brand-font-mono); white-space:nowrap; color:var(--brand-spruce); }
+
+  dl.limits { margin:0; }
+  dl.limits dt { font-family:var(--brand-font-sans); font-weight:600; margin-top:1.4rem; }
+  dl.limits dd { margin:.3rem 0 0; color:var(--brand-text-soft); }
+
+  .where { display:grid; grid-template-columns:minmax(11rem,15ch) 1fr; gap:.45rem 1rem;
+    font-size:.9375rem; margin:1.25rem 0; }
+  .where dt { color:var(--brand-moss); } .where dd { margin:0; }
+</style>
+{% endblock %}
+
+{% block content %}
+<h1>Statement of operating policy</h1>
+<p class="issued">Manifest version {{ version }} · {{ count }} commitments · applies to
+   dugnadsand.org and the software behind it</p>
+
+<p>A plain statement of what this system does, what it deliberately does not do, and how
+   anybody can check either for themselves.</p>
+
+<p>The commitments below are not a description of the software. They are read out of
+   <a href="https://github.com/ewolters/dugnadsand/blob/master/policy/manifest.toml">the
+   file the checks run against</a>, at the moment this page is drawn — so this page
+   cannot state a promise the code is not keeping, or leave one out. Results are published
+   live at <a href="/attestation/">the attestation</a>.</p>
+
+<div class="caveat">
+  <b>What this is not</b>
+  <p><strong>Not legal advice, a tax opinion, or a representation about your
+     organization's obligations.</strong> Those belong to your own counsel and
+     accountant, who know your circumstances. Nothing here should be relied on in place
+     of them.</p>
+  <p><strong>Not a legal attestation.</strong> The checks behind it are engineering
+     checks: they describe the behaviour of software. They certify compliance with no
+     statute, and no auditor has reviewed them.</p>
+  <p>What it can tell you is exactly what the software does and does not do. That is the
+     part we can be held to, and the part that is testable.</p>
+</div>
+
+<hr class="rule">
+
+<h2>1. The commitments</h2>
+
+{% for title, invariants in sections %}
+  {% if invariants %}
+    <h3>{{ title }}</h3>
+    <div class="scroll">
+      <table>
+        <thead><tr><th>Name</th><th>Commitment</th></tr></thead>
+        <tbody>
+          {% for i in invariants %}
+            <tr><td class="id">{{ i.id }}</td><td>{{ i.claim }}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% endif %}
+{% endfor %}
+
+<p><strong>The load-bearing one is <code>no-gating</code>.</strong> Everything else exists
+   to protect it. A system where giving earns standing is an exchange whatever it is
+   called, and an organization offering help without eligibility requirements cannot run
+   on one.</p>
+
+<hr class="rule">
+
+<h2>2. What is deliberately not promised</h2>
+<p>A statement is as useful for what it refuses to claim.</p>
+
+<dl class="limits">
+  <dt>Individual contributions are visible.</dt>
+  <dd>The ledger is the organization's own log and lists each entry by name. That is
+      intended — it is recognition, and it is how a community sees its own work. What
+      does not exist is a <strong>total</strong>: not per member, not per project, not
+      your own. A number that can be compared between people is a score, and a score
+      reintroduces through social pressure exactly what the code removes.</dd>
+
+  <dt>We cannot govern what people say to each other.</dt>
+  <dd>No software stops somebody noticing who turns up. These commitments are about what
+      the system computes, displays and decides.</dd>
+
+  <dt>We do not value donated material, and will not.</dt>
+  <dd>A manifest records that goods moved, from where, to whom and when. What they were
+      worth is a question for the donor, their adviser and the tax authority. Any figure
+      this system produced would be an appraisal of donated property written by a
+      platform about a donor, which is the one document it must never generate.</dd>
+
+  <dt>We take no custody of anything.</dt>
+  <dd>Material listed here stays where its holder keeps it. The system records a
+      location, a description and a count. It is a directory, not a warehouse, and it
+      never holds title.</dd>
+
+  <dt>Availability is a claim about when somebody last looked.</dt>
+  <dd>Every quantity is shown with the age of its confirmation. A listing that has gone
+      quiet may well still be there — only its holder can say, and only its holder can
+      update it.</dd>
+</dl>
+
+<hr class="rule">
+
+<h2>3. Organizations and separation</h2>
+
+<p>Each organization is admitted deliberately, by a person, through an administrative
+   step. There is no self-service signup.</p>
+
+<p>Its members, postings, ledger, projects and material are invisible to every other
+   organization. That separation is enforced by the database itself — row-level security,
+   applied in the same migration that creates each table — rather than by application
+   code remembering to filter. It <strong>fails closed</strong>: a mistake makes rows
+   disappear rather than leak.</p>
+
+<h2>4. What leaves the boundary</h2>
+
+<p>Notifications, email and integrations travel through shared infrastructure that the
+   per-organization separation does not reach. Anything crossing that boundary therefore
+   carries <strong>the signal and not the content</strong>: that something exists, its
+   state, and a link. Never the words somebody wrote, never a member's name. The link
+   resolves under the reader's own session, inside their own organization, which is where
+   that content belongs.</p>
+
+<p>Somebody signing for a delivery, or setting up an account, receives a link that works
+   once, expires, and authorises exactly one action decided when it was issued. Spent and
+   expired links are deleted on a schedule.</p>
+
+<h2>5. Changes</h2>
+
+<p>A new commitment, or a change to an existing one, is a change to the manifest and
+   appears here and in the attestation from the moment it lands.</p>
+
+<p>Every attestation is appended to a hash chain: each entry commits to the one before
+   it, so an altered history is detectable rather than merely unlikely. It is deliberately
+   <strong>tamper-evident and not tamper-proof</strong> — a community must be able to
+   correct an honest mistake, honour a deletion request, or unwind a record made under
+   pressure. A ledger nobody can amend is a ledger that has to be right the first time.</p>
+
+<hr class="rule">
+
+<h2>6. How to check any of this</h2>
+
+<dl class="where">
+  <dt>Live results</dt><dd><a href="/attestation/">dugnadsand.org/attestation</a></dd>
+  <dt>The commitments</dt><dd><a href="https://github.com/ewolters/dugnadsand/blob/master/policy/manifest.toml"><code>policy/manifest.toml</code></a></dd>
+  <dt>The checks</dt><dd><a href="https://github.com/ewolters/dugnadsand/blob/master/policy/checks.py"><code>policy/checks.py</code></a></dd>
+  <dt>The reasoning</dt><dd><a href="https://github.com/ewolters/dugnadsand/blob/master/docs/design-rules.md"><code>docs/design-rules.md</code></a></dd>
+  <dt>The source</dt><dd><a href="https://github.com/ewolters/dugnadsand">github.com/ewolters/dugnadsand</a></dd>
+</dl>
+
+<p>A check whose subject does not exist yet reports <em>incomplete</em> rather than
+   passing, and a run can never read green while any check is in that state. An honest
+   amber is the right answer until the thing is built.</p>
+
+<p>The software is published under the AGPL, whose network clause means anybody running a
+   modified copy must be able to show its source. That is doing specific work here: it is
+   what lets a member of a community ask that community to prove these commitments still
+   hold in the version they are actually running.</p>
+
+<p><a href="/how-it-works/">How it works</a> covers the same ground less formally.</p>
+{% endblock %}

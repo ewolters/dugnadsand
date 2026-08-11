@@ -294,3 +294,81 @@ class TheStatementMatchesTheManifest(SignedIn, TestCase):
         # The specific overclaim the copy sweep caught, named here so it
         # cannot creep back in through this document.
         self.assertIn("individual contributions are visible", text)
+
+
+class ThePublicPolicyPage(SignedIn, TestCase):
+    """/policy/ is generated FROM the manifest, so it cannot drift.
+
+    A document alongside the manifest can only be tested for drift.
+    docs/policy-statement.md is that, and it has tests. This page reads the
+    same file the checks run against, at the moment it is drawn — so it cannot
+    state a commitment the code is not keeping, or omit one it is.
+    """
+
+    def page(self):
+        import re
+
+        return re.sub(r"\s+", " ", self.client.get("/policy/").content.decode())
+
+    def test_it_is_public(self):
+        self.assertEqual(self.client.get("/policy/").status_code, 200)
+
+    def test_every_commitment_appears_with_the_manifest_wording(self):
+        from policy.attest import load_manifest
+
+        page = self.page()
+        for invariant in load_manifest()["invariant"]:
+            self.assertIn(invariant["id"], page, invariant["id"])
+            self.assertIn(invariant["claim"], page, invariant["id"])
+
+    def test_a_new_commitment_reaches_the_page_without_anybody_editing_it(self):
+        """The whole point of generating it. A commitment added to the manifest
+        is on the public page immediately, in the right section."""
+        from unittest.mock import patch
+
+        from policy import attest
+
+        real = attest.load_manifest()
+        grown = {**real, "invariant": real["invariant"] + [{
+            "id": "no-invented-thing", "group": "recorded",
+            "claim": "A commitment nobody has written prose for.",
+            "why": "x", "check": "no_balance", "enforceable_when": "never"}]}
+
+        with patch("policy.attest.load_manifest", return_value=grown):
+            page = self.page()
+
+        self.assertIn("no-invented-thing", page)
+        self.assertIn("A commitment nobody has written prose for.", page)
+
+    def test_a_commitment_with_no_group_is_still_shown(self):
+        """Silently dropping one from the page that exists to state them would
+        be the worst failure this page has."""
+        from unittest.mock import patch
+
+        from policy import attest
+
+        real = attest.load_manifest()
+        orphan = {**real, "invariant": real["invariant"] + [{
+            "id": "no-group-here", "claim": "Ungrouped but real.",
+            "why": "x", "check": "no_balance", "enforceable_when": "never"}]}
+
+        with patch("policy.attest.load_manifest", return_value=orphan):
+            page = self.page()
+
+        self.assertIn("no-group-here", page)
+        self.assertIn("Other commitments", page)
+
+    def test_every_invariant_declares_a_group(self):
+        """Otherwise it lands in the catch-all and reads as an afterthought."""
+        from policy.attest import load_manifest
+
+        ungrouped = [i["id"] for i in load_manifest()["invariant"]
+                     if not i.get("group")]
+        self.assertEqual(ungrouped, [])
+
+    def test_it_carries_its_limits_as_hard_to_skip_as_its_claims(self):
+        page = self.page()
+        for required in ("Not legal advice", "Not a legal attestation",
+                         "your own counsel", "deliberately not promised",
+                         "Individual contributions are visible"):
+            self.assertIn(required, page, required)

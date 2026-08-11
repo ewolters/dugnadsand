@@ -20,6 +20,7 @@ legal_effect = "none"
 
 [[invariant]]
 id = "no-balance"
+group = "recorded"
 claim = "No member holds a balance, credit limit, or any spendable quantity."
 why = """
 A balance is what makes a record into a currency. Komunitin's Account carries
@@ -32,6 +33,7 @@ enforceable_when = "the domain models exist"
 
 [[invariant]]
 id = "no-gating"
+group = "decides"
 claim = "No code path consults what a member has given when deciding what they may receive."
 why = """
 The organization's stated approach is assistance without eligibility
@@ -43,6 +45,7 @@ enforceable_when = "a claim path exists"
 
 [[invariant]]
 id = "no-routing-by-record"
+group = "decides"
 claim = "No code path consults what a member has given when deciding who to tell about a need."
 why = """
 This is no-gating applied to the delivery layer, and it needs its own entry
@@ -63,6 +66,7 @@ enforceable_when = "a delivery path exists"
 
 [[invariant]]
 id = "no-material-valuation"
+group = "money"
 claim = "No record of material carries a value, a price, or an equivalence in hours."
 why = """
 The warehouse is the second surface where valuation can enter, and neither of
@@ -89,6 +93,7 @@ enforceable_when = "a material record exists"
 
 [[invariant]]
 id = "no-exchange"
+group = "money"
 claim = "Nothing links what a member received to what a member gave."
 why = """
 Reciprocal linkage is the definition of an exchange. Hours may never be traded
@@ -101,6 +106,7 @@ enforceable_when = "the domain models exist"
 
 [[invariant]]
 id = "flat-hours"
+group = "recorded"
 claim = "An hour counts as one hour, from anyone, and is never denominated in money."
 why = """
 Weighting by skill, or pegging a credit to a dollar, creates a readily
@@ -112,6 +118,7 @@ enforceable_when = "the domain models exist"
 
 [[invariant]]
 id = "no-money-rails"
+group = "money"
 claim = "The system integrates no payment processor and moves no funds."
 why = """
 This is a check on the CODE, not on what members write. A member may describe a
@@ -125,6 +132,7 @@ enforceable_when = "always"
 
 [[invariant]]
 id = "no-tax-artifact"
+group = "money"
 claim = "The system emits no per-member valuation, total, or statement that could function as tax substantiation."
 why = """
 Donated services are not deductible (Treas. Reg. 1.170A-1(g)). A statement
@@ -137,6 +145,7 @@ enforceable_when = "always"
 
 [[invariant]]
 id = "no-catalog"
+group = "recorded"
 claim = "Postings are free text. No categories, rates, or suggested values."
 why = """
 Standardised categories create comparables and comparables create ascertainable
@@ -147,6 +156,7 @@ enforceable_when = "the domain models exist"
 
 [[invariant]]
 id = "no-obligation"
+group = "decides"
 claim = "An offer of time is a ceiling with no floor, and stopping is recorded nowhere."
 why = """
 No obligation means no bargained-for exchange, and it is strong evidence against
@@ -158,6 +168,7 @@ enforceable_when = "the domain models exist"
 
 [[invariant]]
 id = "no-aggregate-display"
+group = "recorded"
 claim = "Nothing computes or displays a per-member total of contributed hours."
 why = """
 The record is recognition, not standing. A visible number people can compare is

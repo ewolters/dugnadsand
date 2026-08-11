@@ -576,7 +576,7 @@ class NoTemplateCommentReachesThePage(SignedIn, TestCase):
     ever visible after rendering.
     """
 
-    PUBLIC = ["/", "/how-it-works/", "/attestation/", "/login/"]
+    PUBLIC = ["/", "/how-it-works/", "/policy/", "/attestation/", "/login/"]
     MEMBER = ["/board/", "/board/new/", "/projects/", "/warehouse/",
               "/manifests/", "/pairings/", "/pinned/", "/you/", "/notices/",
               "/ledger/", "/password/"]

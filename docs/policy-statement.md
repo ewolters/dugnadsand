@@ -5,6 +5,11 @@ software behind it**
 
 ---
 
+> **This is published at [dugnadsand.org/policy](https://dugnadsand.org/policy/).**
+> That page reads its commitments straight out of `policy/manifest.toml` at
+> render time, so it cannot drift; this file is the same statement in the
+> repository, checked against the manifest by the test suite.
+
 ## What this document is
 
 A plain statement of what this system does, what it deliberately does not do,
@@ -15,6 +20,11 @@ code continuously. The results are published, live, at
 **[dugnadsand.org/attestation](https://dugnadsand.org/attestation/)** — run at
 the moment that page is loaded, so a stalled checker cannot make a green record
 look like a green system.
+
+> **This is published at [dugnadsand.org/policy](https://dugnadsand.org/policy/).**
+> That page reads its commitments straight out of `policy/manifest.toml` at
+> render time, so it cannot drift; this file is the same statement in the
+> repository, checked against the manifest by the test suite.
 
 ## What this document is not
 

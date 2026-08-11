@@ -144,6 +144,48 @@ def how_it_works(request):
     return render(request, "site_app/how_it_works.html")
 
 
+SECTIONS = (
+    ("recorded", "About what is recorded"),
+    ("decides", "About what the record may decide"),
+    ("money", "About money and material"),
+)
+
+
+def policy(request):
+    """The operating policy, read out of the manifest at render time.
+
+    NOT a copy of docs/policy-statement.md. The commitments on this page are
+    the ones policy/manifest.toml is enforcing right now — read from the file
+    the checks run against, so the page cannot state a promise the code is not
+    keeping, or omit one it is. A document alongside the manifest can only be
+    tested for drift; a page generated from it cannot drift at all.
+
+    Public and unauthenticated on purpose: a board deciding whether to adopt
+    this needs to read it before anybody has an account.
+    """
+    from policy.attest import load_manifest
+
+    manifest = load_manifest()
+    by_group = {}
+    for invariant in manifest["invariant"]:
+        by_group.setdefault(invariant.get("group", "other"), []).append(invariant)
+
+    sections = [(title, by_group.get(key, [])) for key, title in SECTIONS]
+    # Anything the manifest grew without a group still appears. Silently
+    # dropping a commitment from the page that exists to state them would be
+    # the worst failure this page has.
+    known = {key for key, _ in SECTIONS}
+    leftover = [i for g, items in by_group.items() if g not in known for i in items]
+    if leftover:
+        sections.append(("Other commitments", leftover))
+
+    return render(request, "site_app/policy.html", {
+        "sections": sections,
+        "version": manifest["manifest"]["version"],
+        "count": len(manifest["invariant"]),
+    })
+
+
 def attestation(request):
     """Public, read-only. The latest recorded run plus a live chain check.
 

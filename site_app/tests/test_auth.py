@@ -306,6 +306,7 @@ class EveryRouteIsAccountedFor(TestCase):
         "login/": "the way in",
         "logout/": "must work from a half-authenticated state",
         "how-it-works/": "the mechanics, for somebody deciding whether to use this",
+        "policy/": "the operating policy; a board reads it before anybody has an account",
         "attestation/": "the proof; publishing it privately would defeat it",
         "act/<str:token>/": "the holder has no account — that is the whole point",
         "setup/<str:token>/": "used before an account has a password",
