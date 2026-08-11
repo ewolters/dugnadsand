@@ -92,9 +92,9 @@
 
 {% block content %}
 <h1>The virtual warehouse</h1>
-<p class="sub">Willing hands are rarely what a project runs short of. A pallet of shingles
-   is. Somebody nearby usually has them already — this is how they find each other, and
-   what it deliberately refuses to do along the way.</p>
+<p class="sub">Material, rather than labour, is the more common constraint on a project.
+   This describes how material held by one party is matched to a project that needs it, and
+   the constraints the system observes while doing so.</p>
 
 <h2>Nothing moves until somebody needs it</h2>
 
@@ -140,45 +140,42 @@
     <text class="sm" x="554" y="142" text-anchor="middle">goods travel</text>
 
     <!-- what does not happen -->
-    <text class="note" x="360" y="26" text-anchor="middle">nothing here is ever priced,
-      and nothing changes hands but the goods themselves</text>
+    <text class="note" x="360" y="26" text-anchor="middle">no value is recorded at any stage;
+      nothing but the material changes hands</text>
   </svg>
 </div>
 
-<p class="pull">The goods never enter our custody. We record a location, a description and
-   a count — and we can prove a thing moved, without ever saying what it was worth.</p>
+<p class="pull">Material does not enter the platform's custody. The system records a location,
+   a description and a quantity, and evidences that material moved without stating a value.</p>
 
-<p>That is not modesty. No custody means no title, and no title means no storage
-   liability, no insurance obligation, and nothing that turns a directory into a
-   warehouse. It is the same shape that keeps the record of hours a record rather than a
-   currency.</p>
+<p>Absence of custody means absence of title, and therefore no storage liability, no
+   insurance obligation, and no basis on which the platform would be treated as a warehouse
+   operator rather than a directory.</p>
 
 <hr class="rule">
 
 <h2>Every amount says when somebody last looked</h2>
 
-<p>A quantity with no date on it is a claim about the present tense that nobody checked,
-   and somebody drives forty miles on it. So every listing carries the age of its
-   confirmation — <em>confirmed today</em>, <em>not confirmed in four weeks</em> — and two
-   rules keep that honest.</p>
+<p>An undated quantity is an unverified assertion about the present. Every listing therefore
+   carries the age of its last confirmation — <em>confirmed today</em>, <em>not confirmed in
+   four weeks</em> — under two constraints.</p>
 
-<p><strong>Only the holder can move that clock.</strong> Anybody else asserting what is in
-   somebody's barn is guessing. And <strong>shipping something out deliberately does
-   not</strong>: the sender knows what they sent, but they have not re-counted what is
-   left, and letting a shipment reset the clock would make a shelf look freshly checked
-   because something left it.</p>
+<p><strong>Only the holder may reset the timestamp.</strong> No other party is in a position
+   to state what is present at that location. <strong>Dispatching material deliberately does
+   not reset it</strong>: the sender knows the quantity dispatched but has not recounted the
+   remainder, and resetting on dispatch would mark a listing as freshly verified on the basis
+   of a removal.</p>
 
-<p>Listings that have gone quiet are dimmed, never hidden. The material may well still be
-   there — only its holder can say.</p>
+<p>Unconfirmed listings are de-emphasised rather than hidden, since the material may still be
+   present. Only the holder can confirm this.</p>
 
 <hr class="rule">
 
 <h2>What the paperwork looks like</h2>
 
-<p>Material moving out produces a manifest. It travels with the goods, and whoever takes
-   delivery scans the code to sign for it — no account, no sign-up, because they are
-   standing in a yard with a phone and a receipt nobody can record is a receipt that
-   never happens.</p>
+<p>Dispatched material produces a manifest, which travels with the consignment. The recipient
+   scans the code to confirm receipt. No account or registration is required; requiring one
+   would mean receipts go unrecorded.</p>
 
 <div class="paper">
   <span class="stamp">Example · not a real consignment</span>
@@ -200,13 +197,13 @@
 
   <div class="sign">
     {% if example_qr %}<div class="qr">{{ example_qr|safe }}</div>{% endif %}
-    <p>Whoever receives it scans this once and it is signed for. Scanning this particular
-       one brings you back to this page — a working link on a public example would be a
-       working link.</p>
+    <p>The recipient scans this once to confirm receipt. This example code resolves to the
+       present page; a functioning receipt link on a public document would be a functioning
+       credential.</p>
   </div>
 
-  <p class="novalue">This records what moved and when. It states no value, and no value
-     will be added to it.</p>
+  <p class="novalue">Records what moved and when. States no value, and no value field will be
+     added.</p>
 </div>
 
 <hr class="rule">
@@ -215,44 +212,40 @@
 
 <dl class="limits">
   <dt>It will not price anything.</dt>
-  <dd>What material is worth is a question for the donor, their adviser and the tax
-      authority. Any figure this system produced would be an appraisal of donated
-      property written by a platform about a donor, which is the one document it must
-      never generate. A manifest is evidence that goods moved; a valuation is a different
-      document, and only one of the two is safe for us to write.</dd>
+  <dd>The value of donated material is a matter for the donor, their adviser and the relevant
+      tax authority. A figure produced by this system would constitute an appraisal of donated
+      property generated by a platform concerning a donor. A manifest evidences transfer; a
+      valuation is a separate document that this system does not produce.</dd>
 
   <dt>It will not convert material into hours.</dt>
-  <dd>“Two hundred board-feet became forty hours” reads like bookkeeping and is an
-      exchange rate. Hours and material are two separate records, side by side, never
-      added together.</dd>
+  <dd>An expression such as “two hundred board-feet equals forty hours” is an exchange rate.
+      Hours and material are held as separate records and are never combined.</dd>
 
-  <dt>It will not sort your material into types.</dt>
-  <dd>There are no categories and no icons for kinds of thing, because a fixed vocabulary
-      of materials makes two donations comparable — and comparable donations have a
-      price. Descriptions are whatever you would say out loud. Where the system needs to
-      match a need to something on a shelf, it matches on the <strong>unit</strong> you
-      typed: board-feet to board-feet.</dd>
+  <dt>It will not classify material into types.</dt>
+  <dd>There are no categories and no type icons. A fixed vocabulary of materials renders two
+      donations comparable, and comparable donations acquire a price. Descriptions are free
+      text. Where the system matches a requirement to available stock, it matches on the
+      <strong>unit</strong> as entered: board-feet to board-feet.</dd>
 
-  <dt>It will not tell you the shelf is full when nobody has looked.</dt>
-  <dd>Absence of a recent confirmation is shown as exactly that, rather than quietly
-      passed off as availability.</dd>
+  <dt>It will not present unverified stock as available.</dt>
+  <dd>Absence of a recent confirmation is displayed as such rather than as availability.</dd>
 </dl>
 
 <hr class="rule">
 
-<h2>For a business thinking about listing something</h2>
+<h2>For a business considering listing material</h2>
 
-<p>You keep the goods, the space and the title. You decide what goes on the list, you are
-   the only person who can confirm what is still there, and you are told when something
-   is booked out of a place you hold — told, not asked, because material on a list is
-   already on offer and a permission step would put a gate in front of a gift.</p>
+<p>The holder retains the material, the premises and the title, determines what is listed,
+   and is the only party able to confirm what remains. The holder is notified when material
+   is booked out of a location they hold. This is a notification rather than an approval
+   step: listed material is already on offer, and an approval gate would condition a donation
+   on a further permission.</p>
 
-<p>What you get back is evidence of transfer: a record of what left, when, where it went
-   and that somebody signed for it. What you will not get from us is a number for your
-   tax return, and that is deliberate.</p>
+<p>The system returns evidence of transfer: a record of what was dispatched, when, to where,
+   and confirmation of receipt. It does not return a figure for a tax return.</p>
 
-<p>The commitments behind all of this are set out in the
-   <a href="/policy/">statement of operating policy</a> and checked continuously at
+<p>The underlying commitments are set out in the
+   <a href="/policy/">statement of operating policy</a> and verified continuously at
    <a href="/attestation/">the attestation</a>. <a href="/how-it-works/">How it works</a>
-   covers the rest of the system.</p>
+   documents the remainder of the system.</p>
 {% endblock %}

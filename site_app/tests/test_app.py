@@ -439,10 +439,13 @@ class ThePublicCopyStaysTrue(SignedIn, TestCase):
     def test_how_it_works_says_it_is_not_legal_advice(self):
         """It describes tax-adjacent behaviour to nonprofit boards. The
         disclaimer is not decoration."""
+        # The CLAIM, not its phrasing. These pages get rewritten; the three
+        # things the disclaimer has to establish do not change.
         body = self.copy("/how-it-works/")
         self.assertIn("not a legal attestation", body)
-        self.assertIn("it is not legal advice", body)
-        self.assertIn("your own counsel", body)
+        self.assertIn("not legal advice", body)
+        self.assertIn("not a tax opinion", body)
+        self.assertIn("counsel", body)
 
     def test_how_it_works_is_reachable_from_the_public_pages(self):
         for page in ("/", "/attestation/"):
@@ -1001,14 +1004,14 @@ class TheWarehouseExplainer(TestCase):
     def test_the_example_carries_no_value_of_any_kind(self):
         page = self.page()
         self.assertNotIn("$", page)
-        self.assertIn("It states no value", page)
+        self.assertIn("States no value", page)
 
     def test_it_states_the_refusals_and_not_only_the_features(self):
         page = self.page()
-        for required in ("never enter our custody",
+        for required in ("does not enter the platform's custody",
                          "will not price anything",
                          "will not convert material into hours",
-                         "will not sort your material into types"):
+                         "will not classify material into types"):
             self.assertIn(required, page, required)
 
     def test_it_explains_why_there_are_no_material_categories(self):
@@ -1026,3 +1029,47 @@ class TheWarehouseExplainer(TestCase):
             with_choices = {f.name for f in model._meta.get_fields()
                             if getattr(f, "choices", None)}
             self.assertEqual(with_choices, set(), model.__name__)
+
+
+class ThePublicRegisterStaysTechnical(TestCase):
+    """SVEND-sponsored documentation, not a pitch.
+
+    The public pages are read by a nonprofit board and by whoever advises them.
+    They were written in a warm, second-person voice that reads as marketing
+    and — more to the point — reads as generated. This holds the register.
+    """
+
+    PAGES = ["/", "/how-it-works/", "/policy/", "/virtual-warehouse/",
+             "/attestation/"]
+
+    def prose(self, path):
+        """Rendered text with markup, style and script removed."""
+        import html as html_mod
+
+        body = self.client.get(path).content.decode()
+        body = re.sub(r"<(script|style)\b.*?</\1>", " ", body, flags=re.S | re.I)
+        return html_mod.unescape(re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", body)))
+
+    def test_no_public_page_addresses_the_reader_directly(self):
+        """Second person is the register of a pitch. These are specifications
+        about a system, and the reader is not a party to them."""
+        offenders = {}
+        for path in self.PAGES:
+            hits = re.findall(r"\b(you|your|you're|yours|yourself)\b",
+                              self.prose(path), re.I)
+            if hits:
+                offenders[path] = sorted(set(h.lower() for h in hits))
+        self.assertEqual(offenders, {})
+
+    def test_no_public_page_closes_a_paragraph_with_an_aphorism(self):
+        """'…which is the whole design' and its relatives. They read as
+        generated because they usually are."""
+        offenders = [p for p in self.PAGES
+                     if re.search(r"(?:which|and that) is (?:the|exactly|why|what|how)\b",
+                                  self.prose(p), re.I)]
+        self.assertEqual(offenders, [])
+
+    def test_no_public_page_uses_the_word_ai(self):
+        """Not what this is, and not how it should be described."""
+        for path in self.PAGES:
+            self.assertNotRegex(self.prose(path), r"\bAI\b")

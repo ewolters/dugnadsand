@@ -369,6 +369,6 @@ class ThePublicPolicyPage(SignedIn, TestCase):
     def test_it_carries_its_limits_as_hard_to_skip_as_its_claims(self):
         page = self.page()
         for required in ("Not legal advice", "Not a legal attestation",
-                         "your own counsel", "deliberately not promised",
+                         "own counsel", "What is not claimed",
                          "Individual contributions are visible"):
             self.assertIn(required, page, required)

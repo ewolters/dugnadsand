@@ -69,114 +69,112 @@
 
 {% block content %}
 <h1>How it works</h1>
-<p class="sub">The front page is the idea. This is the machinery — what gets written down,
-   what deliberately never does, and how to check that for yourself rather than taking
-   our word for it.</p>
+<p class="sub">Technical description of what the system records, what it does not record, and
+   how each commitment can be independently verified.</p>
 
 <h2>Four things people share</h2>
 
 <h3>Hours</h3>
-<p>Somebody does something and it gets written down. Thirteen hours on a community
-   garden. That is the entire entry.</p>
+<p>Work performed is recorded as a duration against a posting. Thirteen hours on a community
+   garden constitutes a complete entry.</p>
 
-<h3>What's offered, and what's needed</h3>
-<p>A board that runs both directions. Put up what you have, put up what you need, and
-   anyone can take up either. Nobody has to have given first, and asking costs nothing
-   and proves nothing.</p>
+<h3>Offers and needs</h3>
+<p>A single board carries both. Any member may post either, and any member may take up either.
+   Prior contribution is not required and is not consulted.</p>
 
-<h3>Ongoing work</h3>
-<p>A project gathers related postings — repairing homes on the east side, keeping the
-   pantry stocked. Nobody is put in charge of one. Anyone can mark a project finished,
-   including somebody who never worked on it, because otherwise the first person to move
-   away strands whatever they wrote down.</p>
+<h3>Projects</h3>
+<p>A project groups related postings. No owner is assigned. Any member may close a project,
+   including one who never worked on it; restricting closure to an owner would strand a
+   project when that person left.</p>
 
 <h3>Material</h3>
-<p>The part most systems leave out. It has a section of its own below.</p>
+<p>Documented separately below and in full at
+   <a href="/virtual-warehouse/">the virtual warehouse</a>.</p>
 
 <hr class="rule">
 
 <h2>What the record is not</h2>
 <p class="lede">It is not a currency.</p>
 
-<p>Hours cannot be spent, are not owed by anyone to anyone, and buy nothing.
-   <strong>Nothing in the system decides anything based on what you have given.</strong>
-   You can receive having given nothing, ever.</p>
+<p>Hours cannot be spent, are owed by no one to anyone, and purchase nothing.
+   <strong>No code path consults a member's contributions when determining what they may
+   receive.</strong> A member who has contributed nothing may receive without restriction.</p>
 
-<p>What you have given is in the organization's log, like everybody else's — that part is
-   deliberate, and it is recognition rather than a score. What does not exist anywhere is
-   a <em>total</em>: not yours, not anybody's, not per project. A number that can be
-   compared between people is a score whatever it is called, and a score brings back
-   through social pressure exactly what the code removes.</p>
+<p>Individual contributions appear in the organization's log under the contributor's name.
+   This is intentional and serves as recognition. No <em>total</em> is computed or displayed
+   at any level: not per member, not per project. A figure comparable between members
+   functions as a score regardless of its label, and reintroduces through social pressure
+   what the code excludes.</p>
 
-<p class="pull">That one property is the whole design. Everything else is shaped to
-   protect it.</p>
+<p class="pull">This property is load-bearing. The remaining constraints exist to preserve
+   it.</p>
 
-<p>You can also stop whenever. Taking something on and then stepping away deletes the
-   record of it: not marked <em>withdrawn</em>, not counted, gone. A stored record of
-   stopping is a record of not following through, and anything stored can eventually be
-   counted by somebody.</p>
+<p>Withdrawal is unrestricted. Taking on a posting and then stepping away deletes the claim
+   record entirely; it is not flagged as withdrawn and is not counted. A stored record of
+   withdrawal constitutes a record of non-completion, and any stored value can subsequently
+   be aggregated.</p>
 
 <hr class="rule">
 
 <h2>The virtual warehouse</h2>
-<p class="lede">Willing hands are rarely the bottleneck. A pallet of shingles is.</p>
+<p class="lede">Material, rather than labour, is the more common constraint on a project.</p>
 
-<p>A farm or a business lists a place they keep material, and what is in it.
-   <strong>The goods never enter our custody.</strong> They stay where their holder keeps
-   them; this stores a location, a description and a count. That keeps this a directory
-   rather than a warehouse, which matters legally as much as practically — and it is the
-   same shape that keeps the hours a record rather than a currency.</p>
+<p>A farm or business registers a location and its contents. <strong>Material does not enter
+   the platform's custody at any point.</strong> It remains where its holder keeps it; the
+   system stores a location, a description and a quantity. This makes the system a directory
+   rather than a warehouse, with corresponding consequences for title, liability and
+   insurance.</p>
 
-<p class="pull">We can prove a thing moved. We never say what it was worth.</p>
+<p class="pull">The system evidences that material moved. It does not state a value.</p>
 
-<p>Every amount shows how recently the person holding it last looked — <em>confirmed
-   today</em>, <em>not confirmed in four weeks</em>. Only the holder can move that clock,
-   and shipping something out deliberately does not: the sender knows what they sent,
-   they have not re-counted what is left. Listings that have gone quiet are dimmed rather
-   than hidden, because the material may well still be there.</p>
+<p>Every quantity is displayed with the age of its last confirmation — <em>confirmed
+   today</em>, <em>not confirmed in four weeks</em>. Only the holder can reset that
+   timestamp. Dispatching material deliberately does not reset it: the sender knows the
+   quantity sent but has not recounted the remainder. Unconfirmed listings are de-emphasised
+   rather than hidden, since the material may still be present.</p>
 
-<p>When material moves it produces a manifest with a QR code. Whoever takes delivery
-   scans it to sign for it — no account, no sign-up, because they are standing in a yard
-   with a phone, and a receipt nobody can record is a receipt that never happens.</p>
+<p>Dispatched material produces a manifest carrying a QR code. The recipient scans it to
+   confirm receipt. No account or registration is required, since requiring one would mean
+   the receipt is not recorded at all.</p>
 
 <hr class="rule">
 
 <h2>Bills of material</h2>
-<p class="lede">A project can say what it needs, not just who it needs.</p>
+<p class="lede">A project may specify required material as well as labour.</p>
 
-<p>Reclaimed oak, two hundred board-feet. People record what actually arrives against it,
-   and material can come straight from a warehouse listing so the paperwork and the
-   project agree.</p>
+<p>A line specifies a description, a quantity and a unit. Arrivals are recorded against it,
+   and material may be dispatched directly from a warehouse listing so that the manifest and
+   the project record the same movement.</p>
 
-<p><strong>Hours and material are kept in separate lists and are never added together.</strong>
-   There is no way to record what material is worth, and no way to say what it is worth
-   in hours. Both would put a price on a gift, and a priced gift is a transaction.</p>
+<p><strong>Hours and material are held in separate records and are never combined.</strong>
+   No field records the value of material, and no field expresses material as an equivalent
+   number of hours. Either would assign a price to a donation.</p>
 
-<p>The one figure the system does show is what is <em>still needed</em> — eighty
-   board-feet short. That is a fact about the project rather than about any person, and
-   material cannot be coordinated without it.</p>
+<p>One aggregate is displayed: the quantity <em>outstanding</em> on a line. It is a property
+   of the requirement rather than of any member, and material cannot be coordinated without
+   it.</p>
 
 <hr class="rule">
 
-<h2>Your organization is your own</h2>
+<h2>Separation between organizations</h2>
 
-<p>Each organization is admitted deliberately, and its members, postings, ledger and
-   material are invisible to every other one. That separation is enforced by the database
-   itself rather than by application code remembering to filter, and it fails closed: a
-   mistake makes rows disappear rather than leak.</p>
+<p>Each organization is admitted individually. Its members, postings, ledger and material are
+   inaccessible to every other organization. Separation is enforced by row-level security in
+   the database rather than by application-level filtering, and fails closed: a defect causes
+   rows to disappear rather than to leak.</p>
 
-<p>Anything that leaves the system — a notification, an email, an integration — carries
-   only that something exists, and a link. Never the words somebody wrote, never a
-   member's name. Those stay inside and are fetched when the reader signs in.</p>
+<p>Data crossing the system boundary — notifications, email, integrations — carries only the
+   existence of a record and a link to it. Message text and member names are excluded. Both
+   are retrieved inside the organization when the recipient signs in.</p>
 
 <hr class="rule">
 
 <h2>How to check any of this</h2>
-<p class="lede">Everything above is a claim, and claims are cheap.</p>
+<p class="lede">Each statement above is a claim, and is bound to an executable check.</p>
 
-<p>So each one is tied to a test that runs continuously, and the results are published at
-   <a href="/attestation/">/attestation/</a> — run live when you load that page, so a
-   stalled checker cannot make a green record look like a green system.</p>
+<p>Results are published at <a href="/attestation/">/attestation/</a> and are executed when
+   that page is requested, so that a stalled scheduler cannot present a stored pass as a
+   current one.</p>
 
 <div class="scroll">
   <table>
@@ -191,17 +189,15 @@
   </table>
 </div>
 
-<p>A check whose subject does not exist yet reports <em>incomplete</em> rather than
-   passing, and a run can never read green while any check is in that state. An honest
-   amber is the right answer until the thing is built.</p>
+<p>A check whose subject does not yet exist reports <em>incomplete</em> rather than passing,
+   and a run cannot report an overall pass while any check is in that state.</p>
 
 <div class="caveat">
   <b>Not a legal attestation</b>
-  This says what the code was checked for and what the checks returned. It is not legal
-  advice, it is not a tax opinion, and it does not tell your organization what its
-  obligations are — those are questions for your own counsel and accountant. What it can
-  tell you is exactly what the software does and does not do, which is the part we can be
-  held to.
+  This states what the code was checked for and what the checks returned. It is not legal
+  advice, it is not a tax opinion, and it does not determine an organization's obligations;
+  those are matters for that organization's own counsel and accountant. It describes the
+  behaviour of the software. That behaviour is testable.
 </div>
 
 <p>There is also a formal <a
@@ -214,5 +210,5 @@
    The claims live in <code>policy/manifest.toml</code>, the checks behind them in
    <code>policy/checks.py</code>, and the reasoning in <code>docs/design-rules.md</code>.</p>
 
-<p>If this sounds like your street, <a href="/#say-hello">tell us about it</a>.</p>
+<p><a href="/#say-hello">Contact</a> · <a href="/policy/">Statement of operating policy</a></p>
 {% endblock %}

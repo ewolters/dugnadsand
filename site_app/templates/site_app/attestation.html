@@ -65,8 +65,8 @@
 </div>
 
 <h2>Right now</h2>
-<p class="note">Run live when you loaded this page, so a stalled scheduler cannot make a
-  green record look like a green system.</p>
+<p class="note">Executed when this page was requested, so that a stalled scheduler cannot
+  present a stored pass as a current one.</p>
 
 <p><span class="status {{ live.status }}">{{ live.status }}</span></p>
 
@@ -105,10 +105,9 @@
 {% endif %}
 
 <h2>What INCOMPLETE means</h2>
-<p class="note">A check whose subject does not exist yet reports <em>not enforceable</em>
-  rather than passing, and the run as a whole can never read UPHELD while any check is in
-  that state. Most of this system is not built. An honest amber is the correct answer
-  until it is, and the rows above name exactly what is missing.</p>
+<p class="note">A check whose subject does not yet exist reports <em>not enforceable</em>
+  rather than passing, and a run cannot report UPHELD while any check is in that state. The
+  rows above name the specific subject that is absent.</p>
 
 <p class="note">The claims themselves live in
   <a href="https://github.com/ewolters/dugnadsand/blob/master/policy/manifest.toml"><code>policy/manifest.toml</code></a>,

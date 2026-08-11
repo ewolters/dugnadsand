@@ -225,35 +225,34 @@
       </svg>
     </div>
 
-    <p>Thirteen hours on a community garden. Two hundred board-feet of oak, left for somebody's
-       roof. Both get written down; neither gets a price. And the two are never added together —
-       an hour and a plank aren't the same kind of thing, and pretending they are is how a gift
-       turns into a trade. Nothing here can be spent, and nobody can run out.</p>
+    <p>Thirteen hours on a community garden. Two hundred board-feet of oak toward a roof. Both
+       are recorded; neither is priced. The two records are kept separate and are never combined:
+       an hour and a plank are different units, and equating them would assign a price to both.
+       Neither record can be spent or exhausted.</p>
   </div>
 </section>
 
 <section class="terms wrap">
   <div>
     <h3>Nothing is bought or sold.</h3>
-    <p>There's no currency here and no marketplace. If you grew more potatoes than you can eat,
-       put them up and whoever needs them takes them. You don't need hours saved to take
-       something, and you don't get anything back for giving.</p>
+    <p>There is no currency and no marketplace. A surplus is posted and whoever needs it takes
+       it. No accumulated hours are required in order to receive, and giving returns nothing.</p>
   </div>
   <div>
     <h3>Nothing is owed.</h3>
-    <p>Your hours aren't a claim on anybody else's time. Nobody's in debt, nobody's behind, and
-       turning up with an empty record costs you nothing at all.</p>
+    <p>Recorded hours are not a claim on anyone else's time. No member holds a debt or a deficit,
+       and an empty record carries no consequence.</p>
   </div>
   <div>
-    <h3>Help isn't only hours.</h3>
-    <p>A pallet of shingles is as much help as a Saturday. Farms and businesses can list what
-       they've got and where it's sitting — it stays theirs until somebody needs it, it never
-       gets a price, and whoever picks it up signs for it with their phone.</p>
+    <h3>Material counts as well as time.</h3>
+    <p>Farms and businesses can list material and its location. It remains their property until
+       someone needs it, it is never assigned a value, and receipt is confirmed by the recipient
+       at the point of collection.</p>
   </div>
   <div>
-    <h3>You can stop whenever.</h3>
-    <p>Offer four hours and you're offering <em>up to</em> four, never <em>at least</em> four.
-       Change your mind halfway through and nothing happens to you. We built it that way on purpose.</p>
+    <h3>Stopping is always permitted.</h3>
+    <p>An offer of four hours is a ceiling of four, not a floor. Withdrawing partway through
+       records nothing and carries no penalty.</p>
   </div>
 </section>
 
@@ -271,26 +270,25 @@
 
 <section class="closing wrap" id="say-hello">
   <h2>Getting started in upstate South Carolina.</h2>
-  <p>We're early. Right now it's a few neighbors, a long list of questions we haven't answered
-     yet, and a decision not to build anything that keeps score.</p>
-  <p>If this sounds like your street, tell us about it. If you'd rather see the machinery
-     first, <a href="/how-it-works/">here's how it works</a>.</p>
+  <p>The project is early: a small number of participants, a substantial list of open questions,
+     and a decision not to build anything that keeps score.</p>
+  <p>Organizations in the region are welcome to make contact. The mechanics are documented in
+     <a href="/how-it-works/">how it works</a> and the commitments in the
+     <a href="/policy/">statement of operating policy</a>.</p>
 
   {% if csrf_retry %}
     {% if cookies_off %}
-      <p class="note-retry">That didn't go through, and pressing send again won't help —
-         your browser is turning away cookies from this site, and we need one to check the
-         form really came from this page. Allow cookies for dugnadsand.org and it will go
-         first time. Your words are still here.</p>
+      <p class="note-retry">Not sent. This browser is refusing cookies from this site, and one
+         is required to confirm the form originated on this page. Resending will fail until
+         cookies are allowed for dugnadsand.org. The message text has been retained below.</p>
     {% else %}
-      <p class="note-retry">That didn't go through — your browser didn't send us something
-         we needed to check the form came from this page. Nothing was lost; press send
-         again and it should go.</p>
+      <p class="note-retry">Not sent. The check confirming the form originated on this page did
+         not complete. The message text has been retained below; resending should succeed.</p>
     {% endif %}
   {% endif %}
 
   {% if sent %}
-    <p class="note-sent">Thanks — that's come through. We'll write back.</p>
+    <p class="note-sent">Received. A reply will follow.</p>
   {% else %}
     <form method="post" action="/#say-hello" class="contact" novalidate>
       {% comment %}
@@ -304,7 +302,7 @@
       {% endif %}
 
       <div class="field">
-        <label for="{{ form.name.id_for_label }}">Your name</label>
+        <label for="{{ form.name.id_for_label }}">Name</label>
         <input type="text" name="name" id="{{ form.name.id_for_label }}" maxlength="120"
                value="{{ form.name.value|default:'' }}" required>
         {% if form.name.errors %}<span class="err">{{ form.name.errors.0 }}</span>{% endif %}
@@ -318,7 +316,7 @@
       </div>
 
       <div class="field">
-        <label for="{{ form.message.id_for_label }}">What's on your mind</label>
+        <label for="{{ form.message.id_for_label }}">Message</label>
         <textarea name="message" id="{{ form.message.id_for_label }}" rows="5" maxlength="4000"
                   required>{{ form.message.value|default:'' }}</textarea>
         {% if form.message.errors %}<span class="err">{{ form.message.errors.0 }}</span>{% endif %}
