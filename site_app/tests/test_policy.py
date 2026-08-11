@@ -223,3 +223,74 @@ class RoutingNeverConsultsTheRecord(SignedIn, TestCase):
         with patch.object(checks.Path, "exists", lambda self: False):
             result = checks.no_routing_by_record()
         self.assertEqual(result.status, checks.NOT_ENFORCEABLE)
+
+
+class TheStatementMatchesTheManifest(SignedIn, TestCase):
+    """A policy statement is worth exactly as much as its accuracy.
+
+    docs/policy-statement.md restates the commitments in prose for somebody
+    deciding whether their organization should use this. Prose drifts: an
+    invariant gets added and the statement does not mention it, or the
+    statement keeps describing one that was renamed. Either way it becomes a
+    document that says more than the code does — which is the failure the copy
+    sweep already found on three pages.
+
+    So the check runs both directions.
+    """
+
+    @staticmethod
+    def statement():
+        from pathlib import Path
+
+        return (Path(__file__).resolve().parents[2]
+                / "docs" / "policy-statement.md").read_text()
+
+    @staticmethod
+    def manifest():
+        from policy.attest import load_manifest
+
+        return load_manifest()
+
+    def test_every_commitment_in_the_manifest_appears_in_the_statement(self):
+        """A commitment the code enforces but the statement omits is one
+        somebody was never told they had."""
+        text = self.statement()
+        missing = [i["id"] for i in self.manifest()["invariant"]
+                   if i["id"] not in text]
+        self.assertEqual(missing, [], f"not in the statement: {missing}")
+
+    def test_every_commitment_named_in_the_statement_is_really_enforced(self):
+        """The dangerous direction: a promise in prose with nothing behind
+        it."""
+        import re
+
+        declared = {i["id"] for i in self.manifest()["invariant"]}
+        named = set(re.findall(r"`(no-[a-z-]+|flat-hours)`", self.statement()))
+
+        self.assertTrue(named)
+        self.assertTrue(named <= declared, f"claimed but not enforced: {named - declared}")
+
+    def test_it_quotes_the_manifest_wording_rather_than_paraphrasing(self):
+        """A paraphrase is where a claim quietly grows. The table is the
+        operative wording, verbatim."""
+        text = self.statement()
+        for invariant in self.manifest()["invariant"]:
+            self.assertIn(invariant["claim"], text, invariant["id"])
+
+    def test_it_says_which_document_wins(self):
+        text = self.statement().lower()
+        self.assertIn("the manifest is correct and this document is stale", text)
+
+    def test_it_refuses_to_be_read_as_legal_advice(self):
+        text = self.statement().lower()
+        for required in ("not legal advice", "not a legal attestation",
+                         "your own counsel"):
+            self.assertIn(required, text, required)
+
+    def test_it_states_what_is_not_promised(self):
+        """The section that stops it being marketing."""
+        text = self.statement().lower()
+        self.assertIn("deliberately not promised", text)
+        # The specific overclaim the copy sweep caught, named here so it
+        # cannot creep back in through this document.
+        self.assertIn("individual contributions are visible", text)

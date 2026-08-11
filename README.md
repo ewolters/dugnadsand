@@ -36,6 +36,7 @@ requirements. If you are reading this because you are about to add a feature, re
 | [docs/architecture.md](docs/architecture.md) | Code-level comparison with Komunitin: where the gate lives, and what replaces it |
 | [docs/design-rules.md](docs/design-rules.md) | The eleven constraints that hold the model up |
 | [docs/policy-manifest.md](docs/policy-manifest.md) | The claims that are enforced by code, and why INCOMPLETE is not a soft pass |
+| [docs/policy-statement.md](docs/policy-statement.md) | The operating policy, stated formally and bound to the manifest |
 | [docs/how-it-works.md](docs/how-it-works.md) | What the system does, for somebody deciding whether to use it |
 | [docs/warehouse.md](docs/warehouse.md) | The virtual warehouse and bills of material, and why neither carries a value |
 | [docs/reuse.md](docs/reuse.md) | What was reused from the wider estate, and what could not be |
