@@ -169,10 +169,13 @@
   .contact button:hover { background: var(--brand-spruce-hover); }
   .err { color: var(--brand-error); font-size: .875rem; margin: 0; }
   .hp { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
-  .note-sent {
+  .note-sent, .note-retry {
     border-left: 2px solid var(--brand-ochre); padding-left: 1rem;
     margin-top: 1.75rem; color: var(--brand-text-soft);
   }
+  /* Nothing went wrong that they did. Same weight as the success note on
+     purpose — an alarming colour here would read as their mistake. */
+  .note-retry { border-left-color: var(--brand-warn); }
 </style>
 {% endblock %}
 
@@ -272,6 +275,12 @@
      yet, and a decision not to build anything that keeps score.</p>
   <p>If this sounds like your street, tell us about it. If you'd rather see the machinery
      first, <a href="/how-it-works/">here's how it works</a>.</p>
+
+  {% if csrf_retry %}
+    <p class="note-retry">That didn't go through — your browser didn't send us something
+       we needed to check the form came from this page. Nothing was lost; press send
+       again and it should go.</p>
+  {% endif %}
 
   {% if sent %}
     <p class="note-sent">Thanks — that's come through. We'll write back.</p>

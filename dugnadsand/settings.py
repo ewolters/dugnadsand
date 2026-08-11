@@ -129,6 +129,11 @@ SECURE_SSL_REDIRECT = False  # Cloudflare handles HTTPS redirect
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
+# Django's default failure page is a dead end that loses whatever somebody
+# typed. On a public contact form that is the difference between a message
+# arriving and not.
+CSRF_FAILURE_VIEW = "site_app.views.csrf_failure"
+
 CSRF_TRUSTED_ORIGINS = [f"https://{h}" for h in ALLOWED_HOSTS if h not in ("localhost", "127.0.0.1")]
 
 # Logging

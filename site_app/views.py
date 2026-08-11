@@ -64,6 +64,53 @@ def index(request):
     return redirect("/?sent=1#say-hello")
 
 
+def csrf_failure(request, reason=""):
+    """What a stranger sees when their browser did not return the token.
+
+    Django's default is a bare "CSRF verification failed. Request aborted."
+    and everything they typed is gone. Somebody filling in the contact form on
+    a public page has done nothing wrong, has no idea what a CSRF token is, and
+    is now looking at a dead end — which is how a message that was going to be
+    sent stops being sent.
+
+    So: plain language, their words kept, and a fresh token. They press send
+    again and it works.
+
+    IT IS SAFE TO SHOW THEM BACK WHAT THEY POSTED. The form is repopulated and
+    nothing is acted on — no mail leaves, no rate-limit budget is spent. The
+    values are escaped by the template like any other input, so a cross-site
+    POST crafted to be reflected here is inert.
+
+    Not repopulated: the honeypot. Handing a bot back the field that caught it
+    would be teaching it the answer.
+    """
+    posted = request.POST if request.method == "POST" else {}
+    looks_like_contact = any(posted.get(k) for k in ("name", "email", "message"))
+
+    # The default log line says nothing a person could act on. This is the
+    # whole reason the previous occurrence could not be diagnosed.
+    logger.warning(
+        "CSRF failure on %s (%s) — contact_form=%s cookies=%d origin=%r "
+        "referer=%r ua=%r",
+        request.path, reason, looks_like_contact, len(request.COOKIES),
+        request.headers.get("Origin"), request.headers.get("Referer"),
+        (request.headers.get("User-Agent") or "")[:120])
+
+    if not looks_like_contact:
+        return render(request, "site_app/csrf_failed.html",
+                      {"reason": reason}, status=403)
+
+    return render(request, "site_app/index.html", {
+        "form": ContactForm(initial={
+            "name": posted.get("name", ""),
+            "email": posted.get("email", ""),
+            "message": posted.get("message", ""),
+        }),
+        "sent": False,
+        "csrf_retry": True,
+    }, status=403)
+
+
 # --------------------------------------------------------------------------
 # Policy attestation
 #

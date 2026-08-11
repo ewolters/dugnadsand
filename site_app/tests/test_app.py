@@ -733,3 +733,81 @@ class NoTemplateVariableSilentlyFails(SignedIn, TestCase):
             self.missing(f"/board/{self.posting.id}/hours/"), [])
         self.assertEqual(self.missing(f"/projects/{self.project.id}/"), [])
         self.assertEqual(self.missing(f"/manifest/{self.manifest.id}/"), [])
+
+
+class ACsrfFailureIsRecoverable(TestCase):
+    """Somebody filled in the contact form and lost everything they typed.
+
+    Django's default is "CSRF verification failed. Request aborted." — a bare
+    403 with no way back. A stranger on a public page has done nothing wrong,
+    has never heard of a CSRF token, and their message simply stops existing.
+
+    Two of these were in the log before anybody noticed, thirty seconds apart:
+    somebody tried, failed, went back, tried again, failed, left.
+    """
+
+    def post_without_token(self, **data):
+        from django.test import Client
+
+        # enforce_csrf_checks makes the test client behave like a browser that
+        # sent no token, which is exactly the reported failure.
+        return Client(enforce_csrf_checks=True).post("/", data)
+
+    def test_the_contact_form_comes_back_with_their_words_in_it(self):
+        response = self.post_without_token(
+            name="Ruth", email="ruth@example.test",
+            message="We run a pantry in Pickens and would like to talk.")
+        body = response.content.decode()
+
+        self.assertEqual(response.status_code, 403)
+        self.assertIn("Ruth", body)
+        self.assertIn("ruth@example.test", body)
+        self.assertIn("pantry in Pickens", body)
+
+    def test_it_says_what_happened_without_jargon(self):
+        body = self.post_without_token(
+            name="Ruth", email="r@example.test", message="hello").content.decode()
+        # Literal text in a template is not HTML-escaped — only variable
+        # output is — so the apostrophe stays plain.
+        self.assertIn("didn't go through", body)
+        self.assertNotIn("CSRF", body)
+        self.assertNotIn("Request aborted", body)
+
+    def test_a_fresh_token_comes_with_it(self):
+        """Otherwise pressing send again fails identically, forever."""
+        body = self.post_without_token(
+            name="Ruth", email="r@example.test", message="hello").content.decode()
+        self.assertIn("csrfmiddlewaretoken", body)
+
+    def test_nothing_is_sent_and_no_budget_is_spent(self):
+        from unittest.mock import patch
+
+        with patch("kjerne_platform.email.send") as send, \
+             patch("kjerne_platform.rate_limit.check") as limit:
+            self.post_without_token(name="Ruth", email="r@example.test",
+                                    message="hello")
+        send.assert_not_called()
+        limit.assert_not_called()
+
+    def test_the_honeypot_is_not_handed_back(self):
+        """Repopulating the field that caught a bot would teach it the answer."""
+        body = self.post_without_token(
+            name="Ruth", email="r@example.test", message="hello",
+            website="http://spam.example").content.decode()
+        self.assertNotIn("spam.example", body)
+
+    def test_a_reflected_cross_site_post_is_inert(self):
+        """The form is repopulated, so whatever was posted is rendered. It is
+        escaped like any other input and nothing is acted on."""
+        body = self.post_without_token(
+            name="<script>alert(1)</script>", email="r@example.test",
+            message="hello").content.decode()
+        self.assertNotIn("<script>alert(1)</script>", body)
+        self.assertIn("&lt;script&gt;", body)
+
+    def test_a_failure_that_is_not_the_contact_form_gets_a_plain_page(self):
+        from django.test import Client
+
+        response = Client(enforce_csrf_checks=True).post("/login/", {})
+        self.assertEqual(response.status_code, 403)
+        self.assertIn("didn", response.content.decode())
