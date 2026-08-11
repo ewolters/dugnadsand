@@ -1,0 +1,16 @@
+{% extends "app_base.html" %}
+{% block title %}Put a day in — Dugnadsand{% endblock %}
+{% block content %}
+<p class="crumb"><a href="/days/">Coming up</a></p>
+<h1>Put a day in</h1>
+<p class="lede">A date, a place and what it is for. Nothing here asks who is coming —
+   people give time by taking things off the board, on a work day as on any other.</p>
+
+<form method="post" action="/days/new/">{% csrf_token %}
+  {{ form.as_p }}
+  <button class="act" type="submit">Put it in</button>
+</form>
+
+<p class="note">It is not announced yet. The next page is where permissions go, and a
+   day is announced from there once nothing is outstanding.</p>
+{% endblock %}

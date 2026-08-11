@@ -1247,3 +1247,165 @@ def member_new(request):
 
     return render(request, "site_app/member_form.html", {
         "section": "members","form": form, "created": created})
+
+
+# --------------------------------------------------------------------------
+# Work days. The one place in this system where something is withheld until a
+# condition is met, and the condition is never a member — see WorkDay.
+# --------------------------------------------------------------------------
+
+@login_required
+def work_days(request):
+    """What is coming up, and what is still waiting on somebody's permission.
+
+    Unannounced days are shown to members rather than hidden, because the
+    thing a community needs to see is the day that is stuck: a blocker nobody
+    can see is a phone call nobody makes.
+    """
+    from .models import WorkDay
+
+    member = _member(request)
+    if member is None:
+        return HttpResponseForbidden("Not a member of any organization.")
+
+    days = (WorkDay.objects.filter(cancelled_at__isnull=True)
+            .select_related("project", "called_by")
+            .prefetch_related("clearances"))
+
+    return render(request, "site_app/work_days.html", {
+        "member": member, "section": "days",
+        "announced": [d for d in days if d.published],
+        "waiting": [d for d in days if not d.published],
+        "cancelled": (WorkDay.objects.filter(cancelled_at__isnull=False)
+                      .select_related("called_by")),
+    })
+
+
+@login_required
+def work_day_new(request):
+    from .forms import WorkDayForm
+    from .services_events import call_work_day
+
+    member = _member(request)
+    if member is None:
+        return HttpResponseForbidden("Not a member of any organization.")
+
+    form = WorkDayForm(request.POST or None)
+    if request.method == "POST" and form.is_valid():
+        day = call_work_day(
+            organization=member.organization, member=member,
+            project=form.cleaned_data["project"],
+            name=form.cleaned_data["name"],
+            description=form.cleaned_data["description"],
+            starts_at=form.cleaned_data["starts_at"],
+            ends_at=form.cleaned_data["ends_at"],
+            place=form.cleaned_data["place"],
+            muster=form.cleaned_data["muster"])
+        return redirect(f"/days/{day.id}/")
+
+    return render(request, "site_app/work_day_form.html",
+                  {"member": member, "section": "days", "form": form})
+
+
+@login_required
+def work_day_detail(request, work_day_id):
+    """The day, and everything standing between it and being announced."""
+    from .forms import ClearanceForm
+    from .models import WorkDay
+    from .services_events import require_clearance
+
+    member = _member(request)
+    if member is None:
+        return HttpResponseForbidden("Not a member of any organization.")
+
+    day = get_object_or_404(
+        WorkDay.objects.select_related("project", "called_by"), pk=work_day_id)
+    form = ClearanceForm(request.POST or None)
+
+    if request.method == "POST" and form.is_valid():
+        require_clearance(
+            work_day=day, member=member, kind=form.cleaned_data["kind"],
+            authority=form.cleaned_data["authority"],
+            note=form.cleaned_data["note"])
+        return redirect(f"/days/{day.id}/")
+
+    return render(request, "site_app/work_day_detail.html", {
+        "member": member, "section": "days", "day": day, "form": form,
+        "clearances": day.clearances.select_related("raised_by"),
+        "blockers": day.blockers,
+    })
+
+
+@login_required
+def clearance_obtained(request, clearance_id):
+    """Record that somebody outside said yes."""
+    from .forms import ClearanceObtainedForm
+    from .models import Clearance
+    from .services_events import record_clearance
+
+    member = _member(request)
+    if member is None:
+        return HttpResponseForbidden("Not a member of any organization.")
+
+    clearance = get_object_or_404(
+        Clearance.objects.select_related("work_day"), pk=clearance_id)
+    form = ClearanceObtainedForm(request.POST or None)
+
+    if request.method == "POST" and form.is_valid():
+        record_clearance(
+            clearance=clearance,
+            obtained_on=form.cleaned_data["obtained_on"],
+            reference=form.cleaned_data["reference"],
+            expires_on=form.cleaned_data["expires_on"],
+            note=form.cleaned_data["note"] or clearance.note)
+        return redirect(f"/days/{clearance.work_day_id}/")
+
+    return render(request, "site_app/clearance_form.html", {
+        "member": member, "section": "days", "form": form,
+        "clearance": clearance, "day": clearance.work_day,
+    })
+
+
+@login_required
+@require_POST
+def work_day_publish(request, work_day_id):
+    from .models import WorkDay
+    from .services_events import NotCleared, publish
+
+    member = _member(request)
+    if member is None:
+        return HttpResponseForbidden("Not a member of any organization.")
+
+    day = get_object_or_404(WorkDay, pk=work_day_id)
+    try:
+        publish(day)
+    except NotCleared as refused:
+        # Name every blocker, not the first. Otherwise somebody makes three
+        # phone calls on three separate days.
+        messages.error(request, "Not announced. Still waiting on: "
+                                + "; ".join(f"{c.kind} from {c.authority}"
+                                            for c in refused.blockers))
+    else:
+        messages.success(request, "Announced.")
+    return redirect(f"/days/{day.id}/")
+
+
+@login_required
+@require_POST
+def work_day_cancel(request, work_day_id):
+    """Any member may call it off, as any member may close a project.
+
+    Restricting it to whoever called the day would strand it the week that
+    person is away, which is exactly when weather cancels things.
+    """
+    from .models import WorkDay
+    from .services_events import cancel
+
+    member = _member(request)
+    if member is None:
+        return HttpResponseForbidden("Not a member of any organization.")
+
+    day = get_object_or_404(WorkDay, pk=work_day_id)
+    cancel(day, because=(request.POST.get("because") or "").strip())
+    messages.success(request, "Called off.")
+    return redirect(f"/days/{day.id}/")

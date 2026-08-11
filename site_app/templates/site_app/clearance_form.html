@@ -1,0 +1,18 @@
+{% extends "app_base.html" %}
+{% block title %}{{ clearance.kind }} — Dugnadsand{% endblock %}
+{% block content %}
+<p class="crumb"><a href="/days/{{ day.id }}/">{{ day.name }}</a></p>
+<h1>{{ clearance.kind }}</h1>
+<p class="who">{{ clearance.authority }}</p>
+
+<p class="lede">Record that this was given, and how somebody who was not on the call can
+   check it.</p>
+
+<form method="post" action="/days/clearance/{{ clearance.id }}/">{% csrf_token %}
+  {{ form.as_p }}
+  <button class="act" type="submit">Record it</button>
+</form>
+
+<p class="note">This records that somebody says permission was given. It does not
+   obtain anything, and nothing here is checked with the authority named above.</p>
+{% endblock %}

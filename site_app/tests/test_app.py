@@ -503,11 +503,16 @@ class TheNavigationStaysGrouped(SignedIn, TestCase):
 
     That is the default outcome: every feature adds a link, nobody removes
     one, and a member ends up reading a list of features instead of seeing
-    where things live. These tests hold the shape — three subject systems,
-    two surfaces across them, and personal things folded away.
+    where things live. These tests hold the shape — the subject systems, the
+    surfaces across them, and personal things folded away.
+
+    Work days made it four systems rather than three. The number is not the
+    contract; the grouping is. What must not happen is a sixth and seventh
+    entry arriving because nobody had to look at this list to add them.
     """
 
-    AREAS = ["/board/", "/pairings/", "/projects/", "/warehouse/", "/ledger/"]
+    AREAS = ["/board/", "/pairings/", "/projects/", "/days/", "/warehouse/",
+             "/ledger/"]
 
     def setUp(self):
         self.org = Organization.objects.create(slug="alpha", name="Alpha")
@@ -550,7 +555,8 @@ class TheNavigationStaysGrouped(SignedIn, TestCase):
 
     def test_the_current_area_is_marked_on_each_of_its_pages(self):
         for path, section in (("/board/", "Board"), ("/warehouse/", "On hand"),
-                              ("/projects/", "Ongoing"), ("/ledger/", "Ledger")):
+                              ("/projects/", "Ongoing"), ("/ledger/", "Ledger"),
+                              ("/days/", "Coming up")):
             body = self.client.get(path).content.decode()
             self.assertRegex(body, rf'aria-current="page"[^>]*>{section}<',
                              msg=path)
@@ -641,7 +647,7 @@ class NoTemplateVariableSilentlyFails(SignedIn, TestCase):
 
     PAGES = ["/board/", "/board/new/", "/projects/", "/warehouse/",
              "/manifests/", "/pairings/", "/pinned/", "/you/", "/notices/",
-             "/ledger/", "/password/", "/members/"]
+             "/ledger/", "/password/", "/members/", "/days/", "/days/new/"]
 
     def setUp(self):
         """EVERY LIST MUST HAVE A ROW IN IT.
@@ -659,6 +665,7 @@ class NoTemplateVariableSilentlyFails(SignedIn, TestCase):
         from site_app.models import (Manifest, MaterialGiven, MaterialNeed,
                                      Project, StockLine, Warehouse)
         from site_app.services import claim_posting, record_contribution
+        from site_app.services_events import call_work_day
         from site_app.services_social import add_comment, toggle_pin
 
         self.org = Organization.objects.create(slug="alpha", name="Alpha")
@@ -706,8 +713,33 @@ class NoTemplateVariableSilentlyFails(SignedIn, TestCase):
                 organization=self.org, stock_line=line,
                 quantity=Decimal("20.00"), destination="Habitat build",
                 sent_by=self.member)
+            # A work day carrying one obtained clearance and one outstanding,
+            # so both arms of every {% if %} in work_day_detail.html render.
+            # An unclaimed project FK and a null expiry are the lookups that
+            # would silently resolve to nothing.
+            from datetime import timedelta as _td
+
+            from site_app.services_events import (record_clearance,
+                                                  require_clearance)
+            self.day = call_work_day(
+                organization=self.org, member=self.member, project=project,
+                name="Reedy River cleanup", description="Waders and gloves.",
+                starts_at=timezone.now() + _td(days=9),
+                ends_at=timezone.now() + _td(days=9, hours=6),
+                place="Cedar Lane put-in.", muster="By the gate.")
+            record_clearance(
+                clearance=require_clearance(
+                    work_day=self.day, member=self.member,
+                    kind="Landowner permission", authority="Mrs Alderman"),
+                obtained_on=date.today(), reference="Spoke 4 Aug",
+                expires_on=date.today() + _td(days=30))
+            require_clearance(
+                work_day=self.day, member=self.member, kind="Event permit",
+                authority="City of Greenville")
+
             self.project, self.line, self.need = project, line, need
 
+        self.PAGES = self.PAGES + [f"/days/{self.day.id}/"]
         self.sign_in(self.user)
 
     def missing(self, path):
@@ -724,7 +756,9 @@ class NoTemplateVariableSilentlyFails(SignedIn, TestCase):
     def test_every_page_actually_rendered_something(self):
         """The guard is worthless on an empty page, so this checks the pages
         it relies on are not empty."""
-        for path, marker in (("/ledger/", "3.00"),
+        for path, marker in ((f"/days/{self.day.id}/", "Mrs Alderman"),
+                             ("/days/", "Reedy River cleanup"),
+                             ("/ledger/", "3.00"),
                              ("/warehouse/", "board-feet"),
                              ("/manifests/", "Habitat build"),
                              ("/projects/", "Repairing homes"),

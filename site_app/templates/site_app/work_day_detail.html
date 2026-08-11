@@ -1,0 +1,86 @@
+{% extends "app_base.html" %}
+{% block title %}{{ day.name }} — Dugnadsand{% endblock %}
+{% block content %}
+<p class="crumb"><a href="/days/">Coming up</a></p>
+
+{% comment %}
+  Messages are rendered here rather than in the shell. Only board.html renders
+  them today, so a refusal raised in the view would otherwise be swallowed and
+  the page would look as though the button did nothing at all.
+{% endcomment %}
+{% if messages %}{% for m in messages %}<p class="said">{{ m }}</p>{% endfor %}{% endif %}
+
+<h1>{{ day.name }}</h1>
+<p class="who">{{ day.starts_at|date:"l j F Y" }} · {{ day.starts_at|date:"H:i" }}{% if day.ends_at %}–{{ day.ends_at|date:"H:i" }}{% endif %} · put in by {{ day.called_by.display_name }}</p>
+
+{% if day.cancelled_at %}
+  <p class="stale"><strong>Called off.</strong>{% if day.cancelled_because %} {{ day.cancelled_because }}{% endif %}</p>
+{% elif day.published %}
+  <p class="cap">Announced {{ day.published_at|date:"j F" }}.</p>
+{% else %}
+  <p class="cap">Not announced yet.</p>
+{% endif %}
+
+<p>{{ day.description|linebreaksbr }}</p>
+
+<h2>Where</h2>
+<p>{{ day.place|linebreaksbr }}</p>
+{% if day.muster %}<p class="note">Gather at: {{ day.muster|linebreaksbr }}</p>{% endif %}
+{% if day.project %}<p class="cap">Part of <a href="/projects/{{ day.project_id }}/">{{ day.project.name }}</a></p>{% endif %}
+
+<h2>Permissions</h2>
+<p class="note">Recording something here does not create it. This is a note that
+   somebody says permission was given, with a reference so a person who was not on
+   the call can check it.</p>
+
+{% for c in clearances %}
+  <div class="card{% if not c.obtained %} need{% elif c.lapsed %} stale-line{% endif %}">
+    <p class="who">{{ c.kind }}</p>
+    <p>{{ c.authority|linebreaksbr }}</p>
+    {% if c.obtained %}
+      <p class="qty">Given {{ c.obtained_on|date:"j F Y" }}{% if c.reference %} · {{ c.reference }}{% endif %}</p>
+      {% if c.expires_on %}
+        <p class="{% if c.lapsed %}stale{% else %}cap{% endif %}">
+          {% if c.lapsed %}Ran out {{ c.expires_on|date:"j F Y" }}. This blocks the day until it is renewed.{% else %}Runs out {{ c.expires_on|date:"j F Y" }}.{% endif %}</p>
+      {% endif %}
+    {% else %}
+      <p class="stale">Nobody has this yet.</p>
+    {% endif %}
+    {% if c.note %}<p class="note">{{ c.note|linebreaksbr }}</p>{% endif %}
+    <p class="cap">Raised by {{ c.raised_by.display_name }}</p>
+    {% if not day.cancelled_at %}
+      <div class="row">
+        <a class="act quiet" href="/days/clearance/{{ c.id }}/">{% if c.obtained %}Update it{% else %}Record that it was given{% endif %}</a>
+      </div>
+    {% endif %}
+  </div>
+{% empty %}
+  <p class="empty">Nothing recorded. If this day needs nobody's permission, it can be
+     announced as it is.</p>
+{% endfor %}
+
+{% if not day.cancelled_at %}
+  <h3>Add something it needs</h3>
+  <form method="post" action="/days/{{ day.id }}/">{% csrf_token %}
+    {{ form.as_p }}
+    <button class="act" type="submit">Add it</button>
+  </form>
+
+  <h2>Announcing</h2>
+  {% if blockers %}
+    <p class="stale">Not ready. Still waiting on
+      {% for c in blockers %}{{ c.kind }} from {{ c.authority }}{% if not forloop.last %}; {% endif %}{% endfor %}.</p>
+  {% endif %}
+  <form method="post" action="/days/{{ day.id }}/announce/">{% csrf_token %}
+    <button class="act" type="submit"{% if blockers %} disabled{% endif %}>
+      {% if day.published %}Announced{% else %}Announce it{% endif %}</button>
+  </form>
+
+  <h3>Call it off</h3>
+  <form method="post" action="/days/{{ day.id }}/off/">{% csrf_token %}
+    <p><label for="because">Why (optional)</label>
+       <input id="because" name="because" type="text" maxlength="400"></p>
+    <button class="act quiet" type="submit">Call it off</button>
+  </form>
+{% endif %}
+{% endblock %}

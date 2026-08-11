@@ -252,13 +252,15 @@
       {% if user.is_authenticated %}
       <nav class="areas">
         {% comment %}
-          The three places things live, then the two surfaces that cross all
-          three. Ordered by how often a member opens them, not by when they
-          were built.
+          The four places things live -- what is open, what is ongoing, what
+          has a date, what is on a shelf -- then the two surfaces that cross
+          all of them. Ordered by how often a member opens them, not by when
+          they were built.
         {% endcomment %}
         <a href="/board/" {% if section == "board" %}aria-current="page"{% endif %}>Board</a>
         <a href="/pairings/" {% if section == "pairings" %}aria-current="page"{% endif %}>Worth a look</a>
         <a href="/projects/" {% if section == "projects" %}aria-current="page"{% endif %}>Ongoing</a>
+        <a href="/days/" {% if section == "days" %}aria-current="page"{% endif %}>Coming up</a>
         <a href="/warehouse/" {% if section == "warehouse" %}aria-current="page"{% endif %}>On hand</a>
         <a href="/ledger/" {% if section == "ledger" %}aria-current="page"{% endif %}>Ledger</a>
       </nav>

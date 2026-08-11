@@ -281,3 +281,139 @@ class WorkDaysAreTenantScoped(SignedIn, TestCase):
                               kind="Permit", authority="The city")
         with tenant_context(self.beta):
             self.assertEqual(Clearance.objects.count(), 0)
+
+
+class TheWorkDayPages(SignedIn, WorkDayBase):
+    """The screens. The one that matters is announcing, because that is the
+    only button in this system that can refuse."""
+
+    def setUp(self):
+        super().setUp()
+        self.sign_in(self.user)
+
+    def test_the_list_is_reachable_and_separates_announced_from_waiting(self):
+        with tenant_context(self.org):
+            waiting = self.a_work_day()
+            require_clearance(work_day=waiting, member=self.member,
+                              kind="Event permit", authority="The city")
+            publish(self.a_work_day())
+
+        body = self.client.get("/days/").content.decode()
+        self.assertEqual(self.client.get("/days/").status_code, 200)
+        self.assertIn("Announced", body)
+        self.assertIn("Waiting on permission", body)
+        self.assertIn("Event permit", body)
+
+    def test_putting_a_day_in_creates_it_unannounced(self):
+        starts = (timezone.now() + timedelta(days=14)).strftime("%Y-%m-%dT%H:%M")
+        response = self.client.post("/days/new/", {
+            "name": "Reedy River cleanup", "description": "Waders and gloves.",
+            "project": "", "starts_at": starts, "ends_at": "",
+            "place": "Cedar Lane put-in.", "muster": ""})
+        self.assertEqual(response.status_code, 302)
+
+        with tenant_context(self.org):
+            day = WorkDay.objects.get(name="Reedy River cleanup")
+            self.assertIsNone(day.published_at)
+
+    def test_announcing_is_refused_and_says_what_is_missing(self):
+        """The refusal has to reach the page. messages are rendered by
+        board.html and nowhere else, so a message raised here would have been
+        swallowed and the button would look broken rather than blocked."""
+        with tenant_context(self.org):
+            day = self.a_work_day()
+            require_clearance(work_day=day, member=self.member,
+                              kind="River access permit",
+                              authority="Greenville County Parks")
+
+        response = self.client.post(f"/days/{day.id}/announce/", follow=True)
+        body = response.content.decode()
+        self.assertIn("River access permit", body)
+        self.assertIn("Greenville County Parks", body)
+
+        with tenant_context(self.org):
+            self.assertIsNone(WorkDay.objects.get(pk=day.pk).published_at)
+
+    def test_recording_the_clearance_then_announcing_works(self):
+        with tenant_context(self.org):
+            day = self.a_work_day()
+            clearance = require_clearance(
+                work_day=day, member=self.member, kind="River access permit",
+                authority="Greenville County Parks")
+
+        self.client.post(f"/days/clearance/{clearance.id}/", {
+            "obtained_on": date.today().isoformat(), "reference": "PR-2026-1184",
+            "expires_on": "", "note": "Spoke to Dana at Parks."})
+        self.client.post(f"/days/{day.id}/announce/")
+
+        with tenant_context(self.org):
+            fresh = WorkDay.objects.get(pk=day.pk)
+            self.assertTrue(fresh.published)
+            self.assertEqual(
+                Clearance.objects.get(pk=clearance.pk).reference, "PR-2026-1184")
+
+    def test_the_announce_button_is_disabled_while_blocked(self):
+        """Disabled as well as refused. Offering a button that cannot work is
+        how somebody concludes the page is broken."""
+        with tenant_context(self.org):
+            day = self.a_work_day()
+            require_clearance(work_day=day, member=self.member,
+                              kind="Event permit", authority="The city")
+
+        body = self.client.get(f"/days/{day.id}/").content.decode()
+        self.assertIn("disabled", body)
+
+    def test_a_cleared_day_offers_a_live_button(self):
+        with tenant_context(self.org):
+            day = self.a_work_day()
+        body = self.client.get(f"/days/{day.id}/").content.decode()
+        self.assertIn("Announce it", body)
+        self.assertNotIn("disabled", body)
+
+    def test_the_page_says_recording_a_permission_does_not_create_one(self):
+        """The disclaimer travels with the artifact, as it does on the
+        attestation and the manifest."""
+        import re
+
+        with tenant_context(self.org):
+            day = self.a_work_day()
+        body = re.sub(r"\s+", " ", self.client.get(f"/days/{day.id}/").content.decode())
+        self.assertIn("does not create it", body)
+
+    def test_adding_a_requirement_from_the_page(self):
+        with tenant_context(self.org):
+            day = self.a_work_day()
+
+        self.client.post(f"/days/{day.id}/", {
+            "kind": "Certificate of insurance", "authority": "Our carrier",
+            "note": ""})
+
+        with tenant_context(self.org):
+            self.assertEqual(
+                Clearance.objects.filter(work_day=day).count(), 1)
+
+    def test_calling_it_off_records_the_reason(self):
+        with tenant_context(self.org):
+            day = publish(self.a_work_day())
+
+        self.client.post(f"/days/{day.id}/off/",
+                         {"because": "The river came up overnight."})
+
+        with tenant_context(self.org):
+            fresh = WorkDay.objects.get(pk=day.pk)
+            self.assertFalse(fresh.published)
+            self.assertIn("river came up", fresh.cancelled_because)
+
+    def test_a_day_from_another_organization_is_not_reachable(self):
+        other = Organization.objects.create(slug="beta", name="Beta")
+        other_user = User.objects.create_user("ola", password="dugnad-test-pw")
+        with tenant_context(other):
+            ola = Member.objects.create(
+                organization=other, display_name="Ola", user=other_user)
+            theirs = call_work_day(
+                organization=other, member=ola, name="Theirs",
+                description="Not ours.",
+                starts_at=timezone.now() + timedelta(days=2), place="Elsewhere.")
+        set_tenant(None)
+
+        self.assertEqual(self.client.get(f"/days/{theirs.id}/").status_code, 404)

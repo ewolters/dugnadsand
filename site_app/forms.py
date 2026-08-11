@@ -326,3 +326,110 @@ class MaterialGivenForm(forms.Form):
     note = forms.CharField(
         max_length=2000, required=False, widget=forms.Textarea(attrs={"rows": 2}),
         label="Anything worth remembering (optional)")
+
+
+class WorkDayForm(forms.ModelForm):
+    """A day, a place, a time. Nothing about who is expected.
+
+    There is no attendees field, no headcount and no capacity, and none may be
+    added — see WorkDay's docstring. People give time by claiming postings, on
+    a work day exactly as on any other.
+    """
+
+    class Meta:
+        from .models import WorkDay
+
+        model = WorkDay
+        fields = ("name", "description", "project", "starts_at", "ends_at",
+                  "place", "muster")
+        labels = {
+            "name": "What to call it",
+            "description": "What the day is for, and what to bring",
+            "project": "Part of something ongoing (optional)",
+            "starts_at": "Starts",
+            "ends_at": "Ends (optional)",
+            "place": "Where",
+            "muster": "Where to gather, if that is somewhere else (optional)",
+        }
+        help_texts = {
+            "place": "Write it however you would tell a neighbour. "
+                     "“The Cedar Lane put-in, park on the grass by the gate” "
+                     "beats a postal address.",
+        }
+        widgets = {
+            "description": forms.Textarea(attrs={"rows": 4}),
+            "place": forms.Textarea(attrs={"rows": 3}),
+            "muster": forms.Textarea(attrs={"rows": 2}),
+            "starts_at": forms.DateTimeInput(
+                attrs={"type": "datetime-local"}, format="%Y-%m-%dT%H:%M"),
+            "ends_at": forms.DateTimeInput(
+                attrs={"type": "datetime-local"}, format="%Y-%m-%dT%H:%M"),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        from .models import Project
+
+        self.fields["project"].queryset = Project.objects.filter(open=True)
+        self.fields["project"].empty_label = "On its own"
+        for name in ("starts_at", "ends_at"):
+            self.fields[name].input_formats = ["%Y-%m-%dT%H:%M", "%Y-%m-%d %H:%M"]
+
+    def clean(self):
+        cleaned = super().clean()
+        starts, ends = cleaned.get("starts_at"), cleaned.get("ends_at")
+        if starts and ends and ends <= starts:
+            self.add_error("ends_at", "That is before it starts.")
+        return cleaned
+
+
+class ClearanceForm(forms.Form):
+    """A permission the day needs and does not have yet.
+
+    kind is free text. Every county names things differently, and a shipped
+    list of permission types would be a catalog — which this system keeps of
+    nothing else either.
+    """
+
+    kind = forms.CharField(
+        max_length=120, label="What is needed",
+        help_text="“River access permit”, “Landowner permission”, "
+                  "“Certificate of insurance” — whatever it is called locally.")
+    authority = forms.CharField(
+        max_length=2000, widget=forms.Textarea(attrs={"rows": 2}),
+        label="Who has to say yes")
+    note = forms.CharField(
+        max_length=4000, required=False, widget=forms.Textarea(attrs={"rows": 2}),
+        label="Anything worth writing down (optional)")
+
+
+class ClearanceObtainedForm(forms.Form):
+    """Somebody said yes. When, and how a person who was not on the call can
+    check it.
+
+    Takes no member. Who obtained it goes in the note: a second Member FK on
+    that row is the shape of a transfer, and no-exchange refuses it.
+    """
+
+    obtained_on = forms.DateField(
+        label="When it was given",
+        widget=forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"))
+    reference = forms.CharField(
+        max_length=200, required=False, label="Reference (optional)",
+        help_text="A permit number, an email date, the name of whoever said it "
+                  "— whatever makes it checkable by somebody else.")
+    expires_on = forms.DateField(
+        required=False, label="Runs out on (optional)",
+        widget=forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"),
+        help_text="Leave blank if it does not expire. A permit for a date does, "
+                  "and an expired one blocks the day again.")
+    note = forms.CharField(
+        max_length=4000, required=False, widget=forms.Textarea(attrs={"rows": 3}),
+        label="Note (optional)")
+
+    def clean(self):
+        cleaned = super().clean()
+        obtained, expires = cleaned.get("obtained_on"), cleaned.get("expires_on")
+        if obtained and expires and expires < obtained:
+            self.add_error("expires_on", "That is before it was given.")
+        return cleaned
