@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+
+{% block title %}Chapter — Dugnadsand{% endblock %}
+
+{% block extra_css %}
+<style>
+  /* Uses the public shell rather than the member one on purpose: an officer
+     need not be a member of any organization, and showing them a nav of
+     member pages they cannot reach would be a menu of locked doors. */
+  body { margin:0; background:var(--brand-birch); color:var(--brand-ink);
+         font-family:var(--brand-font-serif); line-height:1.65; }
+  body > header { border-bottom:1px solid var(--brand-rule); }
+  body > header nav { max-width:50rem; margin-inline:auto; padding:1.1rem var(--brand-gutter);
+    display:flex; align-items:baseline; justify-content:space-between; gap:1rem; flex-wrap:wrap; }
+  body > header .nav-right { display:flex; align-items:baseline; gap:1.25rem; }
+  body > header .place, body > header .signin {
+    font-family:var(--brand-font-mono); font-size:.6875rem; letter-spacing:.1em;
+    text-transform:uppercase; color:var(--brand-moss); }
+  body > header .signin { color:var(--brand-ochre); text-decoration:none; }
+  body > header .brand-name { font-family:var(--brand-font-sans); font-weight:600;
+    letter-spacing:.07em; text-transform:uppercase; text-decoration:none; color:var(--brand-ink); }
+  .mark { height:.7em; width:auto; margin-right:.55rem; vertical-align:baseline; opacity:.75; }
+  body > footer { border-top:1px solid var(--brand-rule); margin-top:4.5rem;
+    font-family:var(--brand-font-mono); font-size:.75rem; color:var(--brand-moss); }
+  body > footer p { max-width:50rem; margin:0 auto; padding:1.5rem var(--brand-gutter); }
+
+  main { max-width:50rem; margin-inline:auto; padding:0 var(--brand-gutter); }
+
+  h1 { color:var(--brand-ink); font-family:var(--brand-font-sans); font-weight:600;
+       font-size:clamp(1.7rem,4vw,2.2rem); line-height:1.12; letter-spacing:-.02em;
+       margin:3.5rem 0 .3rem; text-wrap:balance; }
+  .role { font-family:var(--brand-font-mono); font-size:.6875rem; letter-spacing:.1em;
+    text-transform:uppercase; color:var(--brand-ochre); margin:0 0 1.5rem; }
+  h2 { color:var(--brand-ink); font-family:var(--brand-font-sans); font-weight:600;
+       font-size:1.15rem; margin:2.5rem 0 .5rem; letter-spacing:-.01em; }
+  p { margin:0 0 1rem; }
+  a { color:var(--brand-spruce); }
+
+  .card { border:1px solid var(--brand-rule); background:var(--brand-surface);
+    padding:1rem 1.15rem; margin:0 0 .85rem; }
+  .card .who { font-family:var(--brand-font-mono); font-size:.6875rem;
+    letter-spacing:.09em; text-transform:uppercase; color:var(--brand-moss);
+    margin:0 0 .3rem; }
+  .card h3 { font-family:var(--brand-font-sans); font-size:1rem; font-weight:600;
+    margin:0 0 .3rem; color:var(--brand-ink); }
+  .card p:last-child { margin-bottom:0; }
+  .card.waiting { border-left:3px solid var(--brand-ochre); }
+
+  .needs { font-size:.9rem; color:var(--brand-warn); background:var(--brand-warn-wash);
+    padding:.45rem .6rem; margin:.5rem 0 0; }
+  .ready { font-size:.9rem; color:var(--brand-spruce); margin:.5rem 0 0; }
+
+  .roster { display:grid; grid-template-columns:1fr auto; gap:.4rem 1rem;
+    font-size:.9375rem; margin:0 0 1.5rem; }
+  .roster dt { margin:0; }
+  .roster dd { margin:0; font-family:var(--brand-font-mono); font-size:.8125rem;
+    color:var(--brand-moss); }
+
+  .boundary { border:1px solid var(--brand-ochre); background:var(--brand-warn-wash);
+    padding:1.1rem 1.25rem; margin:2.5rem 0 0; font-size:.9375rem; }
+  .boundary b { font-family:var(--brand-font-mono); font-size:.75rem; letter-spacing:.1em;
+    text-transform:uppercase; color:var(--brand-warn); display:block; margin-bottom:.5rem; }
+  .boundary p:last-child { margin-bottom:0; }
+
+  .empty { color:var(--brand-moss); font-style:italic; }
+  code { font-family:var(--brand-font-mono); font-size:.875em; }
+</style>
+{% endblock %}
+
+{% block content %}
+{% for r in regions %}
+  <h1>{{ r.region.name }}</h1>
+  <p class="role">{{ r.role.title|default:r.role.get_role_display }}{% if r.region.covers %} · {{ r.region.covers }}{% endif %}</p>
+
+  <h2>Officers</h2>
+  <dl class="roster">
+    {% for officer in r.officers %}
+      <dt>{{ officer.title|default:officer.get_role_display }}</dt>
+      <dd>{{ officer.user.username }}</dd>
+    {% endfor %}
+  </dl>
+
+  <h2>Organizations admitted</h2>
+  {% for organization in r.organizations %}
+    <div class="card">
+      <p class="who">Admitted {{ organization.admitted_at|date:"j F Y" }}</p>
+      <h3>{{ organization.name }}</h3>
+      <p class="empty">Nothing inside it is visible here.</p>
+    </div>
+  {% empty %}
+    <p class="empty">None yet. An organization appears here once an application to this
+       chapter has been admitted.</p>
+  {% endfor %}
+
+  <h2>Applications waiting</h2>
+  {% for w in r.waiting %}
+    <div class="card waiting">
+      <p class="who">{{ w.application.get_kind_display }} · submitted {{ w.application.submitted_at|date:"j F Y" }}</p>
+      <h3>{{ w.application.legal_name }}</h3>
+      <p>{{ w.application.contact_name }} — {{ w.application.email }}</p>
+      {% if w.blockers %}
+        <p class="needs">Still needs:
+          {% for blocker in w.blockers %}{{ blocker }}{% if not forloop.last %}; {% endif %}{% endfor %}.</p>
+      {% else %}
+        <p class="ready">Ready to decide.</p>
+      {% endif %}
+      <p class="who">Decide it with <code>manage.py decide_application {{ w.application.id }}</code></p>
+    </div>
+  {% empty %}
+    <p class="empty">Nothing waiting.</p>
+  {% endfor %}
+{% endfor %}
+
+<div class="boundary">
+  <b>What this page cannot show</b>
+  <p>A chapter holds a roster. It has no access to anything inside the organizations it
+     admitted: members, postings, the ledger, projects and material are invisible to it,
+     as they are to every other organization.</p>
+  <p>This is enforced by the shape of the database rather than by this page choosing not
+     to display it. A chapter carries no relation to any tenant-scoped record in either
+     direction, so there is no query this screen could make even by mistake.</p>
+</div>
+
+<p><a href="/chapters/">All chapters</a> · <a href="/policy/">Statement of operating policy</a></p>
+{% endblock %}

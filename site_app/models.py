@@ -903,6 +903,13 @@ class Region(models.Model):
     covers = models.TextField(blank=True)
     description = models.TextField(blank=True)
 
+    # Which counties to shade on the map, as the ids in the baked SVG:
+    # "greenville,spartanburg,anderson". Comma-separated text rather than a
+    # geometry column because this is a diagram of where chapters are, not a
+    # survey — nothing is computed from it, and a chapter that covers half a
+    # county still says the county.
+    map_areas = models.TextField(blank=True)
+
     active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -911,6 +918,10 @@ class Region(models.Model):
 
     def __str__(self):
         return self.name
+
+    @property
+    def areas(self):
+        return [a.strip() for a in self.map_areas.split(",") if a.strip()]
 
 
 class RegionRole(models.Model):

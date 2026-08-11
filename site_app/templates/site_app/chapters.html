@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+
+{% block title %}Chapters — Dugnadsand{% endblock %}
+
+{% block extra_css %}
+<style>
+  /* The register of /policy/ and /apply/. Every value is a --brand-* token;
+     brand-lint fails the build on a literal. */
+  body { margin:0; background:var(--brand-birch); color:var(--brand-ink);
+         font-family:var(--brand-font-serif); line-height:1.65; }
+  body > header { border-bottom:1px solid var(--brand-rule); }
+  body > header nav { max-width:52rem; margin-inline:auto; padding:1.1rem var(--brand-gutter);
+    display:flex; align-items:baseline; justify-content:space-between; gap:1rem; flex-wrap:wrap; }
+  body > header .nav-right { display:flex; align-items:baseline; gap:1.25rem; }
+  body > header .place, body > header .signin {
+    font-family:var(--brand-font-mono); font-size:.6875rem; letter-spacing:.1em;
+    text-transform:uppercase; color:var(--brand-moss); }
+  body > header .signin { color:var(--brand-ochre); text-decoration:none; }
+  body > header .brand-name { font-family:var(--brand-font-sans); font-weight:600;
+    letter-spacing:.07em; text-transform:uppercase; text-decoration:none; color:var(--brand-ink); }
+  .mark { height:.7em; width:auto; margin-right:.55rem; vertical-align:baseline; opacity:.75; }
+  body > footer { border-top:1px solid var(--brand-rule); margin-top:4.5rem;
+    font-family:var(--brand-font-mono); font-size:.75rem; color:var(--brand-moss); }
+  body > footer p { max-width:52rem; margin:0 auto; padding:1.5rem var(--brand-gutter); }
+
+  main { max-width:52rem; margin-inline:auto; padding:0 var(--brand-gutter); }
+
+  h1 { color:var(--brand-ink); font-family:var(--brand-font-sans); font-weight:600;
+       font-size:clamp(1.8rem,4.5vw,2.4rem); line-height:1.12; letter-spacing:-.02em;
+       margin:3.5rem 0 .4rem; text-wrap:balance; }
+  .sub { color:var(--brand-moss); margin:0 0 2rem; font-size:1.0625rem; }
+  h2 { color:var(--brand-ink); font-family:var(--brand-font-sans); font-weight:600;
+       font-size:1.25rem; margin:2.5rem 0 .5rem; letter-spacing:-.01em; }
+  p { margin:0 0 1rem; }
+  a { color:var(--brand-spruce); }
+
+  /* The map. Baked from Census boundaries at build time and inlined, so a
+     visitor's address never reaches a tile provider. */
+  .map { border:1px solid var(--brand-rule); background:var(--brand-surface);
+    padding:1rem; margin:1.5rem 0 .75rem; overflow-x:auto; }
+  .map svg { display:block; width:100%; height:auto; min-width:26rem; }
+  .county { fill:var(--brand-surface); stroke:var(--brand-rule); stroke-width:1;
+    vector-effect:non-scaling-stroke; }
+  .county.held { fill:var(--brand-spruce); stroke:var(--brand-birch); }
+  .county.held:hover { fill:var(--brand-spruce-hover); }
+  .county title { pointer-events:none; }
+
+  .key { display:flex; gap:1.5rem; flex-wrap:wrap; align-items:center;
+    font-family:var(--brand-font-mono); font-size:.6875rem; letter-spacing:.09em;
+    text-transform:uppercase; color:var(--brand-moss); margin:0 0 2.5rem; }
+  .key span { display:flex; align-items:center; gap:.45rem; }
+  .key i { width:.85rem; height:.85rem; display:inline-block;
+    border:1px solid var(--brand-rule); }
+  .key i.held { background:var(--brand-spruce); border-color:var(--brand-spruce); }
+  .key i.open { background:var(--brand-surface); }
+
+  .chapter { border:1px solid var(--brand-rule); background:var(--brand-surface);
+    padding:1.25rem 1.4rem; margin:0 0 1.25rem; }
+  .chapter h3 { font-family:var(--brand-font-sans); font-size:1.0625rem;
+    font-weight:600; margin:0 0 .3rem; color:var(--brand-ink); }
+  .chapter .covers { color:var(--brand-moss); margin:0 0 .75rem; font-size:.9375rem; }
+  .chapter dl { display:grid; grid-template-columns:auto 1fr; gap:.3rem 1rem;
+    margin:0; font-size:.875rem; }
+  .chapter dt { font-family:var(--brand-font-mono); font-size:.6875rem;
+    letter-spacing:.09em; text-transform:uppercase; color:var(--brand-moss);
+    align-self:center; }
+  .chapter dd { margin:0; }
+
+  .empty { color:var(--brand-moss); font-style:italic; }
+</style>
+{% endblock %}
+
+{% block content %}
+<h1>Chapters</h1>
+<p class="sub">A chapter admits organizations in one area and holds the roster for it.
+   Every county below that is not shaded is one where no chapter exists yet.</p>
+
+<div class="map">
+  {{ map }}
+</div>
+<div class="key">
+  <span><i class="held"></i> Covered by a chapter</span>
+  <span><i class="open"></i> No chapter yet</span>
+  <span>{{ covered_count }} of 46 counties</span>
+</div>
+
+<h2>Where there are chapters</h2>
+{% for r in regions %}
+  <div class="chapter">
+    <h3>{{ r.name }}</h3>
+    {% if r.covers %}<p class="covers">{{ r.covers }}</p>{% endif %}
+    <dl>
+      <dt>Organizations</dt>
+      <dd>{{ r.organizations.count }}</dd>
+      <dt>Officers</dt>
+      <dd>{{ r.roles.count }}</dd>
+    </dl>
+  </div>
+{% empty %}
+  <p class="empty">No chapters yet.</p>
+{% endfor %}
+
+<h2>Where there are none</h2>
+<p>A chapter starts as an application from the people who intend to run it. The named
+   officers are the ones who take that on: admitting organizations in the area, holding
+   the roster, and being reachable by the people in it.</p>
+<p><a href="/apply/">Applying to the network</a> ·
+   <a href="/policy/">Statement of operating policy</a></p>
+
+<h2>What a chapter can and cannot see</h2>
+<p>A chapter holds a roster: which organizations it admitted, and who runs the chapter.
+   It has no access to anything inside those organizations. Members, postings, the
+   ledger, projects and material remain invisible to it, as they are to every other
+   organization — the separation is enforced by the database, and a chapter is not an
+   exception to it.</p>
+{% endblock %}

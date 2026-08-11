@@ -21,6 +21,10 @@ class Command(BaseCommand):
         parser.add_argument("--slug", help="Derived from the name if omitted")
         parser.add_argument("--covers", default="",
                             help="Where it covers, in words")
+        parser.add_argument(
+            "--areas", default="",
+            help="County ids to shade on the map, comma-separated: "
+                 "greenville,spartanburg,anderson")
 
     def handle(self, *args, **options):
         name = options["name"].strip()
@@ -31,7 +35,9 @@ class Command(BaseCommand):
             raise CommandError(f"A chapter with slug '{slug}' already exists.")
 
         region = Region.objects.create(
-            slug=slug, name=name, covers=options["covers"].strip())
+            slug=slug, name=name, covers=options["covers"].strip(),
+            map_areas=",".join(
+                a.strip() for a in options["areas"].split(",") if a.strip()))
 
         self.stdout.write(self.style.SUCCESS(f"Opened {region.name} ({region.slug})."))
         self.stdout.write(

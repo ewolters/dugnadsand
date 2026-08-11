@@ -1462,3 +1462,104 @@ def apply(request):
 
     return render(request, "site_app/apply_received.html",
                   {"kind": application.get_kind_display()})
+
+
+# --------------------------------------------------------------------------
+# Chapters. A roster and a map, never a lens: see Region's docstring for why
+# a chapter cannot read into the organizations it admitted.
+# --------------------------------------------------------------------------
+
+def chapters(request):
+    """Public: where there are chapters, and where there are not.
+
+    The blank counties are the point. Somebody looking for their own area and
+    finding it unshaded is the person the apply page is for.
+    """
+    from .models import Region
+
+    regions = Region.objects.filter(active=True).prefetch_related(
+        "organizations", "roles__user")
+
+    covered = {}
+    for region in regions:
+        for area in region.areas:
+            covered[area] = region
+
+    return render(request, "site_app/chapters.html", {
+        "regions": regions,
+        "map": _shaded_map({f"c-{a}": r.name for a, r in covered.items()}),
+        "covered_count": len(covered),
+    })
+
+
+def _shaded_map(covered):
+    """The baked SVG with the covered counties marked, server-side.
+
+    Done here rather than with a script on the page so the map is complete in
+    the HTML: shading by JavaScript would show a visitor with none an entirely
+    blank state, which reads as "no chapters anywhere" rather than as a page
+    that has not finished.
+
+    The SVG itself stays a plain map of South Carolina and knows nothing about
+    chapters, so deploy/build_sc_map.py can regenerate it without being taught
+    any of this.
+    """
+    import html
+    import re
+
+    from django.template.loader import render_to_string
+    from django.utils.safestring import mark_safe
+
+    svg = render_to_string("site_app/_sc_counties.svg")
+
+    def mark(match):
+        element, ident = match.group(0), match.group(1)
+        name = re.search(r'data-name="([^"]*)"', element)
+        name = name.group(1) if name else ident
+        if ident in covered:
+            element = element.replace('class="county"', 'class="county held"')
+            label = f"{name} — {covered[ident]}"
+        else:
+            label = f"{name} — no chapter yet"
+        # A <title> inside the path is the accessible, no-JavaScript tooltip.
+        return element[:-2] + f"><title>{html.escape(label)}</title></path>"
+
+    return mark_safe(re.sub(r'<path id="(c-[a-z-]+)"[^>]*/>', mark, svg))
+
+
+@login_required
+def chapter(request):
+    """What an officer of a chapter can see.
+
+    Everything on this page is ABOVE the tenant line: the names of the
+    organizations admitted, who else holds a role, and the applications
+    addressed to this chapter. Nothing from inside an organization appears
+    here and nothing can — Region has no relation to any tenant-scoped model,
+    so there is no query this view could make even by mistake. That is
+    asserted in test_chapters.py rather than promised here.
+    """
+    from .models import Application
+
+    roles = (request.user.region_roles
+             .select_related("region")
+             .prefetch_related("region__organizations", "region__roles__user"))
+    if not roles:
+        return HttpResponseForbidden("Not an officer of any chapter.")
+
+    regions = []
+    for role in roles:
+        region = role.region
+        waiting = (Application.objects
+                   .filter(region=region, admitted__isnull=True)
+                   .prefetch_related("credentials", "screenings"))
+        regions.append({
+            "region": region,
+            "role": role,
+            "officers": region.roles.all(),
+            "organizations": region.organizations.all(),
+            "waiting": [{"application": a, "blockers": a.blockers}
+                        for a in waiting],
+        })
+
+    return render(request, "site_app/chapter.html",
+                  {"regions": regions, "member": _member(request)})
