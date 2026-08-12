@@ -194,6 +194,18 @@
     .which label:has(input:checked) { background:var(--brand-white);
       border-color:var(--brand-spruce); color:var(--brand-ink); }
 
+    /* The project composer reuses .say-it, so its title field needs the same
+       borderless treatment the body already has. */
+    .say-it input[type=text] { border:0; padding:0; background:none;
+      font-family:var(--brand-font-sans); font-size:1.25rem; font-weight:600;
+      color:var(--brand-ink); margin-bottom:.5rem; }
+    .say-it input[type=text]:focus-visible { outline:0; }
+    .say-it input[type=text]::placeholder { color:var(--brand-moss);
+      font-weight:400; }
+
+    /* A finished project is still worth reading, just not competing. */
+    .post.done { opacity:.68; }
+
     .more-detail { margin:1rem 0 0; }
     .more-detail summary { cursor:pointer; font-family:var(--brand-font-mono);
       font-size:.6875rem; letter-spacing:.08em; text-transform:uppercase;

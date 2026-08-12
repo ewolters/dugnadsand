@@ -5,18 +5,21 @@
 {% block content %}
 <p class="crumb"><a href="/projects/">Ongoing work</a></p>
 <h1>{{ project.name }}</h1>
-<p class="who">Written down by {{ project.started_by.display_name }} ·
+<p class="meta">Written down by {{ project.started_by.display_name }} ·
    {{ project.created_at|date:"j M Y" }}{% if not project.open %} · finished{% endif %}</p>
 
 <p class="lede">{{ project.description|linebreaksbr }}</p>
 
 <h2>Open under this</h2>
 {% for p in open_postings %}
-  <div class="card{% if p.is_need %} need{% endif %}">
-    <p class="who">{{ p.member.display_name }} · {{ p.created_at|date:"j M" }}
+  <div class="post{% if p.is_need %} need{% endif %}">
+    <p class="who">
+      {% avatar p.member 30 %}<a class="name" href="/board/{{ p.id }}/">{{ p.member.display_name }}</a>
+      <span class="kind">{% if p.is_need %}asking{% else %}offering{% endif %}</span>
+      <span class="stamp">{{ p.created_at|date:"j M" }}</span>
       {% if p.needed_by %}<span class="when {{ p.urgency|slugify }}">{{ p.urgency }}</span>{% endif %}
     </p>
-    <p>{{ p.description|linebreaksbr }}</p>
+    <p class="body">{{ p.description|linebreaksbr }}</p>
     <div class="row">
       {% if p.member_id != member.id and not p.i_am_on %}
         <form method="post" action="/board/{{ p.id }}/claim/">{% csrf_token %}
@@ -47,36 +50,40 @@
 </div>
 
 <h2>Talk about it</h2>
-{% for c in project.comments.all %}
-  <div class="comment">
-    <p class="who">{% avatar c.member 22 %}{{ c.member.display_name }} · {{ c.created_at|date:"j M, H:i" }}
-      {% if c.member_id != member.id %}
-        <form method="post" action="/thanks/{{ c.member_id }}/" class="inline-thanks">
-          {% csrf_token %}
-          <input type="hidden" name="back" value="/projects/{{ project.id }}/">
-          <button type="submit" class="thanks-btn" title="Say thanks. Nothing is recorded.">Say thanks</button>
-        </form>
-      {% endif %}
-    </p>
-    <p>{{ c.body|mentions }}</p>
-  </div>
-{% empty %}
-  <p class="empty">Nothing said yet.</p>
-{% endfor %}
+<div class="talk">
+  {% for c in project.comments.all %}
+    <div class="comment">
+      {% avatar c.member 26 %}
+      <div class="bubble">
+        <span class="said-by">{{ c.member.display_name }}</span>
+        <span class="stamp">{{ c.created_at|date:"j M, H:i" }}</span>
+        {% if c.member_id != member.id %}
+          <form method="post" action="/thanks/{{ c.member_id }}/" class="inline-thanks">
+            {% csrf_token %}
+            <input type="hidden" name="back" value="/projects/{{ project.id }}/">
+            <button type="submit" class="thanks-btn" title="Say thanks. Nothing is recorded.">Say thanks</button>
+          </form>
+        {% endif %}
+        <p class="words">{{ c.body|mentions }}</p>
+      </div>
+    </div>
+  {% empty %}
+    <p class="empty">Nothing said yet.</p>
+  {% endfor %}
 
-<form method="post" action="/comment/" class="stack say">
-  {% csrf_token %}
-  <input type="hidden" name="project" value="{{ project.id }}">
-  <div>
-    <label for="id_body">Say something</label>
-    <textarea name="body" id="id_body" rows="2" required></textarea>
-    <p class="help">Write <b>@</b> and somebody's name to point them at this — they get a
-       nudge and you are told nothing about what they do with it. Write <b>$</b> and a
-       word to link something on the shelf, like <b>$oak</b>. Either one that does not
-       match exactly one thing simply stays as you typed it.</p>
-  </div>
-  <div><button type="submit" class="act quiet">Post it</button></div>
-</form>
+  <form method="post" action="/comment/" class="reply">{% csrf_token %}
+    <input type="hidden" name="project" value="{{ project.id }}">
+    {% avatar member 26 %}
+    <label class="sr" for="id_body">Say something</label>
+    <input id="id_body" name="body" type="text" maxlength="4000" required
+           placeholder="Say something…">
+    <button type="submit" class="act quiet">Post</button>
+  </form>
+</div>
+<p class="note">Write <b>@</b> and a name to point somebody at this — they get a nudge and
+   nothing comes back. Write <b>$</b> and a word to link something on the shelf, like
+   <b>$oak</b>. Either one that does not match exactly one thing stays as it was
+   typed.</p>
 
 <h2>What it needs</h2>
 <p class="ordering">Material, not hands. These are two separate records and they are
@@ -84,7 +91,7 @@
    kind of thing, and treating them as though they were would put a price on both.</p>
 
 {% for n in needs %}
-  <div class="card{% if n.met %} done{% endif %}">
+  <div class="post{% if n.met %} done{% endif %}">
     <p>{{ n.description|linebreaksbr }}</p>
     <p class="qty">
       {% if n.met %}

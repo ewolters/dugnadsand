@@ -210,7 +210,15 @@ class ProjectForm(Branded, forms.ModelForm):
             "description": "Who it is for, what it needs, how long it might run. "
                            "Nobody is put in charge of it by writing this down.",
         }
-        widgets = {"description": forms.Textarea(attrs={"rows": 5})}
+        widgets = {
+            "name": forms.TextInput(attrs={
+                "placeholder": "What is it called?", "autofocus": "autofocus"}),
+            "description": forms.Textarea(attrs={
+                "rows": 5,
+                "placeholder": "Who it is for, what it needs, how long it might "
+                               "run. Nobody is put in charge of it by writing "
+                               "this down."}),
+        }
 
 
 class ContributionForm(Branded, forms.Form):
