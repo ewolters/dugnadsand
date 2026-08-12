@@ -160,6 +160,52 @@
       border-color:var(--brand-rule); }
     .reply input[type=text]:focus-visible { background:var(--brand-white); }
 
+    /* Writing a post. The words are the page; everything else defers to
+       them. Two radios styled as a segmented control rather than a bordered
+       fieldset with a legend, because "which is it" is a choice somebody
+       makes in half a second and it was the heaviest thing on the screen. */
+    .compose-post { max-width:38rem; }
+    .say-it { background:var(--brand-paper); border:1px solid var(--brand-rule);
+      border-radius:10px; padding:1.1rem 1.2rem; }
+    .say-it .whoami { display:flex; align-items:center; gap:.6rem; margin:0 0 .7rem; }
+    .say-it .whoami b { font-family:var(--brand-font-sans); font-size:1rem;
+      font-weight:600; color:var(--brand-ink); }
+    .say-it textarea { border:0; padding:0; font-size:1.125rem; line-height:1.5;
+      background:none; resize:vertical; }
+    .say-it textarea:focus-visible { outline:0; }
+    .say-it textarea::placeholder { color:var(--brand-moss); }
+
+    /* Django renders RadioSelect as nested divs; the label wraps the input,
+       so the whole option is the target. */
+    .which { border-top:1px solid var(--brand-rule); margin-top:.9rem;
+      padding-top:.85rem; }
+    .which > div { display:flex; gap:.5rem; flex-wrap:wrap; }
+    .which > div > div { flex:1 1 0; min-width:11rem; }
+    .which label { display:flex; align-items:center; gap:.5rem; margin:0;
+      cursor:pointer; padding:.55rem .8rem; border-radius:2rem;
+      border:1px solid var(--brand-rule); background:var(--brand-birch);
+      font-family:var(--brand-font-sans); font-size:.9375rem; font-weight:600;
+      letter-spacing:0; text-transform:none; color:var(--brand-text-soft); }
+    .which label:hover { border-color:var(--brand-rule-strong);
+      color:var(--brand-ink); }
+    .which input[type=radio] { margin:0; }
+    /* :has is what lets the chosen option carry the state rather than the
+       input alone; without it the only signal is a 13px dot. */
+    .which label:has(input:checked) { background:var(--brand-white);
+      border-color:var(--brand-spruce); color:var(--brand-ink); }
+
+    .more-detail { margin:1rem 0 0; }
+    .more-detail summary { cursor:pointer; font-family:var(--brand-font-mono);
+      font-size:.6875rem; letter-spacing:.08em; text-transform:uppercase;
+      color:var(--brand-moss); }
+    .more-detail summary:hover { color:var(--brand-ink); }
+    .more-detail > div, .more-detail .pair > div { margin-top:.9rem; }
+    .more-detail .pair { display:flex; gap:1rem; flex-wrap:wrap; }
+    .more-detail .pair > div { flex:1 1 12rem; }
+
+    .send { margin-top:1.25rem; align-items:center; }
+    .send .note { flex:1 1 16rem; margin:0; font-size:.8125rem; }
+
     /* Visible to a screen reader, not on the page. Every control needs a
        label; not every control needs one printed beside it. */
     .sr { position:absolute; width:1px; height:1px; padding:0; margin:-1px;

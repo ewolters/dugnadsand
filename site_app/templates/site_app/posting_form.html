@@ -1,52 +1,69 @@
 {% extends "app_base.html" %}
+{% load avatars %}
 {% block title %}Post something — Dugnadsand{% endblock %}
 {% block content %}
-<h1>Post something</h1>
-<p class="lede">Offer what you have, or ask for what you need. Write it however you like —
-   there is no category to pick and no rate to set, because both would turn this into a
-   price list.</p>
+<p class="crumb"><a href="/community/">The community</a></p>
+{% comment %}
+  Present for a screen reader and absent on screen. Removing the visible
+  heading is what let the writing box lead, but a page with no h1 leaves
+  somebody navigating by headings with nothing to land on.
+{% endcomment %}
+<h1 class="sr">Post something</h1>
 
-<form method="post" class="stack">
+{% comment %}
+  The words come first. This page used to open with the offering/asking
+  fieldset — a bordered box with a legend and a paragraph of reassurance —
+  above a small text area, with three optional fields below it carrying more
+  help text than fields. Five blocks of equal weight to say "I need a ride on
+  Thursday".
+
+  Now: say it, mark which it is, and everything else is folded away.
+{% endcomment %}
+
+<form method="post" class="compose-post">
   {% csrf_token %}
   {% if form.non_field_errors %}<p class="err">{{ form.non_field_errors.0 }}</p>{% endif %}
 
-  <fieldset class="kind">
-    <legend>{{ form.kind.label }}</legend>
-    {{ form.kind }}
-    <p class="help">{{ form.kind.help_text }}</p>
-    {% if form.kind.errors %}<p class="err">{{ form.kind.errors.0 }}</p>{% endif %}
-  </fieldset>
-
-  <div>
-    <label for="{{ form.description.id_for_label }}">{{ form.description.label }}</label>
+  <div class="say-it">
+    <p class="whoami">{% avatar member 30 %}<b>{{ member.display_name }}</b></p>
+    <label class="sr" for="{{ form.description.id_for_label }}">{{ form.description.label }}</label>
     {{ form.description }}
     {% if form.description.errors %}<p class="err">{{ form.description.errors.0 }}</p>{% endif %}
+
+    <div class="which">
+      {{ form.kind }}
+      {% if form.kind.errors %}<p class="err">{{ form.kind.errors.0 }}</p>{% endif %}
+    </div>
   </div>
 
-  <div>
-    <label for="{{ form.project.id_for_label }}">{{ form.project.label }}</label>
-    {{ form.project }}
-    <p class="help">{{ form.project.help_text }}</p>
-    {% if form.project.errors %}<p class="err">{{ form.project.errors.0 }}</p>{% endif %}
-  </div>
+  <details class="more-detail">
+    <summary>Add a date, a rough size, or a project</summary>
+    <div class="pair">
+      <div>
+        <label for="{{ form.needed_by.id_for_label }}">{{ form.needed_by.label }}</label>
+        {{ form.needed_by }}
+        <p class="help">{{ form.needed_by.help_text }}</p>
+        {% if form.needed_by.errors %}<p class="err">{{ form.needed_by.errors.0 }}</p>{% endif %}
+      </div>
+      <div>
+        <label for="{{ form.hours_cap.id_for_label }}">{{ form.hours_cap.label }}</label>
+        {{ form.hours_cap }}
+        <p class="help">{{ form.hours_cap.help_text }}</p>
+        {% if form.hours_cap.errors %}<p class="err">{{ form.hours_cap.errors.0 }}</p>{% endif %}
+      </div>
+    </div>
+    <div>
+      <label for="{{ form.project.id_for_label }}">{{ form.project.label }}</label>
+      {{ form.project }}
+      <p class="help">{{ form.project.help_text }}</p>
+    </div>
+  </details>
 
-  <div>
-    <label for="{{ form.needed_by.id_for_label }}">{{ form.needed_by.label }}</label>
-    {{ form.needed_by }}
-    <p class="help">{{ form.needed_by.help_text }}</p>
-    {% if form.needed_by.errors %}<p class="err">{{ form.needed_by.errors.0 }}</p>{% endif %}
-  </div>
-
-  <div>
-    <label for="{{ form.hours_cap.id_for_label }}">{{ form.hours_cap.label }}</label>
-    {{ form.hours_cap }}
-    <p class="help">{{ form.hours_cap.help_text }}</p>
-    {% if form.hours_cap.errors %}<p class="err">{{ form.hours_cap.errors.0 }}</p>{% endif %}
-  </div>
-
-  <div class="row">
-    <button type="submit" class="act">Put it up</button>
-    <a class="act quiet" href="/board/">Cancel</a>
+  <div class="row send">
+    <button type="submit" class="act">Post it</button>
+    <a class="act quiet" href="/community/">Cancel</a>
+    <p class="note">Asking costs nothing and proves nothing. Nothing here totals what
+       anybody has given, and nothing consults it.</p>
   </div>
 </form>
 {% endblock %}

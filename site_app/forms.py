@@ -145,10 +145,22 @@ class PostingForm(Branded, forms.ModelForm):
         something that finished.
         """
         super().__init__(*args, **kwargs)
-        from .models import Project
+        from .models import Posting, Project
 
         self.fields["project"].queryset = Project.objects.filter(open=True)
         self.fields["project"].empty_label = "Not part of anything"
+
+        # Said as a person would say it, at the FORM level. The model's
+        # choices are untouched: editing those needs a migration, and the
+        # stored values are what the rest of the system reads.
+        self.fields["kind"].choices = [
+            (Posting.OFFER, "I'm offering something"),
+            (Posting.NEED, "I'm asking for something"),
+        ]
+        self.fields["description"].widget.attrs.update({
+            "placeholder": "What is it? Write it however you would say it.",
+            "autofocus": "autofocus",
+        })
 
     class Meta:
         from .models import Posting
@@ -156,24 +168,22 @@ class PostingForm(Branded, forms.ModelForm):
         model = Posting
         fields = ("kind", "description", "project", "needed_by", "hours_cap")
         labels = {
-            "kind": "Are you offering something, or asking for something",
+            "kind": "Which is it",
             "description": "In your own words",
-            "project": "Part of something ongoing (optional)",
-            "needed_by": "Is there a date it stops being useful (optional)",
-            "hours_cap": "Roughly how many hours (optional)",
+            "project": "Part of something ongoing",
+            "needed_by": "Needed by",
+            "hours_cap": "Roughly how many hours",
         }
         help_texts = {
-            "kind": "Asking costs nothing and proves nothing. Nothing here "
-                    "totals what you have given, and nothing consults it.",
-            "project": "Only a place to gather related postings. Leaving it "
-                       "blank is the normal case.",
+            "kind": "",
+            "project": "Only a place to gather related postings.",
             "needed_by": "A ride on Thursday and a fence sometime this year are "
-                         "different things. Leave it blank if there's no rush.",
+                         "different things. Blank means no rush.",
             "hours_cap": "A ceiling, never a floor. Whoever takes this on can "
                          "stop before it, any time, and nothing is recorded.",
         }
         widgets = {
-            "description": forms.Textarea(attrs={"rows": 4}),
+            "description": forms.Textarea(attrs={"rows": 5}),
             "needed_by": forms.DateInput(attrs={"type": "date"}),
             "kind": forms.RadioSelect,
         }
@@ -388,7 +398,7 @@ class WorkDayForm(Branded, forms.ModelForm):
                      "beats a postal address.",
         }
         widgets = {
-            "description": forms.Textarea(attrs={"rows": 4}),
+            "description": forms.Textarea(attrs={"rows": 5}),
             "place": forms.Textarea(attrs={"rows": 3}),
             "muster": forms.Textarea(attrs={"rows": 2}),
             "starts_at": forms.DateTimeInput(
