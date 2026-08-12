@@ -96,7 +96,37 @@
     .post .stamp { margin-left:auto; }
     .post .body { font-size:1.0625rem; margin:0 0 .6rem; }
     .post p { margin:0 0 .6rem; }
-    .post .row { margin-top:.9rem; }
+    .post .row { margin-top:.9rem; align-items:center; }
+
+    /* Who is interested, by name. There is deliberately no count here and no
+       rule that would let one be added quietly. */
+    .keen { font-family:var(--brand-font-mono); font-size:.8125rem;
+      color:var(--brand-spruce); }
+
+    /* The hours offer sits beside the button rather than behind a page: it is
+       a ceiling somebody revises, not a form they fill in. */
+    .keen-form { display:flex; gap:.4rem; align-items:center; margin:0; }
+    .keen-form input[type=number] { width:5rem; padding:.35rem .5rem;
+      font-size:.9rem; }
+
+    /* Conversation, on the card. A feed where talking happens on another page
+       is a noticeboard with a comments section attached. */
+    .talk { border-top:1px solid var(--brand-rule); margin-top:1rem;
+      padding-top:.85rem; }
+    .talk .comment { border-left:0; padding:0; margin:0 0 .7rem; }
+    .talk .comment .who { font-size:.6875rem; margin-bottom:.15rem; }
+    .talk .comment p { margin:0; }
+    .talk .more { font-family:var(--brand-font-mono); font-size:.6875rem;
+      letter-spacing:.06em; text-transform:uppercase; color:var(--brand-moss);
+      text-decoration:none; display:inline-block; margin-bottom:.7rem; }
+    .talk .more:hover { color:var(--brand-ink); }
+    .reply { display:flex; gap:.5rem; align-items:center; margin:0; }
+    .reply input[type=text] { flex:1; padding:.45rem .6rem; font-size:.9375rem; }
+
+    /* Visible to a screen reader, not on the page. Every control needs a
+       label; not every control needs one printed beside it. */
+    .sr { position:absolute; width:1px; height:1px; padding:0; margin:-1px;
+      overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0; }
     fieldset.kind { border:1px solid var(--brand-rule); border-radius:2px; padding:.9rem 1.1rem;
                     margin:0; background:var(--brand-paper); }
     fieldset.kind legend { font-family:var(--brand-font-mono); font-size:.7rem; letter-spacing:.1em;

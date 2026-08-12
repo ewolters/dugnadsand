@@ -357,7 +357,8 @@ def board(request):
         .select_related("member", "project")
         # comments are prefetched for the reply count on every card; without
         # it the feed runs one query per posting.
-        .prefetch_related("claims__member", "comments")
+        .prefetch_related("claims__member", "comments",
+                          "interests__member")
         .order_by("-created_at")
     )
     # Everybody else here, for the "thought of you" picker. Membership and
@@ -372,6 +373,16 @@ def board(request):
     open_postings = list(open_postings)
     for p in open_postings:
         p.i_am_on = any(c.member_id == member.id for c in p.claims.all())
+        p.my_interest = next(
+            (i for i in p.interests.all() if i.member_id == member.id), None)
+        # Sliced HERE, not in the template. {{ comments|slice:"-2:" }} looks
+        # right and does nothing: negative indexing raises on a QuerySet and
+        # Django's slice filter swallows the exception and returns the whole
+        # thing, so every comment rendered and the test caught it only
+        # because a deliberately distinctive token was in the oldest one.
+        said = list(p.comments.all())
+        p.recent_comments = said[-2:]
+        p.more_comments = len(said) > 2
 
     needs = [p for p in open_postings if p.kind == Posting.NEED]
     # Dated needs first, soonest at the top; undated ones keep their place at
@@ -425,6 +436,45 @@ def board(request):
 
 
 @login_required
+@require_POST
+def interested(request, posting_id):
+    """Say you might help, or take it back.
+
+    hours is optional and is a ceiling. An empty field is the ordinary case:
+    "I'm interested" says nothing about how long, and requiring a number would
+    turn a tentative gesture into an estimate somebody has to defend.
+    """
+    from decimal import Decimal, InvalidOperation
+
+    from .models import Posting
+    from .services_social import express_interest, withdraw_interest
+
+    member = _member(request)
+    if member is None:
+        return HttpResponseForbidden("Not a member of any organization.")
+
+    post = get_object_or_404(Posting, pk=posting_id)
+    back = request.POST.get("back") or f"/board/{post.id}/"
+
+    if request.POST.get("withdraw"):
+        withdraw_interest(posting=post, member=member)
+        return redirect(back)
+
+    raw = (request.POST.get("hours") or "").strip()
+    hours = None
+    if raw:
+        try:
+            hours = Decimal(raw)
+        except (InvalidOperation, ValueError):
+            return HttpResponseBadRequest("That is not a number of hours.")
+        if hours <= 0:
+            return HttpResponseBadRequest("Hours must be positive.")
+
+    express_interest(posting=post, member=member, hours=hours)
+    return redirect(back)
+
+
+@login_required
 def posting(request, posting_id):
     """One posting, and the conversation about it.
 
@@ -442,9 +492,12 @@ def posting(request, posting_id):
 
     post = get_object_or_404(
         Posting.objects.select_related("member", "project")
-        .prefetch_related("claims__member", "comments__member"),
+        .prefetch_related("claims__member", "comments__member",
+                          "interests__member"),
         pk=posting_id)
     post.i_am_on = any(c.member_id == member.id for c in post.claims.all())
+    post.my_interest = next(
+        (i for i in post.interests.all() if i.member_id == member.id), None)
 
     others = list(Member.objects.exclude(pk=member.pk)
                   .filter(user__isnull=False).exclude(user__email=""))

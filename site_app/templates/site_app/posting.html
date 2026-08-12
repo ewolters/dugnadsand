@@ -27,6 +27,12 @@
     </p>
   {% endif %}
 
+  {% if p.interests.all %}
+    <p class="keen">Interested:
+      {% for i in p.interests.all %}{{ i.member.display_name }}{% if i.hours %} (up to {{ i.hours|floatformat }} hour{{ i.hours|floatformat|pluralize }}){% endif %}{% if not forloop.last %}, {% endif %}{% endfor %}
+    </p>
+  {% endif %}
+
   <div class="row">
     {% if p.open %}
       {% if p.member_id != member.id and not p.i_am_on %}
@@ -38,6 +44,27 @@
         <form method="post" action="/board/{{ p.id }}/step-off/">{% csrf_token %}
           <button type="submit" class="act quiet">Step off</button>
         </form>
+      {% endif %}
+      {% if p.member_id != member.id %}
+        {% if p.my_interest %}
+          <form method="post" action="/board/{{ p.id }}/interested/">{% csrf_token %}
+            <input type="hidden" name="back" value="/board/{{ p.id }}/">
+            <input type="hidden" name="withdraw" value="1">
+            <button type="submit" class="act quiet">Not any more</button>
+          </form>
+        {% else %}
+          <form method="post" action="/board/{{ p.id }}/interested/" class="keen-form">{% csrf_token %}
+            <input type="hidden" name="back" value="/board/{{ p.id }}/">
+            <button type="submit" class="act quiet">I'm interested</button>
+          </form>
+          <form method="post" action="/board/{{ p.id }}/interested/" class="keen-form">{% csrf_token %}
+            <input type="hidden" name="back" value="/board/{{ p.id }}/">
+            <label class="sr" for="hours-here">Hours you could give</label>
+            <input id="hours-here" name="hours" type="number" min="0.5" step="0.5"
+                   inputmode="decimal" placeholder="hrs">
+            <button type="submit" class="act quiet">Offer hours</button>
+          </form>
+        {% endif %}
       {% endif %}
       <a class="act quiet" href="/board/{{ p.id }}/hours/">Record hours given</a>
       {% if p.member_id == member.id %}

@@ -15,6 +15,7 @@ urlpatterns = [
     # people use, and every existing link and POST target keeps working.
     path("community/", views.board, name="community"),
     path("board/<uuid:posting_id>/claim/", views.claim_posting, name="claim_posting"),
+    path("board/<uuid:posting_id>/interested/", views.interested, name="interested"),
     path("board/<uuid:posting_id>/step-off/", views.step_off, name="step_off"),
     path("board/<uuid:posting_id>/close/", views.posting_close, name="posting_close"),
     path("board/<uuid:posting_id>/hours/", views.contribution_new, name="contribution_new"),

@@ -1,5 +1,6 @@
 {% extends "app_base.html" %}
 {% load avatars %}
+{% load mentions %}
 {% block title %}The community — Dugnadsand{% endblock %}
 {% block content %}
 {% if messages %}{% for m in messages %}<p class="said">{{ m }}</p>{% endfor %}{% endif %}
@@ -43,6 +44,17 @@
       </p>
     {% endif %}
 
+    {% comment %}
+      Named, never counted. This says WHO, the way "On it" does. It does not
+      say how many, because a number beside interest is a like and a like is
+      a score.
+    {% endcomment %}
+    {% if p.interests.all %}
+      <p class="keen">Interested:
+        {% for i in p.interests.all %}{{ i.member.display_name }}{% if i.hours %} (up to {{ i.hours|floatformat }} hour{{ i.hours|floatformat|pluralize }}){% endif %}{% if not forloop.last %}, {% endif %}{% endfor %}
+      </p>
+    {% endif %}
+
     {% if p.member_id == member.id and p.urgency == "overdue" %}
       <p class="stale">This is past the date you gave. Still needed? Leave it up if it is —
          take it down if it is not.</p>
@@ -59,15 +71,53 @@
           <button type="submit" class="act quiet">Step off</button>
         </form>
       {% endif %}
-      <a class="act quiet" href="/board/{{ p.id }}/">
-        {% with n=p.comments.count %}{% if n %}{{ n }} repl{{ n|pluralize:"y,ies" }}{% else %}Reply{% endif %}{% endwith %}
-      </a>
+      {% if p.member_id != member.id %}
+        {% if p.my_interest %}
+          <form method="post" action="/board/{{ p.id }}/interested/">{% csrf_token %}
+            <input type="hidden" name="back" value="/community/">
+            <input type="hidden" name="withdraw" value="1">
+            <button type="submit" class="act quiet">Not any more</button>
+          </form>
+        {% else %}
+          <form method="post" action="/board/{{ p.id }}/interested/" class="keen-form">{% csrf_token %}
+            <input type="hidden" name="back" value="/community/">
+            <button type="submit" class="act quiet">I'm interested</button>
+          </form>
+          <form method="post" action="/board/{{ p.id }}/interested/" class="keen-form">{% csrf_token %}
+            <input type="hidden" name="back" value="/community/">
+            <label class="sr" for="h-{{ p.id }}">Hours you could give</label>
+            <input id="h-{{ p.id }}" name="hours" type="number" min="0.5" step="0.5"
+                   inputmode="decimal" placeholder="hrs">
+            <button type="submit" class="act quiet">Offer hours</button>
+          </form>
+        {% endif %}
+      {% endif %}
       <a class="act quiet" href="/board/{{ p.id }}/hours/">Record hours given</a>
       {% if p.member_id == member.id %}
         <form method="post" action="/board/{{ p.id }}/close/">{% csrf_token %}
           <button type="submit" class="act quiet">Take it down</button>
         </form>
       {% endif %}
+    </div>
+
+    <div class="talk">
+      {% if p.more_comments %}
+        <a class="more" href="/board/{{ p.id }}/">Read the whole conversation</a>
+      {% endif %}
+      {% for c in p.recent_comments %}
+          <div class="comment">
+            <p class="who">{% avatar c.member 20 %}{{ c.member.display_name }} ·
+               {{ c.created_at|date:"j M, H:i" }}</p>
+            <p>{{ c.body|mentions }}</p>
+          </div>
+      {% endfor %}
+      <form method="post" action="/comment/" class="reply">{% csrf_token %}
+        <input type="hidden" name="posting" value="{{ p.id }}">
+        <label class="sr" for="r-{{ p.id }}">Say something</label>
+        <input id="r-{{ p.id }}" name="body" type="text" maxlength="4000"
+               placeholder="Say something…">
+        <button type="submit" class="act quiet">Post</button>
+      </form>
     </div>
   </div>
 {% empty %}

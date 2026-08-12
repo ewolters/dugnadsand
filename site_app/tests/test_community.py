@@ -75,12 +75,34 @@ class TheFeed(CommunityBase):
         body = self.client.get("/community/").content.decode()
         self.assertIn(f'/board/{self.need.id}/', body)
 
-    def test_the_reply_count_appears_once_there_are_replies(self):
+    def test_the_conversation_is_on_the_card_not_behind_a_count(self):
+        """Retargeted when replies moved inline.
+
+        It asserted "1 reply" — a link to go and read elsewhere. A feed where
+        talking happens on another page is a noticeboard with a comments
+        section attached, so the last replies and a box to add one are on the
+        card itself. The count went with the link, which is no loss: a number
+        was standing in for the thing it counted.
+        """
         with tenant_context(self.org):
             add_comment(member=self.ada, posting=self.need, body="I can drive.")
         self.sign_in(self.user)
         body = self.client.get("/community/").content.decode()
-        self.assertIn("1 reply", body)
+        self.assertIn("I can drive.", body)
+        self.assertIn('name="posting" value="%s"' % self.need.id, body)
+
+    def test_a_long_conversation_shows_the_last_of_it_and_a_way_in(self):
+        # Distinctive tokens, not English words. "first" matched a stylesheet
+        # comment reading "Must come first" — the third time this session a
+        # bare substring assertion has matched markup instead of content.
+        with tenant_context(self.org):
+            for line in ("zaphod-one", "zaphod-two", "zaphod-three"):
+                add_comment(member=self.ada, posting=self.need, body=line)
+        self.sign_in(self.user)
+        body = self.client.get("/community/").content.decode()
+        self.assertNotIn("zaphod-one", body)
+        self.assertIn("zaphod-three", body)
+        self.assertIn("Read the whole conversation", body)
 
     def test_nothing_on_the_feed_counts_a_person(self):
         """The line between social and scored. A number beside a name is a

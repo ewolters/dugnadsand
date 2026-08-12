@@ -27,7 +27,12 @@ NOT_ENFORCEABLE = "not_enforceable"
 
 # Models that carry the domain. Until these exist, most claims are about
 # nothing and must not report green.
-DOMAIN_MODELS = ("Posting", "Claim", "Contribution")
+# The models the domain checks look at. _domain_models() only returns names
+# from this tuple, so a check that loops over a name NOT in here raises a
+# KeyError — and because /attestation/ runs the checks when it is drawn, that
+# surfaces as a 500 on a public page rather than as a failing check. Adding a
+# model to a check means adding it here in the same edit.
+DOMAIN_MODELS = ("Posting", "Claim", "Contribution", "Interest")
 
 
 @dataclass
@@ -441,7 +446,11 @@ def no_obligation():
         return blocked
 
     hits = []
-    for name in ("Posting", "Claim", "Contribution"):
+    # Interest is here because it is the newest place a floor could appear:
+    # it carries an offer of hours, and an offer that grew a minimum would be
+    # a promise. The list is hand-maintained, which is the standing gap --
+    # anything that records what somebody said they would do belongs in it.
+    for name in ("Posting", "Claim", "Contribution", "Interest"):
         for f in _all_fields(_domain_models()[name]):
             fname = getattr(f, "name", "")
             if re.search(r"hours_min|minimum|required|commitment|reliability|"

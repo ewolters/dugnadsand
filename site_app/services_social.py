@@ -245,3 +245,39 @@ def going_quiet(*, days=21):
              .select_related("warehouse", "warehouse__holder"))
     return sorted((line for line in lines if line.confirmed_days_ago >= days),
                   key=lambda line: line.confirmed_at)
+
+
+# --------------------------------------------------------------------------
+# Interest: the move between keeping something privately and taking it on.
+# --------------------------------------------------------------------------
+
+def express_interest(*, posting, member, hours=None):
+    """Say publicly that you might help, and optionally roughly how long.
+
+    hours is a CEILING. Somebody who says four and gives one has given one
+    hour: nothing compares the two and nothing records a shortfall. Saying it
+    again updates the number rather than adding a second row, so a person can
+    revise downward as freely as upward -- which is the whole point of a
+    ceiling with no floor.
+    """
+    from .models import Interest
+
+    interest, created = Interest.objects.get_or_create(
+        posting=posting, member=member,
+        defaults={"organization_id": member.organization_id, "hours": hours})
+    if not created and hours != interest.hours:
+        interest.hours = hours
+        interest.save(update_fields=["hours"])
+    return interest
+
+
+def withdraw_interest(*, posting, member):
+    """A HARD DELETE, like stepping off a claim.
+
+    A withdrawn flag would be a record of somebody changing their mind, and
+    anything stored can be counted. Nothing should be able to say how often a
+    person went quiet.
+    """
+    from .models import Interest
+
+    Interest.objects.filter(posting=posting, member=member).delete()

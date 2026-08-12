@@ -1396,3 +1396,48 @@ class PhotoConsent(TenantScoped):
     @property
     def withdrawn(self):
         return bool(self.withdrawn_on)
+
+
+class Interest(TenantScoped):
+    """"I might be able to help." Softer than taking something on.
+
+    Between keeping a posting privately and committing to it there was
+    nothing, so the only public move was the whole commitment. Plenty of help
+    starts as "tell me more" or "I could do a couple of hours if nobody
+    nearer can", and a board with no way to say that turns every tentative
+    person into a silent one.
+
+    NAMED, NEVER COUNTED. The card says who is interested, the way it already
+    says who is on it. It does not say how many, and no number appears beside
+    anybody's name anywhere: a count of interest is a like, a like is a score,
+    and the whole system is built without one. test_interest.py asserts the
+    absence rather than trusting the template.
+
+    hours is a CEILING and never a floor -- the same rule Posting.hours_cap
+    follows. Somebody who offers four hours and gives one has given one hour;
+    nothing compares the two, nothing records a shortfall, and withdrawing is
+    a hard delete leaving no trace, exactly as stepping off a claim is. See
+    no-obligation, whose check now scans this model too.
+    """
+
+    posting = models.ForeignKey(
+        Posting, on_delete=models.CASCADE, related_name="interests")
+    # ONE member link, as everywhere else -- see Clearance.
+    member = models.ForeignKey(
+        Member, on_delete=models.PROTECT, related_name="interests")
+
+    # Null is the ordinary case: "I'm interested" says nothing about how long.
+    hours = models.DecimalField(max_digits=6, decimal_places=2,
+                                null=True, blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ("created_at",)
+        constraints = [
+            models.UniqueConstraint(fields=["posting", "member"],
+                                    name="one_interest_per_person_per_posting"),
+        ]
+
+    def __str__(self):
+        return f"{self.member} is interested"
