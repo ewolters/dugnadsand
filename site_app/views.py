@@ -1876,3 +1876,131 @@ def packet_photo(request, photo_id):
         return FileResponse(image.open("rb"))
     except FileNotFoundError:
         raise Http404
+
+
+# --------------------------------------------------------------------------
+# Reviewing an application from the chapter screen.
+#
+# This used to be decide_application on the command line only, which meant the
+# only person who could admit anybody was the one with shell access. A network
+# of chapters whose admissions all route through one laptop is not a network
+# of chapters. The command still exists and still works.
+#
+# What has NOT moved: a person decides. /policy/ says there is no self-service
+# signup, and that stays true because nothing here admits itself — the gate
+# refuses while anything is unverified, expired, unscreened or unagreed, and
+# the refusal names every reason. A button pressed by a named officer is a
+# person deciding; that was always the distinction, rather than which
+# interface they used.
+# --------------------------------------------------------------------------
+
+def _officer_of(request, region_id):
+    """The role this user holds in that chapter, or None.
+
+    Region-scoped on purpose: an officer of Upstate must not decide a
+    Midlands application, and the check is by region id rather than by
+    "is an officer somewhere".
+    """
+    user = getattr(request, "user", None)
+    if user is None or not user.is_authenticated or region_id is None:
+        return None
+    return user.region_roles.filter(region_id=region_id).first()
+
+
+@login_required
+def chapter_application(request, application_id):
+    """One application, everything it still owes, and the decision.
+
+    THE TAX NUMBER IS SHOWN HERE and nowhere else in the interface. An officer
+    cannot verify a credential against whoever issued it without the reference
+    on it, so withholding it would leave a Verify button that nobody could
+    honestly press. It is shown to an officer of THAT chapter, on a page
+    reached deliberately, and Credential.verified_by records who looked.
+    """
+    from datetime import date
+
+    from .models import Application, Organization
+    from .services_applications import (AdmissionProblem, NotReady,
+                                        admit_to_network, decline,
+                                        record_screening, tell_decision,
+                                        verify_credential)
+
+    application = get_object_or_404(
+        Application.objects.select_related("region"), pk=application_id)
+
+    role = _officer_of(request, application.region_id)
+    if role is None:
+        return HttpResponseForbidden("Not an officer of that chapter.")
+
+    if request.method == "POST":
+        what = request.POST.get("what")
+        back = f"/chapter/application/{application.id}/"
+
+        if what == "verify":
+            credential = get_object_or_404(
+                application.credentials, pk=request.POST.get("credential"))
+            expires = (request.POST.get("expires") or "").strip()
+            try:
+                verify_credential(
+                    credential=credential, user=request.user,
+                    verified_on=date.today(),
+                    expires_on=date.fromisoformat(expires) if expires else None,
+                    note=request.POST.get("note") or None)
+            except ValueError:
+                return HttpResponseBadRequest("That is not a date.")
+            messages.success(request, f"{credential.kind} verified.")
+
+        elif what == "screen":
+            source = (request.POST.get("source") or "").strip()
+            if not source:
+                return HttpResponseBadRequest("Say which registry was searched.")
+            record_screening(
+                application=application, user=request.user, source=source,
+                searched_name=(request.POST.get("searched_name")
+                               or application.legal_name),
+                searched_on=date.today(),
+                clear=not request.POST.get("found"),
+                note=request.POST.get("note", ""))
+            messages.success(request, "Search recorded.")
+
+        elif what == "decline":
+            decline(application=application, user=request.user,
+                    note=request.POST.get("note", ""))
+            tell_decision(application)
+            messages.success(request, "Declined. The applicant has been told.")
+
+        elif what == "admit":
+            into = None
+            if request.POST.get("into"):
+                into = get_object_or_404(
+                    Organization, pk=request.POST["into"],
+                    region_id=application.region_id)
+            try:
+                made = admit_to_network(
+                    application=application, user=request.user,
+                    note=request.POST.get("note", ""), into=into)
+            except NotReady as refused:
+                messages.error(request, "Not admitted. Still needs: "
+                               + "; ".join(refused.blockers) + ".")
+            except AdmissionProblem as problem:
+                messages.error(request, str(problem))
+            else:
+                if not made["mailed"]:
+                    tell_decision(application)
+                messages.success(
+                    request, "Admitted." + (
+                        " The setup link has been sent." if made["mailed"]
+                        else " No login was created."))
+
+        return redirect(back)
+
+    return render(request, "site_app/chapter_application.html", {
+        "application": application, "role": role,
+        "credentials": application.credentials.all(),
+        "screenings": application.screenings.all(),
+        "blockers": application.blockers,
+        # Only organizations already in this chapter: an individual joins one
+        # that exists, and a picker offering any organization anywhere would
+        # let an officer place somebody outside their own chapter.
+        "hosts": Organization.objects.filter(region_id=application.region_id),
+    })

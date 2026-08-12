@@ -1,0 +1,224 @@
+{% extends "base.html" %}
+
+{% block title %}{{ application.legal_name }} — Dugnadsand{% endblock %}
+
+{% block extra_css %}
+<style>
+  /* Uses the public shell rather than the member one on purpose: an officer
+     need not be a member of any organization, and showing them a nav of
+     member pages they cannot reach would be a menu of locked doors. */
+  body { margin:0; background:var(--brand-birch); color:var(--brand-ink);
+         font-family:var(--brand-font-serif); line-height:1.65; }
+  body > header { border-bottom:1px solid var(--brand-rule); }
+  body > header nav { max-width:50rem; margin-inline:auto; padding:1.1rem var(--brand-gutter);
+    display:flex; align-items:baseline; justify-content:space-between; gap:1rem; flex-wrap:wrap; }
+  body > header .nav-right { display:flex; align-items:baseline; gap:1.25rem; }
+  body > header .place, body > header .signin {
+    font-family:var(--brand-font-mono); font-size:.6875rem; letter-spacing:.1em;
+    text-transform:uppercase; color:var(--brand-moss); }
+  body > header .signin { color:var(--brand-ochre); text-decoration:none; }
+  body > header .brand-name { font-family:var(--brand-font-sans); font-weight:600;
+    letter-spacing:.07em; text-transform:uppercase; text-decoration:none; color:var(--brand-ink); }
+  .mark { height:.7em; width:auto; margin-right:.55rem; vertical-align:baseline; opacity:.75; }
+  body > footer { border-top:1px solid var(--brand-rule); margin-top:4.5rem;
+    font-family:var(--brand-font-mono); font-size:.75rem; color:var(--brand-moss); }
+  body > footer p { max-width:50rem; margin:0 auto; padding:1.5rem var(--brand-gutter); }
+
+  main { max-width:50rem; margin-inline:auto; padding:0 var(--brand-gutter); }
+
+  h1 { color:var(--brand-ink); font-family:var(--brand-font-sans); font-weight:600;
+       font-size:clamp(1.7rem,4vw,2.2rem); line-height:1.12; letter-spacing:-.02em;
+       margin:3.5rem 0 .3rem; text-wrap:balance; }
+  .role { font-family:var(--brand-font-mono); font-size:.6875rem; letter-spacing:.1em;
+    text-transform:uppercase; color:var(--brand-ochre); margin:0 0 1.5rem; }
+  h2 { color:var(--brand-ink); font-family:var(--brand-font-sans); font-weight:600;
+       font-size:1.15rem; margin:2.5rem 0 .5rem; letter-spacing:-.01em; }
+  p { margin:0 0 1rem; }
+  a { color:var(--brand-spruce); }
+
+  .card { border:1px solid var(--brand-rule); background:var(--brand-surface);
+    padding:1rem 1.15rem; margin:0 0 .85rem; }
+  .card .who { font-family:var(--brand-font-mono); font-size:.6875rem;
+    letter-spacing:.09em; text-transform:uppercase; color:var(--brand-moss);
+    margin:0 0 .3rem; }
+  .card h3 { font-family:var(--brand-font-sans); font-size:1rem; font-weight:600;
+    margin:0 0 .3rem; color:var(--brand-ink); }
+  .card p:last-child { margin-bottom:0; }
+  .card.waiting { border-left:3px solid var(--brand-ochre); }
+
+  .needs { font-size:.9rem; color:var(--brand-warn); background:var(--brand-warn-wash);
+    padding:.45rem .6rem; margin:.5rem 0 0; }
+  .ready { font-size:.9rem; color:var(--brand-spruce); margin:.5rem 0 0; }
+
+  .roster { display:grid; grid-template-columns:1fr auto; gap:.4rem 1rem;
+    font-size:.9375rem; margin:0 0 1.5rem; }
+  .roster dt { margin:0; }
+  .roster dd { margin:0; font-family:var(--brand-font-mono); font-size:.8125rem;
+    color:var(--brand-moss); }
+
+  .boundary { border:1px solid var(--brand-ochre); background:var(--brand-warn-wash);
+    padding:1.1rem 1.25rem; margin:2.5rem 0 0; font-size:.9375rem; }
+  .boundary b { font-family:var(--brand-font-mono); font-size:.75rem; letter-spacing:.1em;
+    text-transform:uppercase; color:var(--brand-warn); display:block; margin-bottom:.5rem; }
+  .boundary p:last-child { margin-bottom:0; }
+
+  .empty { color:var(--brand-moss); font-style:italic; }
+  code { font-family:var(--brand-font-mono); font-size:.875em; }
+</style>
+
+<style>
+  .back { font-family:var(--brand-font-mono); font-size:.6875rem; letter-spacing:.1em;
+    text-transform:uppercase; margin:2.5rem 0 .6rem; }
+  .back a { color:var(--brand-moss); text-decoration:none; }
+  dl.detail { display:grid; grid-template-columns:minmax(8rem,14ch) 1fr;
+    gap:.45rem 1.1rem; margin:1rem 0 2rem; font-size:.9375rem; }
+  dl.detail dt { font-family:var(--brand-font-mono); font-size:.6875rem;
+    letter-spacing:.09em; text-transform:uppercase; color:var(--brand-moss); }
+  dl.detail dd { margin:0; }
+  .sensitive { font-family:var(--brand-font-mono); }
+  form.act-form { margin:.75rem 0 0; display:flex; gap:.5rem; align-items:flex-end;
+    flex-wrap:wrap; }
+  form.act-form label { font-family:var(--brand-font-mono); font-size:.625rem;
+    letter-spacing:.09em; text-transform:uppercase; color:var(--brand-moss);
+    display:block; margin-bottom:.2rem; }
+  form.act-form input[type=text], form.act-form input[type=date],
+  form.act-form select { font:inherit; font-size:.9rem; padding:.4rem .55rem;
+    border:1px solid var(--brand-rule-strong); border-radius:var(--brand-radius);
+    background:var(--brand-white); color:var(--brand-ink); }
+  button { font-family:var(--brand-font-sans); font-size:.875rem; font-weight:600;
+    padding:.45rem .9rem; border:0; border-radius:var(--brand-radius);
+    cursor:pointer; background:var(--brand-spruce); color:var(--brand-paper); }
+  button.quiet { background:none; color:var(--brand-spruce);
+    border:1px solid var(--brand-rule-strong); }
+  button:disabled { background:var(--brand-moss); opacity:.55; cursor:not-allowed; }
+  .done { font-family:var(--brand-font-mono); font-size:.75rem;
+    color:var(--brand-ok); }
+  .said { background:var(--brand-ok-wash); color:var(--brand-ok);
+    border-left:3px solid var(--brand-ok); padding:.6rem .85rem;
+    margin:0 0 1.25rem; font-size:.9375rem; }
+  .wrong { background:var(--brand-alert-wash); color:var(--brand-alert);
+    border-left:3px solid var(--brand-alert); padding:.6rem .85rem;
+    margin:0 0 1.25rem; font-size:.9375rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+<p class="back"><a href="/chapter/">← {{ role.region.name }}</a></p>
+
+{% if messages %}
+  {% for m in messages %}
+    <p class="{% if m.tags == 'error' %}wrong{% else %}said{% endif %}">{{ m }}</p>
+  {% endfor %}
+{% endif %}
+
+<h1>{{ application.legal_name }}</h1>
+<p class="role">{{ application.get_kind_display }} · submitted
+   {{ application.submitted_at|date:"j F Y" }}</p>
+
+<dl class="detail">
+  <dt>Contact</dt><dd>{{ application.contact_name }}</dd>
+  <dt>Email</dt><dd>{{ application.email }}</dd>
+  {% if application.phone %}<dt>Phone</dt><dd>{{ application.phone }}</dd>{% endif %}
+  {% if application.locality %}<dt>Where</dt><dd>{{ application.locality }}</dd>{% endif %}
+  <dt>Agreed</dt>
+  <dd>{% if application.agreed_at %}Policy version {{ application.agreed_policy_version }},
+      {{ application.agreed_at|date:"j F Y" }}{% else %}Not agreed{% endif %}</dd>
+</dl>
+
+<h2>Why they applied</h2>
+<p>{{ application.statement|linebreaksbr }}</p>
+
+<h2>Credentials</h2>
+<p class="empty">Checked against whoever issued it, not against what was typed here.</p>
+{% for c in credentials %}
+  <div class="card">
+    <p class="who">{{ c.kind }}{% if c.authority %} · {{ c.authority }}{% endif %}</p>
+    {% if c.reference %}<p class="sensitive">{{ c.reference }}</p>{% endif %}
+    {% if c.expires_on %}
+      <p class="{% if c.lapsed %}needs{% else %}who{% endif %}">
+        {% if c.lapsed %}Ran out {{ c.expires_on|date:"j F Y" }}{% else %}Runs out {{ c.expires_on|date:"j F Y" }}{% endif %}</p>
+    {% endif %}
+    {% if c.verified_on %}
+      <p class="done">Verified {{ c.verified_on|date:"j F Y" }} by {{ c.verified_by.username }}</p>
+    {% endif %}
+    {% if not application.decided %}
+      <form class="act-form" method="post" action="/chapter/application/{{ application.id }}/">
+        {% csrf_token %}
+        <input type="hidden" name="what" value="verify">
+        <input type="hidden" name="credential" value="{{ c.id }}">
+        <div><label for="e-{{ c.id }}">Runs out (optional)</label>
+             <input id="e-{{ c.id }}" name="expires" type="date"></div>
+        <button type="submit">{% if c.verified_on %}Verify again{% else %}Verified{% endif %}</button>
+      </form>
+    {% endif %}
+  </div>
+{% empty %}
+  <p class="empty">None required for this kind.</p>
+{% endfor %}
+
+<h2>Searches run</h2>
+{% for s in screenings %}
+  <div class="card">
+    <p class="who">{{ s.source }} · {{ s.searched_on|date:"j F Y" }} · {{ s.searched_by.username }}</p>
+    <p>{% if s.clear %}Nothing came back.{% else %}Something came back that needs a person.{% endif %}</p>
+    {% if s.note %}<p class="empty">{{ s.note }}</p>{% endif %}
+  </div>
+{% empty %}
+  <p class="empty">None recorded.</p>
+{% endfor %}
+
+{% if not application.decided %}
+  <form class="act-form" method="post" action="/chapter/application/{{ application.id }}/">
+    {% csrf_token %}
+    <input type="hidden" name="what" value="screen">
+    <div><label for="source">Registry searched</label>
+         <input id="source" name="source" type="text" maxlength="200" required></div>
+    <div><label for="searched_name">Name searched</label>
+         <input id="searched_name" name="searched_name" type="text" maxlength="200"
+                placeholder="{{ application.legal_name }}"></div>
+    <div><label for="found">Something came back</label>
+         <input id="found" name="found" type="checkbox"></div>
+    <button type="submit" class="quiet">Record the search</button>
+  </form>
+  <p class="empty">Recording a search does not run one. A name match needs a person to
+     look at it, so this records what was searched and what came back.</p>
+{% endif %}
+
+<h2>The decision</h2>
+{% if application.decided %}
+  <p class="{% if application.admitted %}said{% else %}wrong{% endif %}">
+    {% if application.admitted %}Admitted{% else %}Not taken forward{% endif %}
+    {{ application.decided_at|date:"j F Y" }} by {{ application.decided_by.username }}.
+    {% if application.organization %}Organization: {{ application.organization.name }}.{% endif %}
+  </p>
+{% else %}
+  {% if blockers %}
+    <p class="wrong">Not ready:
+      {% for b in blockers %}{{ b }}{% if not forloop.last %}; {% endif %}{% endfor %}.</p>
+  {% endif %}
+
+  <form class="act-form" method="post" action="/chapter/application/{{ application.id }}/">
+    {% csrf_token %}
+    <input type="hidden" name="what" value="admit">
+    {% if application.kind == "individual" %}
+      <div><label for="into">Joining which organization</label>
+        <select id="into" name="into" required>
+          {% for o in hosts %}<option value="{{ o.id }}">{{ o.name }}</option>{% endfor %}
+        </select></div>
+    {% endif %}
+    <div><label for="note">Note for the record (optional)</label>
+         <input id="note" name="note" type="text" maxlength="400"></div>
+    <button type="submit"{% if blockers %} disabled{% endif %}>Admit</button>
+  </form>
+
+  <form class="act-form" method="post" action="/chapter/application/{{ application.id }}/">
+    {% csrf_token %}
+    <input type="hidden" name="what" value="decline">
+    <div><label for="dnote">Why, for the record (not sent)</label>
+         <input id="dnote" name="note" type="text" maxlength="400"></div>
+    <button type="submit" class="quiet">Do not take forward</button>
+  </form>
+  <p class="empty">A decline carries no reason to the applicant. The note above is for
+     the review; the message invites them to reply and be answered by a person.</p>
+{% endif %}
+{% endblock %}

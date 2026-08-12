@@ -65,6 +65,8 @@ urlpatterns = [
     path("packet/<str:token>/", views.packet, name="packet"),
     path("photo/<uuid:photo_id>/", views.packet_photo, name="packet_photo"),
     path("chapter/", views.chapter, name="chapter"),
+    path("chapter/application/<uuid:application_id>/",
+         views.chapter_application, name="chapter_application"),
     path("virtual-warehouse/", views.virtual_warehouse, name="virtual_warehouse"),
     path("attestation/", views.attestation, name="attestation"),
     path("attestation/run/", views.attestation_run, name="attestation_run"),
