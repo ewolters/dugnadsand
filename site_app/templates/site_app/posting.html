@@ -7,7 +7,7 @@
 
 <div class="post{% if p.is_need %} need{% endif %}">
   <p class="who">
-    {% avatar p.member 26 %}{{ p.member.display_name }}
+    {% avatar p.member 30 %}<b class="name">{{ p.member.display_name }}</b>
     <span class="kind">{% if p.is_need %}asking{% else %}offering{% endif %}</span>
     <span class="stamp">{{ p.created_at|date:"j M Y" }}</span>
     {% if p.needed_by %}<span class="when {{ p.urgency|slugify }}">{{ p.urgency }}</span>{% endif %}

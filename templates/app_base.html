@@ -72,56 +72,93 @@
     .card.need { border-left:3px solid var(--brand-ochre); }
 
     /* The feed -----------------------------------------------------------
-       A post is a person saying something, so the card leads with who and
-       carries the direction as a chip rather than under a heading. No count
-       of anything appears on it and none may: a number beside a name is a
-       score, and the whole system is built without one. */
-    .compose { display:flex; align-items:center; gap:.7rem; text-decoration:none;
+       This is where people talk, and it was reading as a filing: three runs
+       of uppercase mono stacked at the head of every card, body copy at
+       document size, and square corners. The palette and the faces are
+       unchanged — ink on warm paper is the brand — but the HIERARCHY is not.
+       A name is set as a name, and everything that is not a name gets out of
+       its way. */
+    .compose { display:flex; align-items:center; gap:.75rem; text-decoration:none;
       background:var(--brand-paper); border:1px solid var(--brand-rule);
-      border-radius:var(--brand-radius); padding:.85rem 1.1rem; margin:0 0 1.5rem; }
+      border-radius:2rem; padding:.7rem 1.1rem; margin:0 0 1.75rem; }
     .compose span { color:var(--brand-moss); font-size:1rem; }
-    .compose:hover { border-color:var(--brand-rule-strong); }
+    .compose:hover { border-color:var(--brand-rule-strong); background:var(--brand-white); }
     .compose:hover span { color:var(--brand-ink); }
 
     .post { background:var(--brand-paper); border:1px solid var(--brand-rule);
-      border-radius:var(--brand-radius); padding:1.15rem 1.25rem; margin:0 0 1rem; }
-    .post.need { border-left:3px solid var(--brand-ochre); }
-    .post .who { display:flex; align-items:center; gap:.5rem; flex-wrap:wrap;
-      font-family:var(--brand-font-mono); font-size:.75rem; letter-spacing:.06em;
-      text-transform:uppercase; color:var(--brand-moss); margin:0 0 .55rem; }
-    .post .who a { color:var(--brand-ink); text-decoration:none; }
-    .post .who a:hover { color:var(--brand-spruce); }
+      border-radius:10px; padding:1.1rem 1.3rem 1rem; margin:0 0 1.1rem; }
+    /* The ochre edge still says "somebody is asking", quietly. */
+    .post.need { box-shadow:inset 3px 0 0 var(--brand-ochre); }
+
+    .post .who { display:flex; align-items:center; gap:.55rem; flex-wrap:wrap;
+      margin:0 0 .5rem; }
+    .post .who .name { font-family:var(--brand-font-sans); font-size:1rem;
+      font-weight:600; color:var(--brand-ink); text-decoration:none;
+      letter-spacing:0; text-transform:none; }
+    .post .who .name:hover { color:var(--brand-spruce); }
+    /* Everything that is not the name: small, quiet, lower case. */
+    .post .kind, .post .stamp { font-family:var(--brand-font-mono);
+      font-size:.6875rem; letter-spacing:.06em; text-transform:uppercase;
+      color:var(--brand-moss); }
     .post .kind { color:var(--brand-spruce); }
     .post.need .kind { color:var(--brand-ochre); }
     .post .stamp { margin-left:auto; }
-    .post .body { font-size:1.0625rem; margin:0 0 .6rem; }
-    .post p { margin:0 0 .6rem; }
-    .post .row { margin-top:.9rem; align-items:center; }
+
+    .post .body { font-size:1.05rem; line-height:1.55; margin:0 0 .5rem;
+      color:var(--brand-ink); }
+    .post p { margin:0 0 .5rem; }
+
+    /* One quiet meta line instead of a stack of mono rows. */
+    .post .meta { font-size:.875rem; color:var(--brand-moss); }
+    .post .meta a { color:var(--brand-moss); }
+    .post .meta a:hover { color:var(--brand-spruce); }
+    .post .on, .post .keen { font-family:var(--brand-font-serif);
+      font-size:.9rem; letter-spacing:0; text-transform:none; }
+    .post .on { color:var(--brand-spruce); }
+    .post .keen { color:var(--brand-moss); }
+
+    .post .row { margin-top:.85rem; align-items:center; }
 
     /* Who is interested, by name. There is deliberately no count here and no
        rule that would let one be added quietly. */
-    .keen { font-family:var(--brand-font-mono); font-size:.8125rem;
-      color:var(--brand-spruce); }
-
     /* The hours offer sits beside the button rather than behind a page: it is
        a ceiling somebody revises, not a form they fill in. */
     .keen-form { display:flex; gap:.4rem; align-items:center; margin:0; }
-    .keen-form input[type=number] { width:5rem; padding:.35rem .5rem;
-      font-size:.9rem; }
+    .keen-form input[type=number] { width:4.5rem; padding:.4rem .55rem;
+      font-size:.875rem; border-radius:2rem; text-align:center; }
 
     /* Conversation, on the card. A feed where talking happens on another page
        is a noticeboard with a comments section attached. */
     .talk { border-top:1px solid var(--brand-rule); margin-top:1rem;
-      padding-top:.85rem; }
-    .talk .comment { border-left:0; padding:0; margin:0 0 .7rem; }
-    .talk .comment .who { font-size:.6875rem; margin-bottom:.15rem; }
-    .talk .comment p { margin:0; }
+      padding-top:.9rem; }
+    /* A reply is somebody speaking, so it reads as speech: the name inline
+       with the words, not a mono header above them. */
+    .talk .comment { border-left:0; padding:0; margin:0 0 .75rem;
+      display:flex; gap:.6rem; align-items:flex-start; }
+    /* The words sit in their own field, the way a reply does everywhere
+       people actually talk. The avatar is outside it so a run of replies
+       reads as a column of who is speaking. */
+    .talk .comment .bubble { background:var(--brand-birch);
+      border-radius:1rem; padding:.5rem .9rem; min-width:0; }
+    .talk .comment .said-by { font-family:var(--brand-font-sans);
+      font-size:.9375rem; font-weight:600; color:var(--brand-ink);
+      margin-right:.45rem; }
+    /* NOT .said — that class already exists for flash messages, with an ok
+       wash and a green rule down its left edge, and every reply inherited it.
+       A collision like this renders as a design decision nobody made. */
+    .talk .comment .words { font-size:.9375rem; margin:.1rem 0 0; }
+    .talk .comment .stamp { font-family:var(--brand-font-mono);
+      font-size:.625rem; letter-spacing:.06em; text-transform:uppercase;
+      color:var(--brand-moss); }
     .talk .more { font-family:var(--brand-font-mono); font-size:.6875rem;
       letter-spacing:.06em; text-transform:uppercase; color:var(--brand-moss);
       text-decoration:none; display:inline-block; margin-bottom:.7rem; }
     .talk .more:hover { color:var(--brand-ink); }
-    .reply { display:flex; gap:.5rem; align-items:center; margin:0; }
-    .reply input[type=text] { flex:1; padding:.45rem .6rem; font-size:.9375rem; }
+    .reply { display:flex; gap:.55rem; align-items:center; margin:.2rem 0 0; }
+    .reply input[type=text] { flex:1; padding:.5rem .9rem; font-size:.9375rem;
+      border-radius:2rem; background:var(--brand-birch);
+      border-color:var(--brand-rule); }
+    .reply input[type=text]:focus-visible { background:var(--brand-white); }
 
     /* Visible to a screen reader, not on the page. Every control needs a
        label; not every control needs one printed beside it. */
@@ -233,7 +270,8 @@
     .when.today, .when.tomorrow { color:var(--brand-warn); background:var(--brand-warn-wash); }
     .when.overdue { color:var(--brand-alert); background:var(--brand-alert-wash); }
 
-    .ordering { color:var(--brand-moss); font-size:.875rem; margin:0 0 1rem; }
+    .ordering { color:var(--brand-moss); font-size:.8125rem; margin:0 0 1.1rem;
+      font-family:var(--brand-font-mono); letter-spacing:.03em; }
 
     /* Shown to a poster on their own expired posting. Warm, not alarming:
        nothing has gone wrong and nobody is late. */

@@ -19,13 +19,12 @@
   {% avatar member 26 %}<span>Ask for something, or offer something…</span>
 </a>
 
-<p class="ordering">Needs with a date come first, soonest at the top; then needs without
-   one; then offers. Order is a fact about the posting and never about who wrote it.</p>
+<p class="ordering">Ordered by when things are needed — never by who asked.</p>
 
 {% for p in feed %}
   <div class="post{% if p.is_need %} need{% endif %}">
     <p class="who">
-      {% avatar p.member 26 %}<a href="/board/{{ p.id }}/">{{ p.member.display_name }}</a>
+      {% avatar p.member 30 %}<a class="name" href="/board/{{ p.id }}/">{{ p.member.display_name }}</a>
       <span class="kind">{% if p.is_need %}asking{% else %}offering{% endif %}</span>
       <span class="stamp">{{ p.created_at|date:"j M" }}</span>
       {% if p.needed_by %}<span class="when {{ p.urgency|slugify }}">{{ p.urgency }}</span>{% endif %}
@@ -33,10 +32,13 @@
 
     <p class="body">{{ p.description|linebreaksbr }}</p>
 
-    {% if p.project %}
-      <p class="cap">Part of <a href="/projects/{{ p.project_id }}/">{{ p.project.name }}</a></p>
+    {% if p.project or p.hours_cap %}
+      <p class="meta">
+        {% if p.hours_cap %}Roughly {{ p.hours_cap }} hour{{ p.hours_cap|pluralize }}{% endif %}
+        {% if p.project and p.hours_cap %} · {% endif %}
+        {% if p.project %}Part of <a href="/projects/{{ p.project_id }}/">{{ p.project.name }}</a>{% endif %}
+      </p>
     {% endif %}
-    {% if p.hours_cap %}<p class="cap">Roughly {{ p.hours_cap }} hour{{ p.hours_cap|pluralize }}</p>{% endif %}
 
     {% if p.claims.all %}
       <p class="on">On it:
@@ -106,13 +108,17 @@
       {% endif %}
       {% for c in p.recent_comments %}
           <div class="comment">
-            <p class="who">{% avatar c.member 20 %}{{ c.member.display_name }} ·
-               {{ c.created_at|date:"j M, H:i" }}</p>
-            <p>{{ c.body|mentions }}</p>
+            {% avatar c.member 26 %}
+            <div class="bubble">
+              <span class="said-by">{{ c.member.display_name }}</span>
+              <span class="stamp">{{ c.created_at|date:"j M, H:i" }}</span>
+              <p class="words">{{ c.body|mentions }}</p>
+            </div>
           </div>
       {% endfor %}
       <form method="post" action="/comment/" class="reply">{% csrf_token %}
         <input type="hidden" name="posting" value="{{ p.id }}">
+        {% avatar member 26 %}
         <label class="sr" for="r-{{ p.id }}">Say something</label>
         <input id="r-{{ p.id }}" name="body" type="text" maxlength="4000"
                placeholder="Say something…">
