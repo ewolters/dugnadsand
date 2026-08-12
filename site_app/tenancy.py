@@ -134,16 +134,46 @@ class TenantMiddleware:
         with bypass_rls():
             return (
                 Member.objects
-                .filter(user_id=user.pk)
+                # active=True is LOAD-BEARING and was not, until now. The flag
+                # existed on Organization and was read in one place that gated
+                # nothing, so an organization could be marked inactive while
+                # every one of its members carried on exactly as before. A
+                # switch that looks like a switch and is not one is worse than
+                # no switch: somebody flips it and believes something happened.
+                .filter(user_id=user.pk, organization__active=True)
                 .values_list("organization_id", "organization__region_id")
                 .first()
             ) or (None, None)
+
+    @staticmethod
+    def _closed(request):
+        """True when this user belongs to an organization that is not active.
+
+        Without this the member simply sees nothing: RLS is doing its job and
+        the app is empty, which reads as broken rather than as closed. Costs
+        one query and only for a signed-in user with no resolvable tenant.
+        """
+        from .models import Member
+
+        user = getattr(request, "user", None)
+        if user is None or not user.is_authenticated:
+            return False
+        with bypass_rls():
+            return Member.objects.filter(user_id=user.pk).exists()
 
     def __call__(self, request):
         organization_id, region_id = self._resolve(request)
         if organization_id:
             request.organization_id = organization_id
             request.region_id = region_id
+
+        # A member row exists but no tenant resolved: the organization is
+        # inactive. Say so once rather than serving an empty application.
+        if organization_id is None and self._closed(request):
+            from django.shortcuts import render
+            if not request.path.startswith(("/logout/", "/static/")):
+                set_tenant(None, None)
+                return render(request, "site_app/closed.html", status=403)
 
         set_tenant(organization_id, region_id)
         try:

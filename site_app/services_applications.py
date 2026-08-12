@@ -363,3 +363,38 @@ def admit_to_network(*, application, user, note="", into=None, username=None):
 
     return {"region": None, "organization": organization, "member": member,
             "mailed": mailed}
+
+
+def remove_from_chapter(*, organization, region, user, reason):
+    """The strongest remedy the acceptable use policy names.
+
+    Sets Organization.region to null, which the chapter-aware policy turns
+    into invisibility: members of that chapter stop seeing the organization's
+    postings, projects and material, and its members stop seeing theirs.
+
+    NOTHING IS DELETED. The organization keeps everything it wrote and its
+    members keep their logins; it is scoped to itself, exactly as an
+    organization admitted into no chapter has always been. Removal from a
+    room is not erasure from the record, and the two should not be reachable
+    by the same button.
+
+    A reason is required. A removal nobody can be asked about afterwards is
+    the kind of power this system should not hand out quietly.
+    """
+    from django.db import transaction
+
+    from .models import ChapterRemoval
+
+    reason = (reason or "").strip()
+    if not reason:
+        raise ValueError("A reason is required to remove an organization.")
+    if organization.region_id != region.id:
+        raise ValueError("That organization is not in this chapter.")
+
+    with transaction.atomic():
+        record = ChapterRemoval.objects.create(
+            region=region, organization=organization, removed_by=user,
+            reason=reason)
+        organization.region = None
+        organization.save(update_fields=["region"])
+    return record

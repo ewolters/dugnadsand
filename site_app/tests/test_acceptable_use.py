@@ -85,9 +85,33 @@ class TheRemediesItNamesAreTheOnesThatExist(ThePageExists):
         the system holds none."""
         self.assertIn("such a count is a score", self.prose())
 
-    def test_removal_from_a_chapter_is_described_as_a_person_not_a_button(self):
-        self.assertIn("performed by a person with administrative access",
-                      self.prose())
+    def test_removal_names_what_it_does_and_what_it_does_not(self):
+        """Retargeted the moment removal became a button.
+
+        It asserted the page said removal was "performed by a person with
+        administrative access", which was true when the only way to do it was
+        a database edit. The property that has to survive is not who presses
+        it but what it does: a reason is kept, and nothing is deleted.
+        """
+        prose = self.prose()
+        self.assertIn("A reason is required and is kept", prose)
+        self.assertIn("Nothing the organization wrote is deleted", prose)
+        self.assertIn("Removal from a room is not erasure from the record", prose)
+
+    def test_the_service_really_requires_a_reason(self):
+        """Asserted against the code, not the sentence."""
+        from site_app.services_applications import remove_from_chapter
+        from site_app.models import Organization, Region
+
+        region = Region.objects.create(slug="r", name="R")
+        organization = Organization.objects.create(
+            slug="o", name="O", region=region)
+        from django.contrib.auth.models import User
+        user = User.objects.create_user("officer", password="dugnad-test-pw")
+
+        with self.assertRaises(ValueError):
+            remove_from_chapter(organization=organization, region=region,
+                                user=user, reason="   ")
 
 
 class WhatItRestricts(ThePageExists):

@@ -1441,3 +1441,38 @@ class Interest(TenantScoped):
 
     def __str__(self):
         return f"{self.member} is interested"
+
+
+class ChapterRemoval(models.Model):
+    """A record that an organization was removed from a chapter.
+
+    Not tenant-scoped, like Region: it is about the relationship between a
+    chapter and an organization rather than about anything inside either.
+
+    The removal itself is just Organization.region going null, which the
+    chapter-aware policy turns into invisibility. That is effective and it is
+    also completely silent — nothing would say it happened, who did it, or
+    why. The acceptable use policy calls this the strongest remedy available,
+    and a strongest remedy that leaves no trace is one nobody can be asked
+    about afterwards.
+
+    Kept even if the organization is later readmitted, and never edited.
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    region = models.ForeignKey(
+        Region, on_delete=models.PROTECT, related_name="removals")
+    organization = models.ForeignKey(
+        Organization, on_delete=models.PROTECT, related_name="chapter_removals")
+
+    # The officer, by login. Same reason RegionRole attaches to a User.
+    removed_by = models.ForeignKey(
+        "auth.User", on_delete=models.PROTECT, related_name="chapter_removals")
+    reason = models.TextField()
+    removed_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ("-removed_at",)
+
+    def __str__(self):
+        return f"{self.organization} removed from {self.region}"

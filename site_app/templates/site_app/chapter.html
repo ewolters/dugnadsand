@@ -64,10 +64,40 @@
 
   .empty { color:var(--brand-moss); font-style:italic; }
   code { font-family:var(--brand-font-mono); font-size:.875em; }
+  details summary { cursor:pointer; font-family:var(--brand-font-mono);
+    font-size:.6875rem; letter-spacing:.08em; text-transform:uppercase;
+    color:var(--brand-moss); margin-top:.6rem; }
+  details summary:hover { color:var(--brand-ink); }
+  form.act-form { margin:.6rem 0 0; display:flex; gap:.5rem; align-items:flex-end;
+    flex-wrap:wrap; }
+  form.act-form label { font-family:var(--brand-font-mono); font-size:.625rem;
+    letter-spacing:.09em; text-transform:uppercase; color:var(--brand-moss);
+    display:block; margin-bottom:.2rem; }
+  form.act-form input[type=text] { font:inherit; font-size:.9rem;
+    padding:.4rem .55rem; border:1px solid var(--brand-rule-strong);
+    border-radius:var(--brand-radius); background:var(--brand-white);
+    color:var(--brand-ink); min-width:18rem; }
+  button { font-family:var(--brand-font-sans); font-size:.875rem; font-weight:600;
+    padding:.45rem .9rem; border:0; border-radius:var(--brand-radius);
+    cursor:pointer; background:var(--brand-spruce); color:var(--brand-paper); }
+  button.quiet { background:none; color:var(--brand-alert);
+    border:1px solid var(--brand-rule-strong); }
+  .said { background:var(--brand-ok-wash); color:var(--brand-ok);
+    border-left:3px solid var(--brand-ok); padding:.6rem .85rem;
+    margin:0 0 1.25rem; font-size:.9375rem; }
+  .wrong { background:var(--brand-alert-wash); color:var(--brand-alert);
+    border-left:3px solid var(--brand-alert); padding:.6rem .85rem;
+    margin:0 0 1.25rem; font-size:.9375rem; }
 </style>
 {% endblock %}
 
 {% block content %}
+{% if messages %}
+  {% for m in messages %}
+    <p class="{% if m.tags == 'error' %}wrong{% else %}said{% endif %}">{{ m }}</p>
+  {% endfor %}
+{% endif %}
+
 {% for r in regions %}
   <h1>{{ r.region.name }}</h1>
   <p class="role">{{ r.role.title|default:r.role.get_role_display }}{% if r.region.covers %} · {{ r.region.covers }}{% endif %}</p>
@@ -86,6 +116,20 @@
       <p class="who">Admitted {{ organization.admitted_at|date:"j F Y" }}</p>
       <h3>{{ organization.name }}</h3>
       <p class="empty">Listed by name. This page is a roster.</p>
+      <details>
+        <summary>Remove from this chapter</summary>
+        <p class="empty">Its members stop seeing this chapter's work and this chapter
+           stops seeing theirs. Nothing it wrote is deleted and its members keep their
+           logins — the organization is scoped to itself, as one admitted into no
+           chapter has always been. A reason is required and is kept.</p>
+        <form class="act-form" method="post" action="/chapter/remove/{{ organization.id }}/">
+          {% csrf_token %}
+          <div><label for="why-{{ organization.id }}">Reason, for the record</label>
+               <input id="why-{{ organization.id }}" name="reason" type="text"
+                      maxlength="400" required></div>
+          <button type="submit" class="quiet">Remove</button>
+        </form>
+      </details>
     </div>
   {% empty %}
     <p class="empty">None yet. An organization appears here once an application to this

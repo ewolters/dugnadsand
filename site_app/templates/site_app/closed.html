@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}Closed — Dugnadsand{% endblock %}
+{% block content %}
+<h1 style="margin-top:3.5rem">This organization is closed</h1>
+<p>Its records are intact and nothing has been deleted. Nobody in it can see or post
+   anything while it is closed, and no other organization can see it.</p>
+<p>Closing an organization is done by a person. Whoever arranged it can say why, and
+   <a href="/#say-hello">the contact form</a> reaches somebody if that is not clear.</p>
+<p><a href="/acceptable-use/">Acceptable use</a> ·
+   <a href="/policy/">Statement of operating policy</a></p>
+<form method="post" action="/logout/" style="margin-top:2rem">{% csrf_token %}
+  <button type="submit">Sign out</button>
+</form>
+{% endblock %}

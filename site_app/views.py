@@ -1919,6 +1919,37 @@ def _officer_of(request, region_id):
 
 
 @login_required
+@require_POST
+def chapter_remove(request, organization_id):
+    """An officer removing an organization from their chapter.
+
+    Region-scoped like every other officer action: the check is that this user
+    holds a role in the chapter the organization is IN, not that they hold one
+    somewhere.
+    """
+    from .models import Organization
+    from .services_applications import remove_from_chapter
+
+    organization = get_object_or_404(Organization, pk=organization_id)
+    role = _officer_of(request, organization.region_id)
+    if role is None:
+        return HttpResponseForbidden("Not an officer of that chapter.")
+
+    try:
+        remove_from_chapter(
+            organization=organization, region=role.region, user=request.user,
+            reason=request.POST.get("reason", ""))
+    except ValueError as refused:
+        messages.error(request, str(refused))
+    else:
+        messages.success(
+            request,
+            f"{organization.name} is no longer in {role.region.name}. Nothing "
+            f"it wrote has been deleted, and its members keep their logins.")
+    return redirect("/chapter/")
+
+
+@login_required
 def chapter_application(request, application_id):
     """One application, everything it still owes, and the decision.
 
