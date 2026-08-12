@@ -4,10 +4,13 @@
 whole street turns out to clear the lot or paint the community hall, and nobody keeps
 track of who owed what. *Dugnadsånd* is the spirit of it.
 
-This is the site and, in time, the record-keeping for mutual aid organizations in
-upstate South Carolina. It is multi-tenant: each organization is admitted deliberately,
-and row-level security keeps every organization's members, offerings and ledger
-invisible to the others. Sponsored by [SVEND](https://svend.ai).
+This is the site and the record-keeping for a mutual aid network in upstate South
+Carolina and western North Carolina. Organizations are the parties — households,
+one-person businesses, not-for-profits — and a chapter is the organizations covering
+one area. The chapter is what people share: members of every organization in one see
+each other's offers, needs, projects and material. Between chapters there is nothing,
+enforced by row-level security rather than by application code remembering to filter.
+Sponsored by [SVEND](https://svend.ai).
 
 **Live at [dugnadsand.org](https://dugnadsand.org).**
 

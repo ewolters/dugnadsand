@@ -88,12 +88,19 @@ cannot be coordinated without it.
 
 ---
 
-## Your organization is your own
+## The chapter is what you share
 
-Each organization is admitted deliberately, and its members, postings, ledger
-and material are invisible to every other organization. That separation is
-enforced by the database itself rather than by application code remembering to
-filter, and it fails closed: a mistake makes rows disappear rather than leak.
+An organization is a party in the network — a household, a one-person business,
+a not-for-profit — and most are one or two people. A chapter is the
+organizations covering one area, and it is the boundary that matters: members
+of every organization in a chapter see each other's offers, needs, projects,
+work days and material, and can take up any of it.
+
+Between chapters there is none of that, and an organization admitted into no
+chapter is visible only to itself. That separation is enforced by the database
+itself rather than by application code remembering to filter, and it fails
+closed: a mistake makes rows disappear rather than leak. Authorship is
+untouched — every record carries the organization of whoever wrote it.
 
 Anything that leaves the system — a notification, an email, an integration —
 carries only that something exists and a link to it. Never the words somebody

@@ -80,8 +80,9 @@ commitments remove the routes to it.
 The following are outside the scope of the commitments above and are stated
 explicitly.
 
-**Individual contributions are visible.** The ledger is the organization's own
-log and lists each entry under the contributor's name. This is intentional and
+**Individual contributions are visible.** The ledger is the chapter's log and
+lists each entry under the contributor's name, readable by every member of
+every organization in that chapter. This is intentional and
 serves as recognition. No **total** is computed or displayed at any level: not
 per member, not per project. Nothing prevents a reader tallying the entries
 independently; the commitment constrains what the system computes and displays,
@@ -107,28 +108,40 @@ present; only its holder can confirm or update it.
 
 ---
 
-## 3. Organizations and separation
+## 3. Chapters, organizations and what is shared
 
-Each organization is admitted deliberately, by a person, through an
-administrative step. There is no self-service signup.
+An organization is a party in the network: a household, a one-person business,
+a not-for-profit, a congregation. Most are one or two people. A chapter is the
+group of organizations covering one area, and it is admitted the same way —
+deliberately, by a person, through an administrative step. There is no
+self-service signup.
 
-Its members, postings, ledger, projects and material are invisible to every
-other organization. That separation is enforced by the database itself —
-Postgres row-level security, applied in the same migration that creates each
-table — rather than by application code remembering to filter. It **fails
-closed**: a mistake makes rows disappear rather than leak.
+**The chapter is the boundary, not the organization.** Members of every
+organization in a chapter see one another's offers, needs, projects, work days
+and material, and may take up any of it. A network in which each organization
+saw only its own board would be a set of separate boards.
+
+Between chapters there is no visibility of any kind, and an organization
+admitted into no chapter is visible to nobody but itself. That separation is
+enforced by the database itself — Postgres row-level security, applied in the
+same migration that creates each table — rather than by application code
+remembering to filter. It **fails closed**: a mistake makes rows disappear
+rather than leak.
+
+What stays with the organization is authorship rather than sight. Every record
+carries the organization of whoever wrote it, so a posting remains the posting
+of the person who put it up, wherever it is read.
 
 ---
 
 ## 4. What leaves the boundary
 
 Notifications, email and integrations traverse shared infrastructure that the
-per-organization separation does not cover. Data crossing that boundary carries
+chapter separation does not cover. Data crossing that boundary carries
 **the existence of a record and not its content**: the fact of a record, its
 state, and a link. Message text and member names are excluded.
 
-The link resolves inside the recipient's own organization, under their own
-session.
+The link resolves inside the recipient's own chapter, under their own session.
 
 **Single-use links.** Links issued for confirming a delivery or establishing an
 account are single-use, expire, and authorise exactly one action fixed at the

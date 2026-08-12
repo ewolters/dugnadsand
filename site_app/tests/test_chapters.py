@@ -182,9 +182,19 @@ class TheOfficerScreen(ChapterScreenBase):
         for leaked in ("confidential thing", "Ada"):
             self.assertNotIn(leaked, body, leaked)
 
-    def test_the_page_states_what_it_cannot_show(self):
+    def test_the_page_states_what_a_role_does_and_does_not_grant(self):
+        """Retargeted when the chapter became the sharing boundary.
+
+        It asserted the page said a chapter has "no access to anything inside
+        the organizations", which stopped being true of a chapter MEMBER the
+        day members started seeing each other's work. It never stopped being
+        true of a chapter ROLE, which is the distinction the page has to make:
+        running the roster grants nothing, and seeing the work comes from
+        being in an organization rather than from running the chapter.
+        """
         import re
 
         self.sign_in(self.officer)
         body = re.sub(r"\s+", " ", self.client.get("/chapter/").content.decode())
-        self.assertIn("no access to anything inside the organizations", body)
+        self.assertIn("grants no view of anybody's records", body)
+        self.assertIn("comes from being a member of an organization", body)

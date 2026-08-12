@@ -102,7 +102,8 @@
 
 <p class="pull">A member who has contributed nothing may receive without restriction.</p>
 
-<p>Individual contributions appear in the organization's log under the contributor's name.
+<p>Individual contributions appear in the chapter's log under the contributor's name,
+   readable by every member of every organization in it.
    This is intentional and serves as recognition. No <em>total</em> is computed or displayed
    at any level: not per member, not per project. That absence is checked by
    <code>no-aggregate-display</code>, which scans the application source and templates for
@@ -155,12 +156,18 @@
 
 <hr class="rule">
 
-<h2>Separation between organizations</h2>
+<h2>Chapters, and what a chapter shares</h2>
 
-<p>Each organization is admitted individually. Its members, postings, ledger and material are
-   inaccessible to every other organization. Separation is enforced by row-level security in
-   the database rather than by application-level filtering, and fails closed: a defect causes
-   rows to disappear rather than to leak.</p>
+<p>An organization is a party in the network — a household, a one-person business, a
+   not-for-profit. A chapter is the organizations covering one area, and it is the boundary
+   that matters: members of every organization in a chapter see one another's offers, needs,
+   projects and material, and may take up any of it.</p>
+
+<p>Between chapters there is none of that, and an organization in no chapter is visible only
+   to itself. Separation is enforced by row-level security in the database rather than by
+   application-level filtering, and fails closed: a defect causes rows to disappear rather
+   than to leak. Authorship is unaffected — every record carries the organization of
+   whoever wrote it.</p>
 
 <p>Data crossing the system boundary — notifications, email, integrations — carries only the
    existence of a record and a link to it. Message text and member names are excluded. Both

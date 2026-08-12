@@ -85,7 +85,7 @@
     <div class="card">
       <p class="who">Admitted {{ organization.admitted_at|date:"j F Y" }}</p>
       <h3>{{ organization.name }}</h3>
-      <p class="empty">Nothing inside it is visible here.</p>
+      <p class="empty">Listed by name. This page is a roster.</p>
     </div>
   {% empty %}
     <p class="empty">None yet. An organization appears here once an application to this
@@ -112,13 +112,14 @@
 {% endfor %}
 
 <div class="boundary">
-  <b>What this page cannot show</b>
-  <p>A chapter holds a roster. It has no access to anything inside the organizations it
-     admitted: members, postings, the ledger, projects and material are invisible to it,
-     as they are to every other organization.</p>
-  <p>This is enforced by the shape of the database rather than by this page choosing not
-     to display it. A chapter carries no relation to any tenant-scoped record in either
-     direction, so there is no query this screen could make even by mistake.</p>
+  <b>What a role is, and is not</b>
+  <p>This page is the roster and the applications addressed to this chapter. Holding a
+     role here grants no view of anybody's records: the role attaches to a login, carries
+     no relation to any tenant-scoped record in either direction, and there is no query
+     this screen could make even by mistake.</p>
+  <p>Seeing the work of the chapter is a separate thing, and comes from being a member of
+     an organization in it rather than from running it. An officer who is a member sees
+     what every other member sees, and no more.</p>
 </div>
 
 <p><a href="/chapters/">All chapters</a> · <a href="/policy/">Statement of operating policy</a></p>

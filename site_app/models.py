@@ -872,25 +872,28 @@ class Clearance(TenantScoped):
 class Region(models.Model):
     """A chapter. Emphatically NOT a tenant.
 
-    Organizations are the tenant, and row-level security is written against
-    organization_id alone. A chapter sitting above several organizations is
-    therefore a roster and a name, never a wider lens: /policy/ tells every
-    admitted organization that its members, postings, ledger, projects and
-    material are invisible to every other organization, and a chapter that
-    could read across them would make that sentence false for everybody at
-    once.
+    Organizations carry the rows; the chapter is what people SHARE. Members of
+    every organization in a chapter see one another's offers, needs, projects,
+    work days and material -- see 0022_chapter_visibility, where every policy
+    admits a row belonging to any organization in the current chapter. A
+    network of one- and two-person organizations that could not do that would
+    be a set of separate boards.
 
-    So the rule this model is built to keep is structural rather than
-    procedural: NOTHING HERE MAY POINT AT TENANT-SCOPED DATA. Region and
-    RegionRole carry no ForeignKey to any TenantScoped model, in either
-    direction, and test_regions.py asserts that by walking the field list --
-    because the tempting version of this feature is a chapter dashboard
-    showing how each organization is doing, which is the same information the
-    ledger is built not to compute.
+    That visibility comes from MEMBERSHIP, and this model grants none of it.
+    The rule here is structural: NOTHING IN A CHAPTER MAY POINT AT
+    TENANT-SCOPED DATA. Region and RegionRole carry no ForeignKey to any
+    TenantScoped model in either direction, and test_regions.py asserts both
+    directions by walking the field list.
+
+    The distinction is worth holding on to. A chapter ROLE is administrative:
+    the roster, and the applications addressed to the chapter. The tempting
+    version of this feature is a chapter dashboard showing how each
+    organization is doing, which is the per-member total the ledger is built
+    not to compute, arriving one level up. Sharing a board is not the same as
+    being measured on it.
 
     The single link is Organization.region, a label on the tenant root saying
-    which chapter admitted it. That is enough to run a chapter and not enough
-    to look inside one.
+    which chapter admitted it.
     """
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
