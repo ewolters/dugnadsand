@@ -10,6 +10,10 @@ urlpatterns = [
     path("logout/", views.member_logout, name="logout"),
     path("board/", views.board, name="board"),
     path("board/new/", views.posting_new, name="posting_new"),
+    path("board/<uuid:posting_id>/", views.posting, name="posting"),
+    # The board is the community. Both resolve; the nav points at the name
+    # people use, and every existing link and POST target keeps working.
+    path("community/", views.board, name="community"),
     path("board/<uuid:posting_id>/claim/", views.claim_posting, name="claim_posting"),
     path("board/<uuid:posting_id>/step-off/", views.step_off, name="step_off"),
     path("board/<uuid:posting_id>/close/", views.posting_close, name="posting_close"),

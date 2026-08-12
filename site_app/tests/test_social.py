@@ -437,9 +437,16 @@ class PointingSomebodyAtSomething(SocialBase):
                 self.assertEqual(model.objects.count(), before,
                                  f"{model.__name__} grew")
 
-    def test_the_board_offers_it_and_says_what_you_will_not_learn(self):
+    def test_the_posting_offers_it_and_says_what_you_will_not_learn(self):
+        """Moved off the feed and onto the posting itself.
+
+        Pointing somebody at something is a considered act — the control was
+        already folded away behind a summary for that reason — and repeating
+        it on every card of a scrolling feed made it ambient instead. It lives
+        where somebody has stopped to read the thing.
+        """
         self.sign_in(self.ola_user)
-        body = self.client.get("/board/").content.decode()
+        body = self.client.get(f"/board/{self.ride.id}/").content.decode()
 
         self.assertIn(f"/board/{self.ride.id}/point/", body)
         self.assertIn("will not be told", body.replace("\n", " "))

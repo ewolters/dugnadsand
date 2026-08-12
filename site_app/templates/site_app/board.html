@@ -1,24 +1,40 @@
 {% extends "app_base.html" %}
 {% load avatars %}
-{% block title %}The board — Dugnadsand{% endblock %}
+{% block title %}The community — Dugnadsand{% endblock %}
 {% block content %}
 {% if messages %}{% for m in messages %}<p class="said">{{ m }}</p>{% endfor %}{% endif %}
-<h1>The board</h1>
-<p class="lede">What people are asking for, and what people are offering. Take anything.
-   Ask for anything. You do not need to have given first, and nothing here adds up what
-   you have — there is no total, yours or anybody's, so there is nothing to compare.</p>
 
-<p><a class="act" href="/board/new/">Post something</a></p>
+<h1>The community</h1>
+<p class="lede">Everyone in {% if chapter %}{{ chapter }}{% else %}the chapter{% endif %}, in one
+   place. Take anything. Ask for anything. Nothing here adds up what anybody has given —
+   there is no total, so there is nothing to compare.</p>
 
-<h2>People are asking for</h2>
-<p class="ordering">Soonest first. Anything without a date sits at the bottom — not
-   because it matters less, but because there is nothing to sort it by.</p>
-{% for p in needs %}
-  <div class="card need">
-    <p class="who">{% avatar p.member 22 %}{{ p.member.display_name }} · {{ p.created_at|date:"j M" }}
+{% comment %}
+  The composer sits at the top of the feed rather than behind a separate page.
+  Posting is the ordinary act here, and putting it one click away made it read
+  as an administrative form rather than as saying something.
+{% endcomment %}
+<a class="compose" href="/board/new/">
+  {% avatar member 26 %}<span>Ask for something, or offer something…</span>
+</a>
+
+<p class="ordering">Needs with a date come first, soonest at the top; then needs without
+   one; then offers. Order is a fact about the posting and never about who wrote it.</p>
+
+{% for p in feed %}
+  <div class="post{% if p.is_need %} need{% endif %}">
+    <p class="who">
+      {% avatar p.member 26 %}<a href="/board/{{ p.id }}/">{{ p.member.display_name }}</a>
+      <span class="kind">{% if p.is_need %}asking{% else %}offering{% endif %}</span>
+      <span class="stamp">{{ p.created_at|date:"j M" }}</span>
       {% if p.needed_by %}<span class="when {{ p.urgency|slugify }}">{{ p.urgency }}</span>{% endif %}
     </p>
-    <p>{{ p.description|linebreaksbr }}</p>
+
+    <p class="body">{{ p.description|linebreaksbr }}</p>
+
+    {% if p.project %}
+      <p class="cap">Part of <a href="/projects/{{ p.project_id }}/">{{ p.project.name }}</a></p>
+    {% endif %}
     {% if p.hours_cap %}<p class="cap">Roughly {{ p.hours_cap }} hour{{ p.hours_cap|pluralize }}</p>{% endif %}
 
     {% if p.claims.all %}
@@ -35,7 +51,7 @@
     <div class="row">
       {% if p.member_id != member.id and not p.i_am_on %}
         <form method="post" action="/board/{{ p.id }}/claim/">{% csrf_token %}
-          <button type="submit" class="act">I'll do this</button>
+          <button type="submit" class="act">{% if p.is_need %}I'll do this{% else %}I'll take this{% endif %}</button>
         </form>
       {% endif %}
       {% if p.i_am_on %}
@@ -43,7 +59,9 @@
           <button type="submit" class="act quiet">Step off</button>
         </form>
       {% endif %}
-
+      <a class="act quiet" href="/board/{{ p.id }}/">
+        {% with n=p.comments.count %}{% if n %}{{ n }} repl{{ n|pluralize:"y,ies" }}{% else %}Reply{% endif %}{% endwith %}
+      </a>
       <a class="act quiet" href="/board/{{ p.id }}/hours/">Record hours given</a>
       {% if p.member_id == member.id %}
         <form method="post" action="/board/{{ p.id }}/close/">{% csrf_token %}
@@ -51,75 +69,9 @@
         </form>
       {% endif %}
     </div>
-      {% if others %}
-        <details class="point">
-          <summary>Thought of somebody?</summary>
-          <form method="post" action="/board/{{ p.id }}/point/">{% csrf_token %}
-            <input type="hidden" name="back" value="/board/">
-            <select name="member" aria-label="Who to point at this">
-              {% for o in others %}<option value="{{ o.id }}">{{ o.display_name }}</option>{% endfor %}
-            </select>
-            <button type="submit" class="act quiet">Point them at it</button>
-          </form>
-          <p class="help">They get a nudge and nothing else. You will not be told
-             whether they saw it or what they decided — if they take it on it shows
-             up here like anyone else.</p>
-        </details>
-      {% endif %}
   </div>
 {% empty %}
-  <p class="empty">Nobody is asking for anything right now.</p>
-{% endfor %}
-
-<h2>People are offering</h2>
-{% for p in offers %}
-  <div class="card">
-    <p class="who">{% avatar p.member 22 %}{{ p.member.display_name }} · {{ p.created_at|date:"j M" }}</p>
-    <p>{{ p.description|linebreaksbr }}</p>
-    {% if p.hours_cap %}<p class="cap">Up to {{ p.hours_cap }} hour{{ p.hours_cap|pluralize }} — never at least</p>{% endif %}
-
-    {% if p.claims.all %}
-      <p class="on">Taken by:
-        {% for c in p.claims.all %}{{ c.member.display_name }}{% if not forloop.last %}, {% endif %}{% endfor %}
-      </p>
-    {% endif %}
-
-    <div class="row">
-      {% if p.member_id != member.id and not p.i_am_on %}
-        <form method="post" action="/board/{{ p.id }}/claim/">{% csrf_token %}
-          <button type="submit" class="act">I'll take this</button>
-        </form>
-      {% endif %}
-      {% if p.i_am_on %}
-        <form method="post" action="/board/{{ p.id }}/step-off/">{% csrf_token %}
-          <button type="submit" class="act quiet">Step off</button>
-        </form>
-      {% endif %}
-
-      <a class="act quiet" href="/board/{{ p.id }}/hours/">Record hours given</a>
-      {% if p.member_id == member.id %}
-        <form method="post" action="/board/{{ p.id }}/close/">{% csrf_token %}
-          <button type="submit" class="act quiet">Take it down</button>
-        </form>
-      {% endif %}
-    </div>
-      {% if others %}
-        <details class="point">
-          <summary>Thought of somebody?</summary>
-          <form method="post" action="/board/{{ p.id }}/point/">{% csrf_token %}
-            <input type="hidden" name="back" value="/board/">
-            <select name="member" aria-label="Who to point at this">
-              {% for o in others %}<option value="{{ o.id }}">{{ o.display_name }}</option>{% endfor %}
-            </select>
-            <button type="submit" class="act quiet">Point them at it</button>
-          </form>
-          <p class="help">They get a nudge and nothing else. You will not be told
-             whether they saw it or what they decided — if they take it on it shows
-             up here like anyone else.</p>
-        </details>
-      {% endif %}
-  </div>
-{% empty %}
-  <p class="empty">Nothing on offer yet. Be the first.</p>
+  <p class="empty">Nothing yet. Whatever goes up first sets the tone —
+     <a href="/board/new/">ask for something</a>.</p>
 {% endfor %}
 {% endblock %}

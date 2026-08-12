@@ -354,8 +354,10 @@ def board(request):
     # which is the coordination the board is for.
     open_postings = (
         Posting.objects.filter(open=True)
-        .select_related("member")
-        .prefetch_related("claims__member")
+        .select_related("member", "project")
+        # comments are prefetched for the reply count on every card; without
+        # it the feed runs one query per posting.
+        .prefetch_related("claims__member", "comments")
         .order_by("-created_at")
     )
     # Everybody else here, for the "thought of you" picker. Membership and
@@ -397,11 +399,59 @@ def board(request):
     needs.sort(key=lambda p: (band(p),
                               p.needed_by or date.max,
                               -p.created_at.timestamp()))
+
+    # ONE STREAM, not two headed lists. The ordering above is unchanged and
+    # still never consults the person — what changes is that a reader sees a
+    # single run of what is happening rather than two filing cabinets, with
+    # the direction carried on each card instead of by a heading.
+    #
+    # Needs lead because a need has a date and an offer does not. That is a
+    # fact about the posting, which is the only thing ordering is allowed to
+    # be about.
+    offers = [p for p in open_postings if p.kind == Posting.OFFER]
+    feed = needs + offers
+
+    # Resolved here rather than in the template: an organization admitted into
+    # no chapter has region=None, and member.organization.region.name would
+    # resolve to the invalid-variable marker rather than to nothing.
+    region = member.organization.region
     return render(request, "site_app/board.html", {
         "section": "board",
         "member": member, "others": others,
-        "needs": needs,
-        "offers": [p for p in open_postings if p.kind == Posting.OFFER],
+        "feed": feed, "chapter": region.name if region else None,
+        # Kept for anything still reading them, and for the counts in the lede.
+        "needs": needs, "offers": offers,
+    })
+
+
+@login_required
+def posting(request, posting_id):
+    """One posting, and the conversation about it.
+
+    THIS DID NOT EXIST, and comments were the casualty. A comment on a posting
+    attached to a project was shown on the project page; a comment on a
+    posting attached to NOTHING was written, stored, and displayed nowhere at
+    all. Somebody typed it, pressed the button, and watched the page return to
+    a board that had no idea it existed.
+    """
+    from .models import Member, Posting
+
+    member = _member(request)
+    if member is None:
+        return HttpResponseForbidden("Not a member of any organization.")
+
+    post = get_object_or_404(
+        Posting.objects.select_related("member", "project")
+        .prefetch_related("claims__member", "comments__member"),
+        pk=posting_id)
+    post.i_am_on = any(c.member_id == member.id for c in post.claims.all())
+
+    others = list(Member.objects.exclude(pk=member.pk)
+                  .filter(user__isnull=False).exclude(user__email=""))
+
+    return render(request, "site_app/posting.html", {
+        "section": "board", "member": member, "p": post, "others": others,
+        "comments": post.comments.all(),
     })
 
 
@@ -917,7 +967,10 @@ def comment_new(request):
     posting = project = None
     if request.POST.get("posting"):
         posting = get_object_or_404(Posting, pk=request.POST["posting"])
-        back = f"/projects/{posting.project_id}/" if posting.project_id else "/board/"
+        # Back to the posting itself. It used to be the project page, or the
+        # board for a posting with no project — which meant a comment on a
+        # project-less posting was written and then shown nowhere.
+        back = f"/board/{posting.id}/"
     else:
         project = get_object_or_404(Project, pk=request.POST.get("project"))
         back = f"/projects/{project.id}/"

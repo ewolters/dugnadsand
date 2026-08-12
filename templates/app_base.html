@@ -70,6 +70,33 @@
     .cap { font-family:var(--brand-font-mono); font-size:.75rem; color:var(--brand-ochre); }
     .row { display:flex; gap:.6rem; flex-wrap:wrap; margin-top:.9rem; }
     .card.need { border-left:3px solid var(--brand-ochre); }
+
+    /* The feed -----------------------------------------------------------
+       A post is a person saying something, so the card leads with who and
+       carries the direction as a chip rather than under a heading. No count
+       of anything appears on it and none may: a number beside a name is a
+       score, and the whole system is built without one. */
+    .compose { display:flex; align-items:center; gap:.7rem; text-decoration:none;
+      background:var(--brand-paper); border:1px solid var(--brand-rule);
+      border-radius:var(--brand-radius); padding:.85rem 1.1rem; margin:0 0 1.5rem; }
+    .compose span { color:var(--brand-moss); font-size:1rem; }
+    .compose:hover { border-color:var(--brand-rule-strong); }
+    .compose:hover span { color:var(--brand-ink); }
+
+    .post { background:var(--brand-paper); border:1px solid var(--brand-rule);
+      border-radius:var(--brand-radius); padding:1.15rem 1.25rem; margin:0 0 1rem; }
+    .post.need { border-left:3px solid var(--brand-ochre); }
+    .post .who { display:flex; align-items:center; gap:.5rem; flex-wrap:wrap;
+      font-family:var(--brand-font-mono); font-size:.75rem; letter-spacing:.06em;
+      text-transform:uppercase; color:var(--brand-moss); margin:0 0 .55rem; }
+    .post .who a { color:var(--brand-ink); text-decoration:none; }
+    .post .who a:hover { color:var(--brand-spruce); }
+    .post .kind { color:var(--brand-spruce); }
+    .post.need .kind { color:var(--brand-ochre); }
+    .post .stamp { margin-left:auto; }
+    .post .body { font-size:1.0625rem; margin:0 0 .6rem; }
+    .post p { margin:0 0 .6rem; }
+    .post .row { margin-top:.9rem; }
     fieldset.kind { border:1px solid var(--brand-rule); border-radius:2px; padding:.9rem 1.1rem;
                     margin:0; background:var(--brand-paper); }
     fieldset.kind legend { font-family:var(--brand-font-mono); font-size:.7rem; letter-spacing:.1em;
@@ -320,7 +347,7 @@
           all of them. Ordered by how often a member opens them, not by when
           they were built.
         {% endcomment %}
-        <a href="/board/" {% if section == "board" %}aria-current="page"{% endif %}>Board</a>
+        <a href="/community/" {% if section == "board" %}aria-current="page"{% endif %}>Community</a>
         <a href="/pairings/" {% if section == "pairings" %}aria-current="page"{% endif %}>Worth a look</a>
         <a href="/projects/" {% if section == "projects" %}aria-current="page"{% endif %}>Ongoing</a>
         <a href="/days/" {% if section == "days" %}aria-current="page"{% endif %}>Coming up</a>

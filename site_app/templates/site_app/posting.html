@@ -1,0 +1,98 @@
+{% extends "app_base.html" %}
+{% load avatars %}
+{% load mentions %}
+{% block title %}{{ p.member.display_name }} — Dugnadsand{% endblock %}
+{% block content %}
+<p class="crumb"><a href="/community/">The community</a></p>
+
+<div class="post{% if p.is_need %} need{% endif %}">
+  <p class="who">
+    {% avatar p.member 26 %}{{ p.member.display_name }}
+    <span class="kind">{% if p.is_need %}asking{% else %}offering{% endif %}</span>
+    <span class="stamp">{{ p.created_at|date:"j M Y" }}</span>
+    {% if p.needed_by %}<span class="when {{ p.urgency|slugify }}">{{ p.urgency }}</span>{% endif %}
+  </p>
+
+  <p class="body">{{ p.description|linebreaksbr }}</p>
+
+  {% if p.project %}
+    <p class="cap">Part of <a href="/projects/{{ p.project_id }}/">{{ p.project.name }}</a></p>
+  {% endif %}
+  {% if p.hours_cap %}<p class="cap">Roughly {{ p.hours_cap }} hour{{ p.hours_cap|pluralize }}</p>{% endif %}
+  {% if not p.open %}<p class="cap">Taken down.</p>{% endif %}
+
+  {% if p.claims.all %}
+    <p class="on">On it:
+      {% for c in p.claims.all %}{{ c.member.display_name }}{% if not forloop.last %}, {% endif %}{% endfor %}
+    </p>
+  {% endif %}
+
+  <div class="row">
+    {% if p.open %}
+      {% if p.member_id != member.id and not p.i_am_on %}
+        <form method="post" action="/board/{{ p.id }}/claim/">{% csrf_token %}
+          <button type="submit" class="act">{% if p.is_need %}I'll do this{% else %}I'll take this{% endif %}</button>
+        </form>
+      {% endif %}
+      {% if p.i_am_on %}
+        <form method="post" action="/board/{{ p.id }}/step-off/">{% csrf_token %}
+          <button type="submit" class="act quiet">Step off</button>
+        </form>
+      {% endif %}
+      <a class="act quiet" href="/board/{{ p.id }}/hours/">Record hours given</a>
+      {% if p.member_id == member.id %}
+        <form method="post" action="/board/{{ p.id }}/close/">{% csrf_token %}
+          <button type="submit" class="act quiet">Take it down</button>
+        </form>
+      {% endif %}
+    {% endif %}
+    <form method="post" action="/pin/">{% csrf_token %}
+      <input type="hidden" name="posting" value="{{ p.id }}">
+      <input type="hidden" name="back" value="/board/{{ p.id }}/">
+      <button type="submit" class="act quiet">Keep for later</button>
+    </form>
+  </div>
+
+  {% if others and p.open %}
+    <details class="point">
+      <summary>Thought of somebody?</summary>
+      <form method="post" action="/board/{{ p.id }}/point/">{% csrf_token %}
+        <input type="hidden" name="back" value="/board/{{ p.id }}/">
+        <select name="member" aria-label="Who to point at this">
+          {% for o in others %}<option value="{{ o.id }}">{{ o.display_name }}</option>{% endfor %}
+        </select>
+        <button type="submit" class="act quiet">Point them at it</button>
+      </form>
+      <p class="help">They get a nudge and nothing else. You will not be told whether they
+         saw it or what they decided — if they take it on it shows up here like anyone
+         else.</p>
+    </details>
+  {% endif %}
+</div>
+
+<h2>Conversation</h2>
+{% for c in comments %}
+  <div class="comment">
+    <p class="who">{% avatar c.member 22 %}{{ c.member.display_name }} · {{ c.created_at|date:"j M, H:i" }}
+      {% if c.member_id != member.id %}
+        <form method="post" action="/thanks/{{ c.member_id }}/" class="inline-thanks">
+          {% csrf_token %}
+          <input type="hidden" name="back" value="/board/{{ p.id }}/">
+          <button type="submit" class="thanks-btn" title="Say thanks. Nothing is recorded.">Say thanks</button>
+        </form>
+      {% endif %}
+    </p>
+    <p>{{ c.body|mentions }}</p>
+  </div>
+{% empty %}
+  <p class="empty">Nothing said yet.</p>
+{% endfor %}
+
+<form method="post" action="/comment/" class="say">{% csrf_token %}
+  <input type="hidden" name="posting" value="{{ p.id }}">
+  <label for="body">Say something</label>
+  <textarea id="body" name="body" rows="3" maxlength="4000"></textarea>
+  <p class="help">Name somebody with @, and something on the shelf with $.</p>
+  <button type="submit" class="act">Post it</button>
+</form>
+{% endblock %}

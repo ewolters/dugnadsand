@@ -314,13 +314,21 @@ class Needs(AppBase):
         with tenant_context(self.alpha):
             self.assertEqual(Posting.objects.filter(kind=Posting.NEED).count(), 1)
 
-    def test_the_board_shows_needs_and_offers_separately(self):
+    def test_the_feed_carries_both_directions_in_one_stream(self):
+        """Retargeted when the board became the community.
+
+        It asserted two headings, "People are asking for" and "People are
+        offering", which was the layout rather than the property. The property
+        is that both directions are present and that a reader can tell which
+        is which — now carried on each card, so a person scrolls one run of
+        what is happening instead of reading two filing cabinets.
+        """
         self.post_need("A ride to the clinic on Thursday.")
         body = self.client.get("/board/").content.decode()
-        self.assertIn("People are asking for", body)
-        self.assertIn("People are offering", body)
         self.assertIn("ride to the clinic", body)
         self.assertIn("potatoes", body)
+        self.assertIn("asking", body)
+        self.assertIn("offering", body)
 
     def test_undated_needs_keep_recency_order(self):
         """Ranking requests by contribution is gating wearing a sort order.
@@ -511,7 +519,7 @@ class TheNavigationStaysGrouped(SignedIn, TestCase):
     entry arriving because nobody had to look at this list to add them.
     """
 
-    AREAS = ["/board/", "/pairings/", "/projects/", "/days/", "/warehouse/",
+    AREAS = ["/community/", "/pairings/", "/projects/", "/days/", "/warehouse/",
              "/ledger/"]
 
     def setUp(self):
@@ -554,7 +562,7 @@ class TheNavigationStaysGrouped(SignedIn, TestCase):
             self.assertEqual(self.client.get(path).status_code, 200, path)
 
     def test_the_current_area_is_marked_on_each_of_its_pages(self):
-        for path, section in (("/board/", "Board"), ("/warehouse/", "On hand"),
+        for path, section in (("/community/", "Community"), ("/warehouse/", "On hand"),
                               ("/projects/", "Ongoing"), ("/ledger/", "Ledger"),
                               ("/days/", "Coming up")):
             body = self.client.get(path).content.decode()
