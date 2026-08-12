@@ -446,12 +446,38 @@
     @media print { .no-print, header.app, body > footer { display:none; }
       .manifest { border:0; padding:0; } }
 
-    .notice { border-bottom:1px solid var(--brand-rule); padding:.85rem 0; }
+    /* Notices. A list of things that happened, so it reads as a list rather
+       than as a document — but the unread mark is a dot, not a badge with a
+       number in it. Nothing counts what a reader has left. */
+    .notices { background:var(--brand-paper); border:1px solid var(--brand-rule);
+      border-radius:10px; padding:.4rem 1.15rem; }
+    .notice { display:flex; gap:.75rem; align-items:flex-start;
+      border-bottom:1px solid var(--brand-rule); padding:.85rem 0; }
     .notice:last-of-type { border-bottom:0; }
-    .notice .msg { margin:0 0 .2rem; }
-    .notice .stamp { font-family:var(--brand-font-mono); font-size:.6875rem; letter-spacing:.06em;
-      color:var(--brand-moss); margin:0; }
+    .notice .dot { flex:none; width:.45rem; height:.45rem; border-radius:50%;
+      margin-top:.55rem; background:none; }
+    .notice.fresh .dot { background:var(--brand-ochre); }
+    .notice .msg { margin:0 0 .15rem; font-size:1rem; }
+    .notice .msg a { color:var(--brand-ink); text-decoration:none; }
+    .notice .msg a:hover { color:var(--brand-spruce); text-decoration:underline; }
+    .notice .stamp { font-family:var(--brand-font-mono); font-size:.6875rem;
+      letter-spacing:.06em; color:var(--brand-moss); margin:0; }
     .notice.fresh .msg { font-weight:600; }
+
+    /* The ledger stays a table. What changed is its weight: a name reads as a
+       name, dates and notes recede, and the chain check is an affirmation at
+       the head of the record rather than small print under it. */
+    table.ledger td.who-col { white-space:nowrap; }
+    table.ledger td.who-col .avatar { margin-right:.4rem; }
+    table.ledger td.when-col { font-family:var(--brand-font-mono);
+      font-size:.8125rem; color:var(--brand-moss); white-space:nowrap; }
+    table.ledger td.note-col { color:var(--brand-text-soft); }
+    .verified, .broken { font-family:var(--brand-font-mono); font-size:.75rem;
+      letter-spacing:.04em; padding:.5rem .75rem; border-radius:var(--brand-radius);
+      margin:0 0 .9rem; display:inline-block; }
+    .verified { color:var(--brand-ok); background:var(--brand-ok-wash); }
+    .broken { color:var(--brand-alert); background:var(--brand-alert-wash);
+      border-left:3px solid var(--brand-alert); }
 
     table.ledger { width:100%; border-collapse:collapse; background:var(--brand-paper);
                    border:1px solid var(--brand-rule); font-size:.9rem; }
