@@ -206,6 +206,25 @@
     /* A finished project is still worth reading, just not competing. */
     .post.done { opacity:.68; }
 
+    /* Amount and unit sit side by side inside the composer card rather than
+       stacked, because they are one fact typed in two boxes. */
+    .which.amount { display:flex; gap:1rem; flex-wrap:wrap; }
+    .which.amount > div { flex:1 1 9rem; }
+    .which.amount label { display:block; border:0; background:none; padding:0;
+      border-radius:0; font-family:var(--brand-font-mono); font-size:.625rem;
+      letter-spacing:.09em; text-transform:uppercase; color:var(--brand-moss);
+      font-weight:400; margin-bottom:.25rem; }
+    .which.amount input { border:1px solid var(--brand-rule-strong);
+      border-radius:var(--brand-radius); padding:.45rem .6rem; font-size:.9375rem; }
+
+    /* A quantity carries its freshness. Kept legible on the post card, where
+       the old .card rules no longer reach it. */
+    .post .qty { font-family:var(--brand-font-mono); font-size:.9rem;
+      color:var(--brand-ink); }
+    .post .qty .by { font-size:.6875rem; color:var(--brand-moss);
+      margin-left:.5rem; text-transform:none; letter-spacing:0; }
+    .post.stale-line { opacity:.8; box-shadow:inset 3px 0 0 var(--brand-warn); }
+
     .more-detail { margin:1rem 0 0; }
     .more-detail summary { cursor:pointer; font-family:var(--brand-font-mono);
       font-size:.6875rem; letter-spacing:.08em; text-transform:uppercase;

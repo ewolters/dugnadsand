@@ -1,4 +1,5 @@
 {% extends "app_base.html" %}
+{% load avatars %}
 {% block title %}Add a place — Dugnadsand{% endblock %}
 {% block subnav %}
 <div class="subnav"><div>
@@ -7,23 +8,34 @@
 </div></div>
 {% endblock %}
 {% block content %}
-<h1>Add a place</h1>
-<p class="lede">Somewhere you keep material. It stays yours and stays where it is —
-   listing it here tells people it exists and how to reach you, nothing more.</p>
+<p class="crumb"><a href="/warehouse/">What's on hand</a></p>
+<h1 class="sr">Add a place</h1>
 
-<form method="post" class="stack">
+<form method="post" class="compose-post">
   {% csrf_token %}
-  {% for field in form %}
-    <div>
-      <label for="{{ field.id_for_label }}">{{ field.label }}</label>
-      {{ field }}
-      {% if field.help_text %}<p class="help">{{ field.help_text }}</p>{% endif %}
-      {% if field.errors %}<p class="err">{{ field.errors.0 }}</p>{% endif %}
-    </div>
-  {% endfor %}
-  <div class="row">
+  <div class="say-it">
+    <p class="whoami">{% avatar member 30 %}<b>{{ member.display_name }}</b></p>
+
+    <label class="sr" for="{{ form.name.id_for_label }}">{{ form.name.label }}</label>
+    {{ form.name }}
+    {% if form.name.errors %}<p class="err">{{ form.name.errors.0 }}</p>{% endif %}
+
+    <label class="sr" for="{{ form.address.id_for_label }}">{{ form.address.label }}</label>
+    {{ form.address }}
+    <p class="help">{{ form.address.help_text }}</p>
+    {% if form.address.errors %}<p class="err">{{ form.address.errors.0 }}</p>{% endif %}
+
+    <label class="sr" for="{{ form.notes.id_for_label }}">{{ form.notes.label }}</label>
+    {{ form.notes }}
+    {% if form.notes.errors %}<p class="err">{{ form.notes.errors.0 }}</p>{% endif %}
+  </div>
+
+  <div class="row send">
     <button type="submit" class="act">Add it</button>
     <a class="act quiet" href="/warehouse/">Cancel</a>
+    <p class="note">It stays yours and stays where it is. Listing it tells people it
+       exists and how to reach you, and nothing else — no custody, no title, no
+       liability moves.</p>
   </div>
 </form>
 {% endblock %}

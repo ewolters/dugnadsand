@@ -1,4 +1,5 @@
 {% extends "app_base.html" %}
+{% load avatars %}
 {% block title %}What's on hand — Dugnadsand{% endblock %}
 {% block subnav %}
 <div class="subnav"><div>
@@ -9,25 +10,33 @@
 {% block content %}
 <h1>What's on hand</h1>
 <p class="lede">Material somebody nearby already has. It stays where they keep it — this
-   is an index of other people's barns, not a warehouse. Every amount below says how
-   recently the person holding it last looked.</p>
+   is an index of other people's barns, not a warehouse. Every amount says how recently
+   the person holding it last looked.</p>
 
-<div class="row">
-  <a class="act" href="/warehouse/new/">Add a place</a>
-  <a class="act quiet" href="/manifests/">Paperwork</a>
-</div>
+<a class="compose" href="/warehouse/new/">
+  {% avatar member 26 %}<span>Add a place you keep things…</span>
+</a>
 
 <h2>Available now</h2>
 {% for l in lines %}
-  <div class="card{% if l.stale %} stale-line{% endif %}">
-    <p class="who">{{ l.warehouse.name }} · {{ l.warehouse.holder.display_name }}</p>
-    <p>{{ l.description|linebreaksbr }}</p>
+  <div class="post{% if l.stale %} stale-line{% endif %}">
+    <p class="who">
+      {% avatar l.warehouse.holder 30 %}<a class="name" href="/warehouse/{{ l.warehouse_id }}/">{{ l.warehouse.name }}</a>
+      <span class="kind">on hand</span>
+      <span class="stamp">{{ l.warehouse.holder.display_name }}</span>
+    </p>
+    <p class="body">{{ l.description|linebreaksbr }}</p>
+    {% comment %}
+      The amount and the age of its confirmation travel together, always. A
+      number on its own is a claim about the present tense that nobody
+      checked — see the design rules.
+    {% endcomment %}
     <p class="qty">{{ l.quantity }} {{ l.unit }}
       <span class="freshness{% if l.stale %} old{% endif %}">{{ l.freshness }}</span>
     </p>
     <div class="row">
-      <a class="act quiet" href="/warehouse/{{ l.warehouse_id }}/">Where it is</a>
       <a class="act" href="/warehouse/line/{{ l.id }}/send/">Send some of this</a>
+      <a class="act quiet" href="/warehouse/{{ l.warehouse_id }}/">Where it is</a>
     </div>
   </div>
 {% empty %}
@@ -37,10 +46,12 @@
 
 <h2>Places</h2>
 {% for w in warehouses %}
-  <div class="card">
-    <p class="who">{{ w.holder.display_name }}</p>
-    <h3 class="proj"><a href="/warehouse/{{ w.id }}/">{{ w.name }}</a></h3>
-    <p>{{ w.address|linebreaksbr }}</p>
+  <div class="post">
+    <p class="who">
+      {% avatar w.holder 30 %}<a class="name" href="/warehouse/{{ w.id }}/">{{ w.name }}</a>
+      <span class="stamp">{{ w.holder.display_name }}</span>
+    </p>
+    <p class="meta">{{ w.address|linebreaksbr }}</p>
   </div>
 {% empty %}
   <p class="empty">No places yet.</p>

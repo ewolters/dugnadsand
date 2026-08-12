@@ -270,8 +270,15 @@ class WarehouseForm(Branded, forms.ModelForm):
                        "\u201cSecond barn, gate code 4412\u201d beats a postal address.",
         }
         widgets = {
-            "address": forms.Textarea(attrs={"rows": 3}),
-            "notes": forms.Textarea(attrs={"rows": 3}),
+            "name": forms.TextInput(attrs={
+                "placeholder": "What to call it", "autofocus": "autofocus"}),
+            "address": forms.Textarea(attrs={
+                "rows": 3,
+                "placeholder": "Where it is, and how to get in"}),
+            "notes": forms.Textarea(attrs={
+                "rows": 2,
+                "placeholder": "Anything a person turning up should know "
+                               "(optional)"}),
         }
 
 
@@ -284,8 +291,9 @@ class StockLineForm(Branded, forms.Form):
     """
 
     description = forms.CharField(
-        max_length=2000, widget=forms.Textarea(attrs={"rows": 3}),
-        label="What it is, in your own words")
+        max_length=2000, label="What it is, in your own words",
+        widget=forms.Textarea(attrs={
+            "rows": 3, "placeholder": "What it is, in your own words"}))
     quantity = forms.DecimalField(
         max_digits=12, decimal_places=2, min_value=Decimal("0.01"),
         label="How much")
