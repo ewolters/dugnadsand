@@ -1082,7 +1082,7 @@ class ThePublicRegisterStaysTechnical(TestCase):
     """
 
     PAGES = ["/", "/how-it-works/", "/policy/", "/virtual-warehouse/",
-             "/attestation/", "/apply/", "/chapters/"]
+             "/attestation/", "/apply/", "/chapters/", "/acceptable-use/"]
 
     def prose(self, path):
         """Rendered text with markup, style and script removed."""

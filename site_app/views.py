@@ -152,6 +152,17 @@ SECTIONS = (
 )
 
 
+def acceptable_use(request):
+    """The standard applied by people, kept deliberately apart from /policy/.
+
+    /policy/ lists commitments bound to checks. Nothing here is checkable —
+    there is no executable test for whether a posting is campaigning — so this
+    page says so at the top rather than borrowing the authority of the page
+    that can prove itself.
+    """
+    return render(request, "site_app/acceptable_use.html", {})
+
+
 def policy(request):
     """The operating policy, read out of the manifest at render time.
 

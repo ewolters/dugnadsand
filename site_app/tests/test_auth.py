@@ -309,6 +309,8 @@ class EveryRouteIsAccountedFor(TestCase):
         "policy/": "the operating policy; a board reads it before anybody has an account",
         "virtual-warehouse/": "how material moves; a business reads it before listing anything",
         "attestation/": "the proof; publishing it privately would defeat it",
+        "acceptable-use/": ("the standard every member is held to; a rule "
+                            "nobody can read before joining is not a rule"),
         "chapters/": ("where chapters are and are not; somebody looking for "
                       "their own area has no account and should not need one"),
         "apply/": ("the ingress; an applicant has no account yet, and "

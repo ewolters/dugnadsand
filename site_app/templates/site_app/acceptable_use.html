@@ -1,0 +1,216 @@
+{% extends "base.html" %}
+
+{% block title %}Acceptable use — Dugnadsand{% endblock %}
+
+{% block extra_css %}
+<style>
+  /* The same register as /attestation/ and /how-it-works/. This is a document,
+     not an argument, and it should read like one. Every value is a --brand-*
+     token; brand-lint fails the build on a literal. */
+  body { margin:0; background:var(--brand-birch); color:var(--brand-ink);
+         font-family:var(--brand-font-serif); line-height:1.65; }
+  body > header { border-bottom:1px solid var(--brand-rule); }
+  body > header nav { max-width:46rem; margin-inline:auto; padding:1.1rem var(--brand-gutter);
+    display:flex; align-items:baseline; justify-content:space-between; gap:1rem; flex-wrap:wrap; }
+  body > header .nav-right { display:flex; align-items:baseline; gap:1.25rem; }
+  body > header .place, body > header .signin {
+    font-family:var(--brand-font-mono); font-size:.6875rem; letter-spacing:.1em;
+    text-transform:uppercase; color:var(--brand-moss); }
+  body > header .signin { color:var(--brand-ochre); text-decoration:none; }
+  body > header .brand-name { font-family:var(--brand-font-sans); font-weight:600;
+    letter-spacing:.07em; text-transform:uppercase; text-decoration:none; color:var(--brand-ink); }
+  .mark { height:.7em; width:auto; margin-right:.55rem; vertical-align:baseline; opacity:.75; }
+  body > footer { border-top:1px solid var(--brand-rule); margin-top:4.5rem;
+    font-family:var(--brand-font-mono); font-size:.75rem; color:var(--brand-moss); }
+  body > footer p { max-width:46rem; margin:0 auto; padding:1.5rem var(--brand-gutter); }
+
+  main { max-width:46rem; margin-inline:auto; padding:0 var(--brand-gutter); }
+
+  h1 { color:var(--brand-ink); font-family:var(--brand-font-sans); font-weight:600;
+       font-size:clamp(1.8rem,4.5vw,2.4rem); line-height:1.12; letter-spacing:-.02em;
+       margin:3.5rem 0 .4rem; text-wrap:balance; }
+  .issued { font-family:var(--brand-font-mono); font-size:.75rem; letter-spacing:.08em;
+    text-transform:uppercase; color:var(--brand-moss); margin:0 0 2.5rem; }
+
+  h2 { color:var(--brand-ink); font-family:var(--brand-font-sans); font-weight:600;
+       font-size:1.3rem; margin:3rem 0 .6rem; letter-spacing:-.01em; }
+  h3 { color:var(--brand-ink); font-family:var(--brand-font-sans); font-weight:600;
+       font-size:1rem; margin:2rem 0 .5rem; }
+  p { margin:0 0 1rem; }
+  a { color:var(--brand-spruce); }
+  strong { font-weight:600; }
+  .rule { border:0; border-top:1px solid var(--brand-rule); margin:3rem 0 0; }
+
+  /* The one framed block on the page. A statement that reads as an assurance
+     needs its limits to be as hard to skip as its claims. */
+  .caveat { border:1px solid var(--brand-ochre); background:var(--brand-warn-wash);
+    padding:1.15rem 1.25rem; margin:2rem 0; font-size:.9375rem; }
+  .caveat b { font-family:var(--brand-font-mono); font-size:.75rem; letter-spacing:.1em;
+    text-transform:uppercase; color:var(--brand-warn); display:block; margin-bottom:.5rem; }
+  .caveat p:last-child { margin-bottom:0; }
+
+  .scroll { overflow-x:auto; border:1px solid var(--brand-rule);
+    background:var(--brand-surface); margin:1.25rem 0 2rem; }
+  table { border-collapse:collapse; width:100%; min-width:32rem; font-size:.9375rem; }
+  th,td { text-align:left; padding:.65rem .85rem; border-bottom:1px solid var(--brand-rule);
+    vertical-align:top; }
+  thead th { font-family:var(--brand-font-mono); font-size:.6875rem; letter-spacing:.11em;
+    text-transform:uppercase; color:var(--brand-moss); font-weight:400;
+    background:var(--brand-table-head); white-space:nowrap; }
+  tbody tr:last-child td { border-bottom:0; }
+  td.id { font-family:var(--brand-font-mono); white-space:nowrap; color:var(--brand-spruce); }
+
+  dl.limits { margin:0; }
+  dl.limits dt { font-family:var(--brand-font-sans); font-weight:600; margin-top:1.4rem; }
+  dl.limits dd { margin:.3rem 0 0; color:var(--brand-text-soft); }
+
+  .where { display:grid; grid-template-columns:minmax(11rem,15ch) 1fr; gap:.45rem 1rem;
+    font-size:.9375rem; margin:1.25rem 0; }
+  .where dt { color:var(--brand-moss); } .where dd { margin:0; }
+</style>
+<style>
+  ul { margin:0 0 1rem; padding-left:1.2rem; }
+  li { margin:0 0 .4rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+<h1>Acceptable use</h1>
+<p class="issued">Applies to dugnadsand.org and to every organization admitted to it</p>
+
+<p>This states what the network is for, what it is not for, and what happens when somebody
+   uses it for the second thing.</p>
+
+<div class="caveat">
+  <b>How this differs from the operating policy</b>
+  <p>The <a href="/policy/">statement of operating policy</a> lists eleven commitments, each
+     bound to a check that runs against the source and reports at
+     <a href="/attestation/">the attestation</a>. <strong>Nothing on this page works that
+     way.</strong> There is no executable check for whether a posting is campaigning or
+     whether a message is abusive, and a commitment with nothing behind it would be worse
+     than no commitment: it would read as enforcement while enforcing nothing.</p>
+  <p>What follows is therefore a standard applied by people, and the section on enforcement
+     says exactly which mechanisms exist and which do not.</p>
+</div>
+
+<hr class="rule">
+
+<h2>1. What the network is for</h2>
+
+<p>Practical mutual aid within a chapter: work offered, work needed, material that exists
+   and can be moved, and the coordination of both. A posting describes something somebody
+   can do or something somebody needs done.</p>
+
+<p>Every organization in a chapter can see every other organization's postings and take up
+   any of them. That visibility is the point, and it is also why the standard below exists:
+   a shared board carries whatever is put on it.</p>
+
+<h2>2. Political activity</h2>
+
+<p>The network is not a channel for electoral politics. The following do not belong on it:</p>
+
+<ul>
+  <li>Support for or opposition to a candidate for public office, a party, or a slate.</li>
+  <li>Advocacy for or against a ballot measure, referendum, or piece of legislation.</li>
+  <li>Recruitment to a campaign, canvass, protest, or political organization, whether or
+      not framed as a request for volunteers.</li>
+  <li>Fundraising or signature collection for any of the above.</li>
+</ul>
+
+<p>This is narrower than a rule against holding or expressing views, which would be neither
+   enforceable nor desirable. People in a chapter will disagree about a great deal. The
+   restriction is on using a shared coordination board as a campaign channel, and the test
+   is what a posting asks somebody to do.</p>
+
+<p>The restriction has a second basis for some members. Not-for-profit organizations
+   admitted to the network are subject to limits on political campaign intervention under
+   their own tax status. A network that carried campaign activity would place that at risk
+   for organizations that never chose it.</p>
+
+<h2>3. Commercial use</h2>
+
+<p>Nothing in the network is bought or sold, and no posting may quote a price, solicit
+   payment, or route to a channel where either happens. Businesses are admitted as
+   parties — an electrician's licence is checked at the door — and they participate on the
+   same terms as anybody else.</p>
+
+<p>Advertising, lead generation, and collecting contact details for use outside the network
+   are all outside what the network is for.</p>
+
+<h2>4. Conduct</h2>
+
+<p>Members meet in person, work at each other's addresses, and hand each other tools. The
+   standard follows from that rather than from a general theory of speech:</p>
+
+<ul>
+  <li>Harassment of a member, including repeated unwanted contact after being asked to
+      stop.</li>
+  <li>Threats, intimidation, or abuse directed at a person.</li>
+  <li>Attacks on a person's race, ethnicity, national origin, religion, disability, sex,
+      sexual orientation, or gender identity.</li>
+  <li>Publishing another member's address, telephone number, or other personal details
+      beyond what they put on the board themselves.</li>
+  <li>Misrepresenting who is asking, or what is being asked for.</li>
+</ul>
+
+<h2>5. Safety</h2>
+
+<p>The network coordinates work and does not supervise it. It carries no insurance for any
+   member, verifies no competence, and makes no assessment of whether a task is safe to
+   attempt. An organization's licence and certificate of insurance are checked at admission
+   and are evidence of a status held on that date, nothing further.</p>
+
+<p>Work involving minors, work in somebody's home, and work with tools or vehicles remain
+   the responsibility of the people doing it and of the organizations they belong to.</p>
+
+<hr class="rule">
+
+<h2>6. How this is enforced</h2>
+
+<p>Precisely, and less than a document of this kind usually implies. The mechanisms that
+   exist today are these, in the order they are reached:</p>
+
+<dl class="limits">
+  <dt>A person speaks to a person.</dt>
+  <dd>The first and most common remedy involves no software at all. It depends on chapters
+      staying small and local enough for the people in one to reach each other.</dd>
+
+  <dt>The author takes it down.</dt>
+  <dd>A posting can be removed by the member who wrote it and by nobody else. There is no
+      moderator account, and no officer can delete another member's posting or comment.
+      This is a real limit, stated rather than glossed.</dd>
+
+  <dt>An application is declined at the door.</dt>
+  <dd>Admission is where the network exercises the most control. A chapter officer reviews
+      every application, checks credentials against whoever issued them, and may decline
+      without giving a reason.</dd>
+
+  <dt>An organization is removed from its chapter.</dt>
+  <dd>The strongest remedy available. An organization removed from a chapter becomes
+      invisible to every member of it — enforced by the database rather than by a setting
+      somebody has to remember — and its members can no longer see or take up anything in
+      it. It is performed by a person with administrative access, not by a button, and it
+      removes an organization from view rather than deleting anything it wrote.</dd>
+</dl>
+
+<p>There is no automated detection of any kind, no reporting queue, and no record of
+   warnings. Nothing counts how often a member has been the subject of a complaint, because
+   such a count is a score and the system holds none.</p>
+
+<h2>7. Raising something</h2>
+
+<p>Concerns go to a chapter officer, or through <a href="/#say-hello">the contact form</a>
+   where a chapter officer cannot be reached or is the subject of the concern. Both reach a
+   person, and neither creates a ticket.</p>
+
+<h2>8. Changes</h2>
+
+<p>This page is not versioned against the manifest, because it makes no claim the manifest
+   can check. It is changed by the people who run the network, and an admitted organization
+   that disagrees with a change may leave — the record it wrote stays with it, and nothing
+   in the network is owed to anybody.</p>
+
+<p><a href="/policy/">Statement of operating policy</a> ·
+   <a href="/how-it-works/">How it works</a> ·
+   <a href="/chapters/">Chapters</a></p>
+{% endblock %}

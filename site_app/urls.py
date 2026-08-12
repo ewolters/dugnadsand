@@ -58,6 +58,7 @@ urlpatterns = [
     path("members/new/", views.member_new, name="member_new"),
     path("how-it-works/", views.how_it_works, name="how_it_works"),
     path("policy/", views.policy, name="policy"),
+    path("acceptable-use/", views.acceptable_use, name="acceptable_use"),
     path("apply/", views.apply, name="apply"),
     path("chapters/", views.chapters, name="chapters"),
     path("projects/<uuid:project_id>/packet/", views.project_packet, name="project_packet"),
