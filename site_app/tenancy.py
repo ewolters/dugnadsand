@@ -21,21 +21,42 @@ from contextlib import contextmanager
 from django.db import connection
 
 TENANT_SETTING = "app.current_tenant_id"
+REGION_SETTING = "app.current_region_id"
 BYPASS_SETTING = "app.bypass_rls"
 
 
-def set_tenant(organization_id):
-    """Bind this connection to one organization. None clears it (fail closed)."""
+def set_tenant(organization_id, region_id=None):
+    """Bind this connection to one organization, and to its chapter.
+
+    TWO settings, because there are two boundaries and they are not the same.
+
+    The organization says whose row a new record belongs to. The chapter says
+    what this member can SEE — a network of one-person organizations is the
+    normal case here, and requiring people to share an organization to see one
+    another's board would be requiring them to share an employer.
+
+    Either being None clears it, and clearing fails closed: with no chapter
+    bound the region clause matches nothing, so an organization outside any
+    chapter is isolated exactly as it was before.
+    """
     with connection.cursor() as cur:
         cur.execute(
-            f"SELECT set_config(%s, %s, FALSE)",
-            [TENANT_SETTING, str(organization_id) if organization_id else ""],
+            "SELECT set_config(%s, %s, FALSE), set_config(%s, %s, FALSE)",
+            [TENANT_SETTING, str(organization_id) if organization_id else "",
+             REGION_SETTING, str(region_id) if region_id else ""],
         )
 
 
 def current_tenant():
     with connection.cursor() as cur:
         cur.execute("SELECT current_setting(%s, TRUE)", [TENANT_SETTING])
+        value = cur.fetchone()[0]
+    return value or None
+
+
+def current_region():
+    with connection.cursor() as cur:
+        cur.execute("SELECT current_setting(%s, TRUE)", [REGION_SETTING])
         value = cur.fetchone()[0]
     return value or None
 
@@ -47,13 +68,17 @@ def tenant_context(organization):
     Used by management commands, the ingest paths, and tests. Request handling
     goes through TenantMiddleware instead.
     """
-    previous = current_tenant()
+    previous, previous_region = current_tenant(), current_region()
     organization_id = getattr(organization, "id", organization)
-    set_tenant(organization_id)
+    # An Organization instance carries its chapter; a bare id cannot, so a
+    # caller passing one gets organization-only scope. Every caller that needs
+    # chapter visibility passes the object.
+    region_id = getattr(organization, "region_id", None)
+    set_tenant(organization_id, region_id)
     try:
         yield
     finally:
-        set_tenant(previous)
+        set_tenant(previous, previous_region)
 
 
 @contextmanager
@@ -99,7 +124,10 @@ class TenantMiddleware:
         """
         user = getattr(request, "user", None)
         if user is None or not user.is_authenticated:
-            return None
+            # A PAIR, like every other return here. Returning a bare None left
+            # the caller unpacking it, and an anonymous request is the most
+            # common request there is.
+            return (None, None)
 
         from .models import Member
 
@@ -107,19 +135,20 @@ class TenantMiddleware:
             return (
                 Member.objects
                 .filter(user_id=user.pk)
-                .values_list("organization_id", flat=True)
+                .values_list("organization_id", "organization__region_id")
                 .first()
-            )
+            ) or (None, None)
 
     def __call__(self, request):
-        organization_id = self._resolve(request)
+        organization_id, region_id = self._resolve(request)
         if organization_id:
             request.organization_id = organization_id
+            request.region_id = region_id
 
-        set_tenant(organization_id)
+        set_tenant(organization_id, region_id)
         try:
             return self.get_response(request)
         finally:
             # Connections are pooled and reused; a tenant left bound to one
             # would leak into whoever gets the connection next.
-            set_tenant(None)
+            set_tenant(None, None)

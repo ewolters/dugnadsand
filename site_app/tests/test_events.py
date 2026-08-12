@@ -8,6 +8,7 @@ that it reads the clearance table and cannot read a member, and that it never
 grew a second input.
 """
 
+import re
 from datetime import date, timedelta
 
 from django.contrib.auth.models import User
@@ -368,7 +369,11 @@ class TheWorkDayPages(SignedIn, WorkDayBase):
             day = self.a_work_day()
         body = self.client.get(f"/days/{day.id}/").content.decode()
         self.assertIn("Announce it", body)
-        self.assertNotIn("disabled", body)
+        # Assert the BUTTON, not the page. A bare substring search matched the
+        # word in a stylesheet comment about disabled buttons — the same
+        # failure as "126" matching a UUID and "Bo" matching "Board".
+        self.assertIsNone(re.search(r"<button[^>]*\bdisabled\b", body),
+                          "the announce button is disabled on a cleared day")
 
     def test_the_page_says_recording_a_permission_does_not_create_one(self):
         """The disclaimer travels with the artifact, as it does on the

@@ -3,6 +3,21 @@ from decimal import Decimal
 from django import forms
 
 
+class Branded:
+    """House defaults for every form on the site.
+
+    label_suffix is dropped. Django appends a colon to every label, so a
+    carefully written "Where to gather, if that is somewhere else (optional)"
+    renders as "...(optional):" — a trailing colon after a closing bracket,
+    on every field, on every page. It reads as unfinished because nobody
+    chose it.
+    """
+
+    def __init__(self, *args, **kwargs):
+        kwargs.setdefault("label_suffix", "")
+        super().__init__(*args, **kwargs)
+
+
 class StampedPublicForm:
     """The "you must have loaded the page" check, without a cookie.
 
@@ -70,7 +85,7 @@ class StampedPublicForm:
         return cleaned
 
 
-class ContactForm(StampedPublicForm, forms.Form):
+class ContactForm(Branded, StampedPublicForm, forms.Form):
     """Front-page contact form. Delivered by kjerne_platform.email.
 
     CSRF-EXEMPT, AND THIS IS WHAT REPLACES IT.
@@ -107,12 +122,12 @@ class ContactForm(StampedPublicForm, forms.Form):
     t = forms.CharField(required=False, widget=forms.HiddenInput)
 
 
-class MemberLoginForm(forms.Form):
+class MemberLoginForm(Branded, forms.Form):
     username = forms.CharField(max_length=150)
     password = forms.CharField(widget=forms.PasswordInput)
 
 
-class PostingForm(forms.ModelForm):
+class PostingForm(Branded, forms.ModelForm):
     """A direction, free text, and a rough size. That is the entire form.
 
     No category, no service type, no suggested hours, no rate. Standardised
@@ -164,7 +179,7 @@ class PostingForm(forms.ModelForm):
         }
 
 
-class ProjectForm(forms.ModelForm):
+class ProjectForm(Branded, forms.ModelForm):
     """A name and a description. The absences are the design — see the model.
 
     No owner field, no status, no target date, no budget, no approval. If a
@@ -188,7 +203,7 @@ class ProjectForm(forms.ModelForm):
         widgets = {"description": forms.Textarea(attrs={"rows": 5})}
 
 
-class ContributionForm(forms.Form):
+class ContributionForm(Branded, forms.Form):
     """Hours given, and a note. No money field exists and none may be added."""
 
     hours = forms.DecimalField(max_digits=6, decimal_places=2, min_value=Decimal("0.01"),
@@ -198,7 +213,7 @@ class ContributionForm(forms.Form):
                            label="Anything worth remembering (optional)")
 
 
-class AddMemberForm(forms.Form):
+class AddMemberForm(Branded, forms.Form):
     """An organizer adding somebody to their own organization.
 
     No organization field: it is always the organizer's own, taken from the
@@ -215,7 +230,7 @@ class AddMemberForm(forms.Form):
         help_text="Organizers add people. They get no extra view of the ledger.")
 
 
-class WarehouseForm(forms.ModelForm):
+class WarehouseForm(Branded, forms.ModelForm):
     """A place somebody keeps things. An address and who to ask.
 
     No capacity, no utilisation, no cost per pallet. This is an index of
@@ -242,7 +257,7 @@ class WarehouseForm(forms.ModelForm):
         }
 
 
-class StockLineForm(forms.Form):
+class StockLineForm(Branded, forms.Form):
     """Something available. Described, counted, and never priced.
 
     There is no value field and none may be added. A figure here would be an
@@ -262,7 +277,7 @@ class StockLineForm(forms.Form):
                   "count it in.")
 
 
-class SendMaterialForm(forms.Form):
+class SendMaterialForm(Branded, forms.Form):
     """Where material is going: onto a project's list, or somewhere written down.
 
     The need picker is the payoff of having a warehouse and bills of material
@@ -318,7 +333,7 @@ class SendMaterialForm(forms.Form):
         return cleaned
 
 
-class MaterialNeedForm(forms.Form):
+class MaterialNeedForm(Branded, forms.Form):
     """A line on a bill of materials. What, and how much.
 
     No value field, and none may be added: an estimate of donated property is
@@ -335,7 +350,7 @@ class MaterialNeedForm(forms.Form):
     unit = forms.CharField(max_length=40, label="Counted in what")
 
 
-class MaterialGivenForm(forms.Form):
+class MaterialGivenForm(Branded, forms.Form):
     quantity = forms.DecimalField(
         max_digits=12, decimal_places=2, min_value=Decimal("0.01"),
         label="How much arrived")
@@ -344,7 +359,7 @@ class MaterialGivenForm(forms.Form):
         label="Anything worth remembering (optional)")
 
 
-class WorkDayForm(forms.ModelForm):
+class WorkDayForm(Branded, forms.ModelForm):
     """A day, a place, a time. Nothing about who is expected.
 
     There is no attendees field, no headcount and no capacity, and none may be
@@ -399,7 +414,7 @@ class WorkDayForm(forms.ModelForm):
         return cleaned
 
 
-class ClearanceForm(forms.Form):
+class ClearanceForm(Branded, forms.Form):
     """A permission the day needs and does not have yet.
 
     kind is free text. Every county names things differently, and a shipped
@@ -419,7 +434,7 @@ class ClearanceForm(forms.Form):
         label="Anything worth writing down (optional)")
 
 
-class ClearanceObtainedForm(forms.Form):
+class ClearanceObtainedForm(Branded, forms.Form):
     """Somebody said yes. When, and how a person who was not on the call can
     check it.
 
@@ -451,7 +466,7 @@ class ClearanceObtainedForm(forms.Form):
         return cleaned
 
 
-class ApplicationForm(StampedPublicForm, forms.Form):
+class ApplicationForm(Branded, StampedPublicForm, forms.Form):
     """Applying to join the network.
 
     What is asked for changes with the kind, and clean() enforces it, because
@@ -569,7 +584,7 @@ class ApplicationForm(StampedPublicForm, forms.Form):
         }
 
 
-class MeasureForm(forms.Form):
+class MeasureForm(Branded, forms.Form):
     """Something true about the world after the work.
 
     There is no field for a value and none for hours, and the unit is checked
@@ -591,7 +606,7 @@ class MeasureForm(forms.Form):
         label="Anything worth saying about it (optional)")
 
 
-class PhotoForm(forms.Form):
+class PhotoForm(Branded, forms.Form):
     image = forms.FileField(label="Photograph")
     depicts_people = forms.BooleanField(
         required=False, initial=True, label="There are people in this picture",
@@ -604,7 +619,7 @@ class PhotoForm(forms.Form):
                   "the people in the picture.")
 
 
-class PacketForm(forms.Form):
+class PacketForm(Branded, forms.Form):
     """The words around the evidence.
 
     acknowledgements is prose somebody writes, not a generated list. Who a
@@ -625,7 +640,7 @@ class PacketForm(forms.Form):
                   "is ranked.")
 
 
-class ConsentForm(forms.Form):
+class ConsentForm(Branded, forms.Form):
     """Recording that somebody in a photograph agreed, or did not.
 
     person is a name typed by whoever asked. Most people at a work party are

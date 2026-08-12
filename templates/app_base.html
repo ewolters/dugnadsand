@@ -88,14 +88,77 @@
     button.act:hover, a.act:hover { background:var(--brand-spruce-hover); }
     button.quiet, a.quiet { background:none; color:var(--brand-spruce); border:1px solid var(--brand-rule); }
     button.quiet:hover, a.quiet:hover { background:var(--brand-quiet-hover); }
+    /* The publish and announce gates disable their button while something is
+       outstanding. Looking identical to a live one made the page read as
+       broken rather than as blocked. */
+    button:disabled, button.act:disabled {
+      background:var(--brand-moss); border-color:var(--brand-moss);
+      opacity:.55; cursor:not-allowed; }
+    button.act:disabled:hover { background:var(--brand-moss); }
 
+    /* Form controls ------------------------------------------------------
+       EVERY control a form can render is listed, not just the text ones. The
+       gap that made this look unfinished was date and datetime-local: both
+       fell through to the browser default and sat beside a styled text input
+       at a different size, in a different font, with a different border. */
     form.stack { display:grid; gap:1.1rem; max-width:34rem; }
+    form > p { margin:0 0 1.15rem; }
     label { font-family:var(--brand-font-mono); font-size:.7rem; letter-spacing:.1em;
             text-transform:uppercase; color:var(--brand-moss); display:block; margin-bottom:.35rem; }
-    input[type=text], input[type=password], input[type=number], textarea {
-      font:inherit; font-size:1rem; width:100%; padding:.55rem .7rem; color:var(--brand-ink);
-      background:var(--brand-white); border:1px solid var(--brand-rule-strong); border-radius:2px; }
+
+    input[type=text], input[type=password], input[type=number], input[type=email],
+    input[type=url], input[type=search], input[type=tel],
+    input[type=date], input[type=datetime-local], input[type=time],
+    input[type=file], select, textarea {
+      font:inherit; font-size:1rem; width:100%; box-sizing:border-box;
+      padding:.55rem .7rem; color:var(--brand-ink); background:var(--brand-white);
+      border:1px solid var(--brand-rule-strong); border-radius:var(--brand-radius); }
     textarea { resize:vertical; line-height:1.55; }
+
+    /* select keeps its native caret deliberately: drawing one needs an inline
+       SVG with a literal colour in it, which brand-lint refuses and rightly. */
+    select { max-width:100%; }
+
+    input[type=file] { padding:.4rem .5rem; }
+    input[type=file]::file-selector-button {
+      font:inherit; font-family:var(--brand-font-sans); font-size:.85rem; font-weight:600;
+      margin-right:.7rem; padding:.35rem .8rem; cursor:pointer;
+      color:var(--brand-spruce); background:var(--brand-quiet-hover);
+      border:1px solid var(--brand-rule-strong); border-radius:var(--brand-radius); }
+    input[type=file]::file-selector-button:hover { background:var(--brand-table-head); }
+
+    /* Checkboxes are not full-width fields, and their label sits beside them
+       rather than above in the uppercase mono the text fields use. */
+    input[type=checkbox], input[type=radio] {
+      width:auto; accent-color:var(--brand-spruce); margin-right:.5rem;
+      transform:translateY(1px); }
+
+    /* One visible focus treatment for everything that can take focus. There
+       was none at all, which is a keyboard user working blind. */
+    input:focus-visible, select:focus-visible, textarea:focus-visible {
+      outline:2px solid var(--brand-ochre); outline-offset:1px;
+      border-color:var(--brand-spruce); }
+    a:focus-visible, button:focus-visible, summary:focus-visible {
+      outline:2px solid var(--brand-ochre); outline-offset:2px; }
+
+    /* Django's own classes. as_p emits these, and neither was styled — help
+       text rendered at body size in the serif, indistinguishable from the
+       page's actual prose, and errors as a bulleted list. */
+    .helptext { display:block; font-size:.85rem; line-height:1.5;
+      color:var(--brand-moss); margin-top:.35rem; }
+    /* as_p renders the errorlist as a SIBLING BEFORE the field's <p>, not
+       inside it, so it cannot be reordered in CSS without replacing the form
+       renderer. Left where it is and made to read as deliberate instead:
+       generous space above separates it from the field before, a tight gap
+       below binds it to the label it belongs to, and the rule down its edge
+       points at what it is about. */
+    ul.errorlist { list-style:none; margin:1.3rem 0 .35rem; padding:.1rem 0 .1rem .6rem;
+      border-left:2px solid var(--brand-error); color:var(--brand-error);
+      font-family:var(--brand-font-sans); font-size:.875rem; line-height:1.45; }
+    ul.errorlist li { margin:0; }
+    ul.errorlist.nonfield { margin:0 0 1.1rem; }
+    form > ul.errorlist:first-child { margin-top:0; }
+
     .help { font-size:.85rem; color:var(--brand-moss); margin-top:.3rem; }
     .err { color:var(--brand-error); font-size:.9rem; margin:.3rem 0 0; }
     .empty { color:var(--brand-moss); font-style:italic; }

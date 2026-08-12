@@ -27,6 +27,28 @@ def _canonical_hours(hours):
     return str(Decimal(hours).quantize(HOURS_QUANT))
 
 
+def _reachable(posting, member):
+    """Whether this member may act on this posting.
+
+    Same organization, or same chapter. The second is the whole reason the
+    network exists: a mutual aid network is many one- and two-person
+    organizations, and a board you can read but not take anything off is a
+    noticeboard.
+
+    A chapter of None never matches another chapter of None. Two organizations
+    admitted into no chapter stay as separate as they ever were, which is the
+    same rule the row-level security policy applies — stated twice on purpose,
+    because RLS decides what is VISIBLE and this decides what may be DONE, and
+    a gap between those two is how somebody ends up able to claim a posting
+    they cannot see.
+    """
+    if posting.organization_id == member.organization_id:
+        return True
+    theirs = posting.organization.region_id
+    mine = member.organization.region_id
+    return theirs is not None and theirs == mine
+
+
 def claim_posting(*, posting, member):
     """Take what was offered.
 
@@ -37,8 +59,8 @@ def claim_posting(*, posting, member):
     """
     if not posting.open:
         raise ValueError("That posting is closed.")
-    if posting.organization_id != member.organization_id:
-        raise ValueError("Posting and member belong to different organizations.")
+    if not _reachable(posting, member):
+        raise ValueError("That posting is not in your chapter.")
 
     return Claim.objects.create(
         organization_id=member.organization_id,
@@ -87,8 +109,8 @@ def record_contribution(*, member, posting, hours, note="", recorded_at=None):
     """
     if hours <= 0:
         raise ValueError("Hours must be positive.")
-    if posting.organization_id != member.organization_id:
-        raise ValueError("Posting and member belong to different organizations.")
+    if not _reachable(posting, member):
+        raise ValueError("That posting is not in your chapter.")
 
     recorded_at = recorded_at or datetime.now(timezone.utc)
 
