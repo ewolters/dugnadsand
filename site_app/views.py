@@ -414,7 +414,7 @@ def board(request):
     # which is the coordination the board is for.
     open_postings = (
         Posting.objects.filter(open=True)
-        .select_related("member", "project")
+        .select_related("member", "member__organization", "project")
         # comments are prefetched for the reply count on every card; without
         # it the feed runs one query per posting.
         .prefetch_related("claims__member", "comments",
@@ -482,6 +482,21 @@ def board(request):
     offers = [p for p in open_postings if p.kind == Posting.OFFER]
     feed = needs + offers
 
+    # A FILTER, NOT A RANKING. It narrows what is shown and never reorders
+    # what remains, so the ordering contract holds inside every view: dated
+    # needs first, soonest at the top, and never a word about who asked.
+    # "mine" is the reader's own postings, which is a fact about the row and
+    # not a score attached to them.
+    show = request.GET.get("show", "")
+    if show == "asking":
+        feed = [p for p in feed if p.kind == Posting.NEED]
+    elif show == "offering":
+        feed = [p for p in feed if p.kind == Posting.OFFER]
+    elif show == "mine":
+        feed = [p for p in feed if p.member_id == member.id]
+    else:
+        show = ""
+
     # Resolved here rather than in the template: an organization admitted into
     # no chapter has region=None, and member.organization.region.name would
     # resolve to the invalid-variable marker rather than to nothing.
@@ -490,6 +505,7 @@ def board(request):
         "section": "board",
         "member": member, "others": others,
         "feed": feed, "chapter": region.name if region else None,
+        "show": show,
         # Kept for anything still reading them, and for the counts in the lede.
         "needs": needs, "offers": offers,
     })
@@ -551,7 +567,7 @@ def posting(request, posting_id):
         return HttpResponseForbidden("Not a member of any organization.")
 
     post = get_object_or_404(
-        Posting.objects.select_related("member", "project")
+        Posting.objects.select_related("member", "member__organization", "project")
         .prefetch_related("claims__member", "comments__member",
                           "interests__member"),
         pk=posting_id)

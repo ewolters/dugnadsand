@@ -38,8 +38,11 @@ class RemovalBase(SignedIn, TestCase):
         self.member_user = User.objects.create_user("ada", password="dugnad-test-pw")
 
         with tenant_context(self.mine):
-            Member.objects.create(organization=self.mine, display_name="Hannah",
-                                  user=self.officer)
+            hannah = Member.objects.create(
+                organization=self.mine, display_name="Hannah", user=self.officer)
+            Posting.objects.create(
+                organization=self.mine, member=hannah, kind=Posting.OFFER,
+                description="A cement mixer, free to borrow.")
         with tenant_context(self.theirs):
             self.ada = Member.objects.create(
                 organization=self.theirs, display_name="Ada", user=self.member_user)
@@ -74,9 +77,13 @@ class TheActiveFlagNowGates(RemovalBase):
         self.assertEqual(self.client.post("/logout/").status_code, 302)
 
     def test_nothing_of_theirs_is_deleted(self):
+        """Scoped to THEIR organization. A bare count inside a tenant context
+        counts the whole chapter now, so it moved the moment a second
+        organization got a posting — which says nothing about deletion."""
         self.close()
         with tenant_context(self.theirs):
-            self.assertEqual(Posting.objects.count(), 1)
+            self.assertEqual(
+                Posting.objects.filter(organization=self.theirs).count(), 1)
 
     def test_others_stop_seeing_it_too(self):
         self.close()
@@ -125,12 +132,22 @@ class RemovingFromAChapter(RemovalBase):
         self.assertNotContains(self.client.get("/community/"), "A ladder")
 
     def test_and_they_stop_seeing_the_chapter(self):
+        """Asserted on WORK, not on an organization's name.
+
+        It checked the page did not contain "Mine", which was the fixture
+        organization's name — and then a filter tab called Mine appeared on
+        the feed and the test failed for a reason that had nothing to do with
+        removal. A name is a word; a posting is the thing that must vanish.
+        """
+        self.sign_in(self.member_user)
+        self.assertContains(self.client.get("/community/"), "cement mixer")
+
         self.sign_in(self.officer)
         self.client.post(f"/chapter/remove/{self.theirs.id}/",
                          {"reason": "Out of area."})
 
         self.sign_in(self.member_user)
-        self.assertNotContains(self.client.get("/community/"), "Mine")
+        self.assertNotContains(self.client.get("/community/"), "cement mixer")
 
     def test_NOTHING_IS_DELETED_and_they_keep_their_login(self):
         """Removal from a room is not erasure from the record."""

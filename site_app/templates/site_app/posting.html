@@ -1,5 +1,6 @@
 {% extends "app_base.html" %}
 {% load avatars %}
+{% load whenago %}
 {% load mentions %}
 {% block title %}{{ p.member.display_name }} — Dugnadsand{% endblock %}
 {% block content %}
@@ -7,9 +8,13 @@
 
 <div class="post{% if p.is_need %} need{% endif %}">
   <p class="who">
-    {% avatar p.member 30 %}<b class="name">{{ p.member.display_name }}</b>
+    {% avatar p.member 30 %}
+    <span class="by">
+      <b class="name">{{ p.member.display_name }}</b>
+      <span class="org">{{ p.member.organization.name }}</span>
+    </span>
     <span class="kind">{% if p.is_need %}asking{% else %}offering{% endif %}</span>
-    <span class="stamp">{{ p.created_at|date:"j M Y" }}</span>
+    <span class="stamp">{{ p.created_at|ago }}</span>
     {% if p.needed_by %}<span class="when {{ p.urgency|slugify }}">{{ p.urgency }}</span>{% endif %}
   </p>
 

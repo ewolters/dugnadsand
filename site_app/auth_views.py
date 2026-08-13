@@ -30,31 +30,31 @@ GENERIC_REFUSAL = ("This link is not usable. Setup links work once and expire "
                    "after a week.")
 
 
-def _qr_svg(data):
-    """Render an otpauth URI as inline SVG, or None if that is not possible.
+def _qr_svg(data, width="38mm"):
+    """Render a QR as inline SVG, or None if it cannot be done honestly.
 
-    Inline rather than an <img> to a generated endpoint: the URI contains the
-    shared secret, and a separate request for it would put that secret in a
-    server log, a proxy cache and the browser's history. Inline SVG keeps it in
-    the one response that already carries it.
+    Inline rather than an <img> to a generated endpoint: the MFA URI contains
+    the shared secret, and a separate request for it would put that secret in
+    a server log, a proxy cache and the browser's history. Inline SVG keeps it
+    in the one response that already carries it.
 
-    Degrades rather than breaks — the setup key is shown as text alongside, so
-    somebody whose camera will not focus, or who is reading this over SSH, can
-    still enroll. Matches kjerne-services/accounts/views.py::_qr_svg.
+    Drawn by juniper, which asks for a size in MILLIMETRES rather than pixels
+    because these end up on paper — a manifest is printed and scanned in a
+    barn. juniper refuses a width that would put the modules under the
+    scannable minimum instead of drawing something that looks like a code and
+    is not one, and that refusal is the reason to use it here.
+
+    Degrades rather than breaks. Every caller shows the underlying value as
+    text too, so somebody whose camera will not focus, or who is reading this
+    over SSH, is never stuck.
     """
     try:
-        import io
+        from juniper.symbology import encode, render_svg
 
-        import qrcode
-        import qrcode.image.svg
-
-        img = qrcode.make(data, image_factory=qrcode.image.svg.SvgPathImage,
-                          box_size=14)
-        buf = io.BytesIO()
-        img.save(buf)
-        return buf.getvalue().decode()
+        return render_svg(encode("qr", data), width=width)
     except Exception:
-        logger.warning("QR render unavailable; manual entry only", exc_info=True)
+        logger.warning("could not render a QR for %d bytes", len(data or ""),
+                       exc_info=True)
         return None
 
 

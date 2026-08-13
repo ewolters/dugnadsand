@@ -90,8 +90,25 @@
     /* The ochre edge still says "somebody is asking", quietly. */
     .post.need { box-shadow:inset 3px 0 0 var(--brand-ochre); }
 
+    /* Tabs narrow the feed. Styled as a quiet row rather than as buttons:
+       they change what is listed, not what is true. */
+    .tabs { display:flex; gap:.4rem; flex-wrap:wrap; margin:0 0 1rem; }
+    .tabs a { font-family:var(--brand-font-sans); font-size:.875rem;
+      font-weight:600; color:var(--brand-moss); text-decoration:none;
+      padding:.35rem .8rem; border-radius:2rem;
+      border:1px solid transparent; }
+    .tabs a:hover { color:var(--brand-ink); background:var(--brand-quiet-hover); }
+    .tabs a[aria-current="page"] { color:var(--brand-ink);
+      background:var(--brand-paper); border-color:var(--brand-rule); }
+
     .post .who { display:flex; align-items:center; gap:.55rem; flex-wrap:wrap;
       margin:0 0 .5rem; }
+    /* Name over organization, as one block. Two lines rather than a run of
+       chips: the name is who said it and the organization is what they are,
+       and those are not the same weight. */
+    .post .who .by { display:flex; flex-direction:column; line-height:1.25; }
+    .post .who .org { font-family:var(--brand-font-mono); font-size:.625rem;
+      letter-spacing:.08em; text-transform:uppercase; color:var(--brand-moss); }
     .post .who .name { font-family:var(--brand-font-sans); font-size:1rem;
       font-weight:600; color:var(--brand-ink); text-decoration:none;
       letter-spacing:0; text-transform:none; }
@@ -451,7 +468,12 @@
       color:var(--brand-ok); background:var(--brand-ok-wash); padding:.6rem .8rem;
       border-radius:2px; }
     @media print { .no-print, header.app, body > footer { display:none; }
-      .manifest { border:0; padding:0; } }
+      .manifest { border:0; padding:0; }
+      /* On paper the code has a real size. juniper draws it at a scannable
+         module width in millimetres; the screen rule below would otherwise
+         carry a viewport-relative width onto the page. */
+      .qr { border:0; padding:0; }
+      .qr svg { width:38mm; height:auto; } }
 
     /* Notices. A list of things that happened, so it reads as a list rather
        than as a document — but the unread mark is a dot, not a badge with a
