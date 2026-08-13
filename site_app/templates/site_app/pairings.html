@@ -1,4 +1,5 @@
 {% extends "app_base.html" %}
+{% load avatars %}
 {% block title %}Worth a look — Dugnadsand{% endblock %}
 {% block content %}
 <h1>Worth a look</h1>
@@ -9,10 +10,14 @@
 <h2>Getting close, nobody on it</h2>
 <p class="ordering">Open needs with a date within three days that nobody has taken up.</p>
 {% for p in running_out %}
-  <div class="card need">
-    <p class="who">{{ p.member.display_name }}
-      <span class="when {{ p.urgency|slugify }}">{{ p.urgency }}</span></p>
-    <p>{{ p.description|linebreaksbr }}</p>
+  <div class="post need">
+    <p class="who">
+      {% avatar p.member 30 %}<a class="name" href="/board/{{ p.id }}/">{{ p.member.display_name }}</a>
+      <span class="kind">asking</span>
+      <span class="stamp">{{ p.created_at|date:"j M" }}</span>
+      <span class="when {{ p.urgency|slugify }}">{{ p.urgency }}</span>
+    </p>
+    <p class="body">{{ p.description|linebreaksbr }}</p>
     <div class="row">
       <form method="post" action="/board/{{ p.id }}/claim/">{% csrf_token %}
         <button type="submit" class="act">I'll do this</button>
@@ -34,9 +39,12 @@
    descriptions would mean keeping a list of what materials are, and a list like that
    makes two donations comparable.</p>
 {% for need, lines in fillable %}
-  <div class="card">
-    <p class="who">{{ need.project.name }}</p>
-    <p>{{ need.description|linebreaksbr }}</p>
+  <div class="post">
+    <p class="who">
+      <a class="name" href="/projects/{{ need.project_id }}/">{{ need.project.name }}</a>
+      <span class="kind">needs material</span>
+    </p>
+    <p class="body">{{ need.description|linebreaksbr }}</p>
     <p class="qty">{{ need.remaining }} {{ need.unit }} still needed</p>
     <p class="on">On hand:
       {% for l in lines %}{{ l.warehouse.name }} ({{ l.quantity }} {{ l.unit }},
@@ -57,9 +65,12 @@
 <p class="ordering">Listings whose holder has not confirmed them in three weeks. They may
    well still be there — only the person holding them can say.</p>
 {% for l in going_quiet %}
-  <div class="card stale-line">
-    <p class="who">{{ l.warehouse.name }} · {{ l.warehouse.holder.display_name }}</p>
-    <p>{{ l.description|linebreaksbr }}</p>
+  <div class="post stale-line">
+    <p class="who">
+      {% avatar l.warehouse.holder 30 %}<a class="name" href="/warehouse/{{ l.warehouse_id }}/">{{ l.warehouse.name }}</a>
+      <span class="stamp">{{ l.warehouse.holder.display_name }}</span>
+    </p>
+    <p class="body">{{ l.description|linebreaksbr }}</p>
     <p class="qty">{{ l.quantity }} {{ l.unit }}
       <span class="freshness old">{{ l.freshness }}</span></p>
     <div class="row">

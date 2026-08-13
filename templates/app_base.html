@@ -272,7 +272,14 @@
        gap that made this look unfinished was date and datetime-local: both
        fell through to the browser default and sat beside a styled text input
        at a different size, in a different font, with a different border. */
-    form.stack { display:grid; gap:1.1rem; max-width:34rem; }
+    /* Short forms — recording hours, sending material, adding a member — read
+       as one object rather than as fields loose on the page. Styled on the
+       shared class rather than in ten templates, which is also why every one
+       of them stays consistent when this changes again. */
+    form.stack { display:grid; gap:1.1rem; max-width:34rem;
+      background:var(--brand-paper); border:1px solid var(--brand-rule);
+      border-radius:10px; padding:1.25rem 1.35rem; }
+    form.stack > p:last-of-type, form.stack .row { margin-bottom:0; }
     form > p { margin:0 0 1.15rem; }
     label { font-family:var(--brand-font-mono); font-size:.7rem; letter-spacing:.1em;
             text-transform:uppercase; color:var(--brand-moss); display:block; margin-bottom:.35rem; }

@@ -11,7 +11,7 @@
 {% if messages %}{% for m in messages %}<p class="said">{{ m }}</p>{% endfor %}{% endif %}
 
 <h1>{{ day.name }}</h1>
-<p class="who">{{ day.starts_at|date:"l j F Y" }} · {{ day.starts_at|date:"H:i" }}{% if day.ends_at %}–{{ day.ends_at|date:"H:i" }}{% endif %} · put in by {{ day.called_by.display_name }}</p>
+<p class="meta">{{ day.starts_at|date:"l j F Y" }} · {{ day.starts_at|date:"H:i" }}{% if day.ends_at %}–{{ day.ends_at|date:"H:i" }}{% endif %} · put in by {{ day.called_by.display_name }}</p>
 
 {% if day.cancelled_at %}
   <p class="stale"><strong>Called off.</strong>{% if day.cancelled_because %} {{ day.cancelled_because }}{% endif %}</p>
@@ -34,9 +34,12 @@
    the call can check it.</p>
 
 {% for c in clearances %}
-  <div class="card{% if not c.obtained %} need{% elif c.lapsed %} stale-line{% endif %}">
-    <p class="who">{{ c.kind }}</p>
-    <p>{{ c.authority|linebreaksbr }}</p>
+  <div class="post{% if not c.obtained %} need{% elif c.lapsed %} stale-line{% endif %}">
+    <p class="who">
+      <b class="name">{{ c.kind }}</b>
+      <span class="kind">{% if c.obtained %}given{% else %}outstanding{% endif %}</span>
+    </p>
+    <p class="body">{{ c.authority|linebreaksbr }}</p>
     {% if c.obtained %}
       <p class="qty">Given {{ c.obtained_on|date:"j F Y" }}{% if c.reference %} · {{ c.reference }}{% endif %}</p>
       {% if c.expires_on %}

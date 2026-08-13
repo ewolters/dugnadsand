@@ -1,4 +1,5 @@
 {% extends "app_base.html" %}
+{% load avatars %}
 {% block title %}Packet — {{ project.name }} — Dugnadsand{% endblock %}
 {% block content %}
 <p class="crumb"><a href="/projects/{{ project.id }}/">{{ project.name }}</a></p>
@@ -35,11 +36,13 @@
 
 <h2>What the work achieved</h2>
 {% for m in measures %}
-  <div class="card">
-    <p class="who">{{ m.recorded_by.display_name }}</p>
-    <h3 class="proj">{{ m.label }}</h3>
+  <div class="post">
+    <p class="who">
+      {% avatar m.recorded_by 30 %}<b class="name">{{ m.label }}</b>
+      <span class="stamp">{{ m.recorded_by.display_name }}</span>
+    </p>
     <p class="qty">{{ m.quantity }} {{ m.unit }}</p>
-    {% if m.note %}<p>{{ m.note|linebreaksbr }}</p>{% endif %}
+    {% if m.note %}<p class="body">{{ m.note|linebreaksbr }}</p>{% endif %}
   </div>
 {% empty %}
   <p class="empty">Nothing recorded yet. A measure is something true about the world
@@ -55,10 +58,11 @@
 
 <h2>What arrived</h2>
 {% for g in material %}
-  <div class="card">
-    <p class="who">{{ g.recorded_at|date:"j F Y" }}</p>
-    <p>{{ g.quantity }} {{ g.need.unit }} — {{ g.need.description }}</p>
-    {% if g.note %}<p class="note">{{ g.note|linebreaksbr }}</p>{% endif %}
+  <div class="post">
+    <p class="who"><b class="name">{{ g.quantity }} {{ g.need.unit }}</b>
+       <span class="stamp">{{ g.recorded_at|date:"j F Y" }}</span></p>
+    <p class="body">{{ g.need.description }}</p>
+    {% if g.note %}<p class="meta">{{ g.note|linebreaksbr }}</p>{% endif %}
   </div>
 {% empty %}
   <p class="empty">Nothing recorded against this project's list.</p>
@@ -70,7 +74,7 @@
    a person was asked and what they said.</p>
 
 {% for row in photos %}
-  <div class="card{% if row.photo.depicts_people and not row.consents %} need{% endif %}">
+  <div class="post{% if row.photo.depicts_people and not row.consents %} need{% endif %}">
     <img src="/photo/{{ row.photo.id }}/" alt="{{ row.photo.caption }}" style="max-width:100%;height:auto">
     {% if row.photo.caption %}<p class="note">{{ row.photo.caption }}</p>{% endif %}
 

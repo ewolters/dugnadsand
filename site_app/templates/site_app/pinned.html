@@ -1,4 +1,5 @@
 {% extends "app_base.html" %}
+{% load avatars %}
 {% block title %}Kept for later — Dugnadsand{% endblock %}
 {% block content %}
 <h1>Kept for later</h1>
@@ -6,12 +7,16 @@
    keeping something is not a vote for it.</p>
 
 {% for pin in pins %}
-  <div class="card">
+  <div class="post">
     {% if pin.posting %}
-      <p class="who">{{ pin.posting.member.display_name }} · posting</p>
-      <p>{{ pin.posting.description|linebreaksbr }}</p>
+      <p class="who">
+        {% avatar pin.posting.member 30 %}<a class="name" href="/board/{{ pin.posting_id }}/">{{ pin.posting.member.display_name }}</a>
+        <span class="kind">{% if pin.posting.is_need %}asking{% else %}offering{% endif %}</span>
+        <span class="stamp">{{ pin.posting.created_at|date:"j M" }}</span>
+      </p>
+      <p class="body">{{ pin.posting.description|linebreaksbr }}</p>
       <div class="row">
-        <a class="act quiet" href="/board/">The board</a>
+        <a class="act quiet" href="/board/{{ pin.posting_id }}/">Open it</a>
         <form method="post" action="/pin/">{% csrf_token %}
           <input type="hidden" name="posting" value="{{ pin.posting_id }}">
           <input type="hidden" name="back" value="/pinned/">
@@ -19,8 +24,11 @@
         </form>
       </div>
     {% else %}
-      <p class="who">Project</p>
-      <h3 class="proj"><a href="/projects/{{ pin.project_id }}/">{{ pin.project.name }}</a></h3>
+      <p class="who">
+        {% avatar pin.project.started_by 30 %}<a class="name" href="/projects/{{ pin.project_id }}/">{{ pin.project.name }}</a>
+        <span class="kind">ongoing</span>
+      </p>
+      <p class="meta">Written down by {{ pin.project.started_by.display_name }}</p>
       <div class="row">
         <form method="post" action="/pin/">{% csrf_token %}
           <input type="hidden" name="project" value="{{ pin.project_id }}">
@@ -31,7 +39,7 @@
     {% endif %}
   </div>
 {% empty %}
-  <p class="empty">Nothing kept yet. Anything on the board or under ongoing work can be
-     kept here for later.</p>
+  <p class="empty">Nothing kept yet. Anything in the community or under ongoing work can
+     be kept here for later.</p>
 {% endfor %}
 {% endblock %}

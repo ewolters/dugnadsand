@@ -1,4 +1,5 @@
 {% extends "app_base.html" %}
+{% load avatars %}
 {% block title %}Coming up — Dugnadsand{% endblock %}
 {% block content %}
 <h1>Coming up</h1>
@@ -6,17 +7,21 @@
    records that whoever holds the gate — a county, a landowner, an insurer — has said
    yes.</p>
 
-<div class="row">
-  <a class="act" href="/days/new/">Put a day in</a>
-</div>
+<a class="compose" href="/days/new/">
+  {% avatar member 26 %}<span>Put a day in the calendar…</span>
+</a>
 
 <h2>Announced</h2>
 {% for d in announced %}
-  <div class="card">
-    <p class="who">{{ d.starts_at|date:"l j F" }} · {{ d.starts_at|date:"H:i" }}{% if d.ends_at %}–{{ d.ends_at|date:"H:i" }}{% endif %}</p>
-    <h3 class="proj"><a href="/days/{{ d.id }}/">{{ d.name }}</a></h3>
-    <p>{{ d.place|linebreaksbr }}</p>
-    {% if d.project %}<p class="cap">Part of {{ d.project.name }}</p>{% endif %}
+  <div class="post">
+    <p class="who">
+      {% avatar d.called_by 30 %}<a class="name" href="/days/{{ d.id }}/">{{ d.name }}</a>
+      <span class="kind">{{ d.starts_at|date:"D j M" }}</span>
+      <span class="stamp">{{ d.starts_at|date:"H:i" }}{% if d.ends_at %}–{{ d.ends_at|date:"H:i" }}{% endif %}</span>
+    </p>
+    <p class="body">{{ d.place|linebreaksbr }}</p>
+    <p class="meta">Put in by {{ d.called_by.display_name }}{% if d.project %} ·
+       part of {{ d.project.name }}{% endif %}</p>
   </div>
 {% empty %}
   <p class="empty">Nothing announced. A day appears here once it is cleared.</p>
@@ -24,10 +29,13 @@
 
 <h2>Waiting on permission</h2>
 {% for d in waiting %}
-  <div class="card{% if d.blockers %} stale-line{% endif %}">
-    <p class="who">{{ d.starts_at|date:"l j F" }} · {{ d.starts_at|date:"H:i" }}</p>
-    <h3 class="proj"><a href="/days/{{ d.id }}/">{{ d.name }}</a></h3>
-    <p>{{ d.place|linebreaksbr }}</p>
+  <div class="post{% if d.blockers %} stale-line{% endif %}">
+    <p class="who">
+      {% avatar d.called_by 30 %}<a class="name" href="/days/{{ d.id }}/">{{ d.name }}</a>
+      <span class="kind">{{ d.starts_at|date:"D j M" }}</span>
+      <span class="stamp">{{ d.starts_at|date:"H:i" }}</span>
+    </p>
+    <p class="body">{{ d.place|linebreaksbr }}</p>
     {% if d.blockers %}
       <p class="stale">Still waiting on
         {% for c in d.blockers %}{{ c.kind }} from {{ c.authority }}{% if not forloop.last %}; {% endif %}{% endfor %}.</p>
@@ -42,9 +50,11 @@
 {% if cancelled %}
   <h2>Called off</h2>
   {% for d in cancelled %}
-    <div class="card done">
-      <p class="who">{{ d.starts_at|date:"l j F" }}</p>
-      <h3 class="proj">{{ d.name }}</h3>
+    <div class="post done">
+      <p class="who">
+        {% avatar d.called_by 26 %}<b class="name">{{ d.name }}</b>
+        <span class="stamp">{{ d.starts_at|date:"j M Y" }}</span>
+      </p>
       {% if d.cancelled_because %}<p>{{ d.cancelled_because|linebreaksbr }}</p>{% endif %}
     </div>
   {% endfor %}
