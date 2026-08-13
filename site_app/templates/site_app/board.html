@@ -28,6 +28,7 @@
   <a href="/community/" {% if not show %}aria-current="page"{% endif %}>Everything</a>
   <a href="/community/?show=asking" {% if show == "asking" %}aria-current="page"{% endif %}>Asking</a>
   <a href="/community/?show=offering" {% if show == "offering" %}aria-current="page"{% endif %}>Offering</a>
+  <a href="/community/?show=saying" {% if show == "saying" %}aria-current="page"{% endif %}>Saying</a>
   <a href="/community/?show=mine" {% if show == "mine" %}aria-current="page"{% endif %}>Mine</a>
 </nav>
 
@@ -47,7 +48,7 @@
         {% endcomment %}
         <span class="org">{{ p.member.organization.name }}</span>
       </span>
-      <span class="kind">{% if p.is_need %}asking{% else %}offering{% endif %}</span>
+      <span class="kind">{% if p.is_need %}asking{% elif p.is_note %}saying{% else %}offering{% endif %}</span>
       <span class="stamp">{{ p.created_at|ago }}</span>
       {% if p.needed_by %}<span class="when {{ p.urgency|slugify }}">{{ p.urgency }}</span>{% endif %}
     </p>
@@ -85,6 +86,12 @@
     {% endif %}
 
     <div class="row">
+      {% comment %}
+        A note asks nothing, so it offers nothing to take up, no interest and
+        no hours. What it does offer is the reply box below, which is the
+        whole point of it.
+      {% endcomment %}
+      {% if not p.is_note %}
       {% if p.member_id != member.id and not p.i_am_on %}
         <form method="post" action="/board/{{ p.id }}/claim/">{% csrf_token %}
           <button type="submit" class="act">{% if p.is_need %}I'll do this{% else %}I'll take this{% endif %}</button>
@@ -117,6 +124,7 @@
         {% endif %}
       {% endif %}
       <a class="act quiet" href="/board/{{ p.id }}/hours/">Record hours given</a>
+      {% endif %}
       {% if p.member_id == member.id %}
         <form method="post" action="/board/{{ p.id }}/close/">{% csrf_token %}
           <button type="submit" class="act quiet">Take it down</button>

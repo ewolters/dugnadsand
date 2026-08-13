@@ -57,6 +57,11 @@ def claim_posting(*, posting, member):
     anything and never will. That is the point of the whole system, and the
     reason this function is four lines.
     """
+    if posting.is_note:
+        # Refused in the SERVICE, not just hidden in the template. A note asks
+        # nothing of anybody, so there is nothing to take up, and a claim on
+        # one would put a person on the hook for a hello.
+        raise ValueError("There is nothing to take up on that.")
     if not posting.open:
         raise ValueError("That posting is closed.")
     if not _reachable(posting, member):

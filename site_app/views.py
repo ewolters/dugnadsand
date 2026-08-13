@@ -479,8 +479,13 @@ def board(request):
     # Needs lead because a need has a date and an offer does not. That is a
     # fact about the posting, which is the only thing ordering is allowed to
     # be about.
-    offers = [p for p in open_postings if p.kind == Posting.OFFER]
-    feed = needs + offers
+    # Offers and notes share the recency group: neither has a date to sort
+    # on, and open_postings is already newest-first. A note interleaves with
+    # offers rather than getting a section, because it is somebody speaking
+    # and speaking does not belong in a filing cabinet either.
+    rest = [p for p in open_postings if p.kind != Posting.NEED]
+    offers = [p for p in rest if p.kind == Posting.OFFER]
+    feed = needs + rest
 
     # A FILTER, NOT A RANKING. It narrows what is shown and never reorders
     # what remains, so the ordering contract holds inside every view: dated
@@ -492,6 +497,8 @@ def board(request):
         feed = [p for p in feed if p.kind == Posting.NEED]
     elif show == "offering":
         feed = [p for p in feed if p.kind == Posting.OFFER]
+    elif show == "saying":
+        feed = [p for p in feed if p.kind == Posting.NOTE]
     elif show == "mine":
         feed = [p for p in feed if p.member_id == member.id]
     else:

@@ -170,6 +170,7 @@ class PostingForm(Branded, forms.ModelForm):
         self.fields["kind"].choices = [
             (Posting.OFFER, "I'm offering something"),
             (Posting.NEED, "I'm asking for something"),
+            (Posting.NOTE, "I'm just saying something"),
         ]
         self.fields["description"].widget.attrs.update({
             "placeholder": "What is it? Write it however you would say it.",
@@ -201,6 +202,22 @@ class PostingForm(Branded, forms.ModelForm):
             "needed_by": forms.DateInput(attrs={"type": "date"}),
             "kind": forms.RadioSelect,
         }
+
+    def clean(self):
+        """A note carries no deadline and no size.
+
+        Both fields are optional and somebody could fill them in before
+        choosing "just saying"; left set, a hello would render an urgency
+        chip and a rough number of hours — the interface promising something
+        the posting does not mean.
+        """
+        cleaned = super().clean()
+        from .models import Posting
+
+        if cleaned.get("kind") == Posting.NOTE:
+            cleaned["needed_by"] = None
+            cleaned["hours_cap"] = None
+        return cleaned
 
 
 class ProjectForm(Branded, forms.ModelForm):

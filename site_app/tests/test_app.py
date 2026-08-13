@@ -383,11 +383,29 @@ class Needs(AppBase):
         self.assertIn("Ola", body)
 
     def test_the_form_still_offers_no_category(self):
-        # kind is a direction, not a taxonomy: exactly two choices, both fixed.
+        """kind is a DIRECTION, not a taxonomy.
+
+        This asserted exactly two choices, which was the right guard while
+        there were two: it exists so nobody adds a value without stopping to
+        justify it. "note" was added deliberately — a community that can only
+        ask and offer is a transaction desk with a nice tone of voice — and
+        it is still not a description of the work. It is the ABSENCE of a
+        direction: somebody saying hello asks nothing and offers nothing.
+
+        The rule the check now holds is the one that actually matters: the
+        vocabulary is fixed and small, and no value names a KIND OF WORK.
+        "Plumbing" or "Childcare" here is the change no-catalog forbids,
+        because two postings under one service type are comparable and
+        comparable work has an ascertainable price.
+        """
         from site_app.forms import PostingForm
 
         choices = dict(PostingForm().fields["kind"].choices)
-        self.assertEqual(set(choices), {"offer", "need"})
+        self.assertEqual(set(choices), {"offer", "need", "note"})
+        self.assertLessEqual(len(choices), 4, "the vocabulary is growing")
+        for value in choices:
+            self.assertNotIn(value, ("service", "category", "trade", "skill",
+                                     "type", "rate"))
         # Two additions, both allowed, for the same reason: neither describes
         # the WORK. needed_by is a fact about the need. project is a pointer to
         # one specific, member-written, organization-scoped effort.

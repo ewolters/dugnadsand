@@ -161,7 +161,15 @@ class Posting(TenantScoped):
 
     OFFER = "offer"
     NEED = "need"
-    KINDS = [(OFFER, "Offering"), (NEED, "Need")]
+    # Neither. Somebody saying hello, that the food bank is shut on Monday,
+    # or thank you for Saturday. A community that can only ask and offer is a
+    # transaction desk with a nice tone of voice.
+    #
+    # kind stays the ONE field on this model carrying a vocabulary, and it is
+    # still a direction rather than a description of the work — no-catalog is
+    # about what the help IS, and "note" says nothing about that.
+    NOTE = "note"
+    KINDS = [(OFFER, "Offering"), (NEED, "Need"), (NOTE, "Just saying")]
 
     member = models.ForeignKey(Member, on_delete=models.PROTECT, related_name="postings")
 
@@ -191,6 +199,12 @@ class Posting(TenantScoped):
     @property
     def is_need(self):
         return self.kind == self.NEED
+
+    @property
+    def is_note(self):
+        """Nothing to take up. There is no claim, no hours and no deadline —
+        the whole point is that it asks nothing of anybody."""
+        return self.kind == self.NOTE
 
     @property
     def days_left(self):
