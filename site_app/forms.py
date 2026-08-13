@@ -123,8 +123,22 @@ class ContactForm(Branded, StampedPublicForm, forms.Form):
 
 
 class MemberLoginForm(Branded, forms.Form):
-    username = forms.CharField(max_length=150)
-    password = forms.CharField(widget=forms.PasswordInput)
+    """Sign in with the name or the address, however the phone capitalised it.
+
+    autocapitalize="none" is the fix at source: a mobile keyboard capitalises
+    the first letter of a text field, and Django's username match is exact.
+    The view resolves what was typed as well, because the attribute is a hint
+    a browser may ignore and the person may have a saved value already wrong.
+    """
+
+    username = forms.CharField(
+        max_length=150, label="Username or email",
+        widget=forms.TextInput(attrs={
+            "autocapitalize": "none", "autocorrect": "off",
+            "spellcheck": "false", "autocomplete": "username",
+            "autofocus": "autofocus"}))
+    password = forms.CharField(
+        widget=forms.PasswordInput(attrs={"autocomplete": "current-password"}))
 
 
 class PostingForm(Branded, forms.ModelForm):

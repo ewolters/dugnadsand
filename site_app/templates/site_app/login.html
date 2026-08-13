@@ -8,14 +8,20 @@
 <form method="post" class="stack">
   {% csrf_token %}
   {% if error %}<p class="err">{{ error }}</p>{% endif %}
+  {% comment %}
+    Rendered from the form rather than by hand. The hand-written input had no
+    autocapitalize, so a phone capitalised the first letter of a username that
+    is stored lowercase and the sign-in failed every time — which is exactly
+    the sort of attribute a duplicated field loses.
+  {% endcomment %}
   <div>
-    <label for="id_username">Username</label>
-    <input type="text" name="username" id="id_username" autocomplete="username"
-           value="{{ form.username.value|default:'' }}" required>
+    <label for="{{ form.username.id_for_label }}">{{ form.username.label }}</label>
+    {{ form.username }}
+    <p class="help">Whichever you have. Capitals do not matter.</p>
   </div>
   <div>
-    <label for="id_password">Password</label>
-    <input type="password" name="password" id="id_password" autocomplete="current-password" required>
+    <label for="{{ form.password.id_for_label }}">Password</label>
+    {{ form.password }}
   </div>
   <div><button type="submit" class="act">Sign in</button></div>
 </form>

@@ -304,6 +304,55 @@ def claim_posting(request, posting_id):
 # --------------------------------------------------------------------------
 
 
+def _resolve_login(typed):
+    """The account somebody meant, from what they actually typed.
+
+    Django's ModelBackend matches the username EXACTLY and does not accept an
+    email address. Both of those are traps for a person who was handed a
+    username by somebody else:
+
+      A phone keyboard capitalises the first letter of a text field, so
+      "hannah" is typed as "Hannah" and never matches. This cost a real
+      member an hour: ten failures in under a minute, an IP ban, and an
+      error that reads as "your account does not exist".
+
+      The address is the thing people know about themselves. Being told to
+      sign in with a name somebody else chose, exactly as they cased it, is
+      a rule the software can drop rather than teach.
+
+    Returns the stored username, or the input unchanged so authenticate()
+    fails normally — never a different answer for "no such account" than for
+    "wrong password", which would turn this into a way to enumerate members.
+
+    Ambiguity fails closed. If two accounts differ only by case, or an
+    address matches more than one, nothing is guessed.
+    """
+    from django.contrib.auth.models import User
+
+    typed = (typed or "").strip()
+    if not typed:
+        return typed
+
+    exact = User.objects.filter(username=typed).values_list("username", flat=True)
+    if exact:
+        return exact[0]
+
+    matches = list(
+        User.objects.filter(username__iexact=typed)
+        .values_list("username", flat=True)[:2])
+    if len(matches) == 1:
+        return matches[0]
+
+    if "@" in typed:
+        by_email = list(
+            User.objects.filter(email__iexact=typed)
+            .values_list("username", flat=True)[:2])
+        if len(by_email) == 1:
+            return by_email[0]
+
+    return typed
+
+
 def member_login(request):
     from django.contrib.auth import authenticate, login
     from kjerne_platform import login_protection
@@ -314,7 +363,7 @@ def member_login(request):
     error = None
 
     if request.method == "POST" and form.is_valid():
-        username = form.cleaned_data["username"]
+        username = _resolve_login(form.cleaned_data["username"])
         if not login_protection.check_login(request, username):
             error = "Too many attempts. Try again in a few minutes."
         else:
