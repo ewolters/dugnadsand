@@ -152,6 +152,44 @@ SECTIONS = (
 )
 
 
+def need_help(request):
+    """Where somebody who needs help goes. And what this site does not do.
+
+    THE LAST MILE IS NOT OURS. Mutual aid groups are excellent at knowing who
+    needs what on their own street and poor at knowing that a contractor forty
+    miles away has two hundred board-feet going to a skip. This system does
+    the second thing. The first stays entirely with the groups, along with
+    every question that comes with it: who qualifies, what is available, what
+    can be done this week.
+
+    So this page is an introduction and nothing else. No form, no request, no
+    queue — nothing typed here reaches anybody, because there is nothing to
+    type. A person contacts a group directly and the relationship is theirs
+    from the first word.
+
+    Only organizations that published a way to be contacted are listed.
+    Silence means unlisted: publishing a route to a group's door is a
+    decision they make rather than a default they discover.
+    """
+    from .models import Organization
+
+    groups = (Organization.objects
+              .filter(active=True)
+              .exclude(public_contact="")
+              .select_related("region")
+              .order_by("region__name", "name"))
+
+    by_chapter = {}
+    for group in groups:
+        key = group.region.name if group.region else "Elsewhere"
+        by_chapter.setdefault(key, []).append(group)
+
+    return render(request, "site_app/need_help.html", {
+        "chapters": sorted(by_chapter.items()),
+        "any_listed": bool(groups),
+    })
+
+
 def acceptable_use(request):
     """The standard applied by people, kept deliberately apart from /policy/.
 

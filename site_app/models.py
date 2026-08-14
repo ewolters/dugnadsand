@@ -24,6 +24,20 @@ class Organization(models.Model):
     admitted_at = models.DateTimeField(auto_now_add=True)
     active = models.BooleanField(default=True)
 
+    # PUBLISHED, and only if the organization fills it in. Somebody who needs
+    # help does not join anything and does not post here — they contact a
+    # group directly, and this is the only way to do that. Blank means the
+    # organization is not listed at all, which is the direction to fail in:
+    # publishing a way to reach people is a decision they make, not a default
+    # they discover.
+    public_contact = models.TextField(blank=True)
+
+    # What they do and who they serve, in their own words. Free text for the
+    # same reason every description here is: a shipped vocabulary of service
+    # types would make two groups comparable, and this is not a directory of
+    # vendors.
+    serves = models.TextField(blank=True)
+
     # Which chapter admitted it. The ONLY link between a chapter and a tenant,
     # and it points this way on purpose: a label on the tenant root, rather
     # than a collection the chapter can walk into. Null for an organization

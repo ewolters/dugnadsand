@@ -75,7 +75,30 @@ commitments remove the routes to it.
 
 ---
 
-## 2. What is deliberately not promised
+## 2. Where this system stops
+
+**Dugnadsand does not reach the people who are helped.** It coordinates supply
+between the groups that do — which material exists, where it is, and which
+group can use it. Everything after that belongs to the group.
+
+The division follows what each side is good at. A mutual aid group knows who on
+its own street needs a roof repaired this month, and has no way of knowing that
+a contractor forty miles away is about to skip the shingles. This system
+addresses the second problem and leaves the first alone.
+
+The consequence is that **no beneficiary is a party to this system.** Somebody
+who needs help contacts a group directly through the page that lists them,
+which carries no form and accepts no request. Who qualifies, what is offered
+and what is decided are that group's questions, governed by that group's own
+rules, and no record of any of it exists here.
+
+Nothing is held either. Material listed in this system stays where its holder
+keeps it; what is recorded is a description, a location and a count. The
+platform is a directory, and the goods never enter its custody.
+
+---
+
+## 3. What is deliberately not promised
 
 The following are outside the scope of the commitments above and are stated
 explicitly.
@@ -108,7 +131,7 @@ present; only its holder can confirm or update it.
 
 ---
 
-## 3. Chapters, organizations and what is shared
+## 4. Chapters, organizations and what is shared
 
 An organization is a party in the network: a household, a one-person business,
 a not-for-profit, a congregation. Most are one or two people. A chapter is the
@@ -134,7 +157,7 @@ of the person who put it up, wherever it is read.
 
 ---
 
-## 4. What leaves the boundary
+## 5. What leaves the boundary
 
 Notifications, email and integrations traverse shared infrastructure that the
 chapter separation does not cover. Data crossing that boundary carries
@@ -149,7 +172,7 @@ time of issue. Spent and expired links are deleted on a schedule.
 
 ---
 
-## 5. Changes to this statement
+## 6. Changes to this statement
 
 The manifest is versioned. A new commitment, or a change to an existing one, is
 a change to `policy/manifest.toml` and appears in the published attestation from
@@ -163,7 +186,7 @@ entered under pressure.
 
 ---
 
-## 6. How to check any of this
+## 7. How to check any of this
 
 | | |
 |---|---|

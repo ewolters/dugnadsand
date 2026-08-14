@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+
+{% block title %}Finding help — Dugnadsand{% endblock %}
+
+{% block extra_css %}
+<style>
+  /* The same register as /attestation/ and /how-it-works/. This is a document,
+     not an argument, and it should read like one. Every value is a --brand-*
+     token; brand-lint fails the build on a literal. */
+  body { margin:0; background:var(--brand-birch); color:var(--brand-ink);
+         font-family:var(--brand-font-serif); line-height:1.65; }
+  body > header { border-bottom:1px solid var(--brand-rule); }
+  body > header nav { max-width:46rem; margin-inline:auto; padding:1.1rem var(--brand-gutter);
+    display:flex; align-items:baseline; justify-content:space-between; gap:1rem; flex-wrap:wrap; }
+  body > header .nav-right { display:flex; align-items:baseline; gap:1.25rem; }
+  body > header .place, body > header .signin {
+    font-family:var(--brand-font-mono); font-size:.6875rem; letter-spacing:.1em;
+    text-transform:uppercase; color:var(--brand-moss); }
+  body > header .signin { color:var(--brand-ochre); text-decoration:none; }
+  body > header .brand-name { font-family:var(--brand-font-sans); font-weight:600;
+    letter-spacing:.07em; text-transform:uppercase; text-decoration:none; color:var(--brand-ink); }
+  .mark { height:.7em; width:auto; margin-right:.55rem; vertical-align:baseline; opacity:.75; }
+  body > footer { border-top:1px solid var(--brand-rule); margin-top:4.5rem;
+    font-family:var(--brand-font-mono); font-size:.75rem; color:var(--brand-moss); }
+  body > footer p { max-width:46rem; margin:0 auto; padding:1.5rem var(--brand-gutter); }
+
+  main { max-width:46rem; margin-inline:auto; padding:0 var(--brand-gutter); }
+
+  h1 { color:var(--brand-ink); font-family:var(--brand-font-sans); font-weight:600;
+       font-size:clamp(1.8rem,4.5vw,2.4rem); line-height:1.12; letter-spacing:-.02em;
+       margin:3.5rem 0 .4rem; text-wrap:balance; }
+  .issued { font-family:var(--brand-font-mono); font-size:.75rem; letter-spacing:.08em;
+    text-transform:uppercase; color:var(--brand-moss); margin:0 0 2.5rem; }
+
+  h2 { color:var(--brand-ink); font-family:var(--brand-font-sans); font-weight:600;
+       font-size:1.3rem; margin:3rem 0 .6rem; letter-spacing:-.01em; }
+  h3 { color:var(--brand-ink); font-family:var(--brand-font-sans); font-weight:600;
+       font-size:1rem; margin:2rem 0 .5rem; }
+  p { margin:0 0 1rem; }
+  a { color:var(--brand-spruce); }
+  strong { font-weight:600; }
+  .rule { border:0; border-top:1px solid var(--brand-rule); margin:3rem 0 0; }
+
+  /* The one framed block on the page. A statement that reads as an assurance
+     needs its limits to be as hard to skip as its claims. */
+  .caveat { border:1px solid var(--brand-ochre); background:var(--brand-warn-wash);
+    padding:1.15rem 1.25rem; margin:2rem 0; font-size:.9375rem; }
+  .caveat b { font-family:var(--brand-font-mono); font-size:.75rem; letter-spacing:.1em;
+    text-transform:uppercase; color:var(--brand-warn); display:block; margin-bottom:.5rem; }
+  .caveat p:last-child { margin-bottom:0; }
+
+  .scroll { overflow-x:auto; border:1px solid var(--brand-rule);
+    background:var(--brand-surface); margin:1.25rem 0 2rem; }
+  table { border-collapse:collapse; width:100%; min-width:32rem; font-size:.9375rem; }
+  th,td { text-align:left; padding:.65rem .85rem; border-bottom:1px solid var(--brand-rule);
+    vertical-align:top; }
+  thead th { font-family:var(--brand-font-mono); font-size:.6875rem; letter-spacing:.11em;
+    text-transform:uppercase; color:var(--brand-moss); font-weight:400;
+    background:var(--brand-table-head); white-space:nowrap; }
+  tbody tr:last-child td { border-bottom:0; }
+  td.id { font-family:var(--brand-font-mono); white-space:nowrap; color:var(--brand-spruce); }
+
+  dl.limits { margin:0; }
+  dl.limits dt { font-family:var(--brand-font-sans); font-weight:600; margin-top:1.4rem; }
+  dl.limits dd { margin:.3rem 0 0; color:var(--brand-text-soft); }
+
+  .where { display:grid; grid-template-columns:minmax(11rem,15ch) 1fr; gap:.45rem 1rem;
+    font-size:.9375rem; margin:1.25rem 0; }
+  .where dt { color:var(--brand-moss); } .where dd { margin:0; }
+</style>
+
+<style>
+  .group { border:1px solid var(--brand-rule); background:var(--brand-surface);
+    padding:1.15rem 1.3rem; margin:0 0 1rem; border-radius:2px; }
+  .group h3 { font-family:var(--brand-font-sans); font-size:1.0625rem;
+    font-weight:600; margin:0 0 .35rem; color:var(--brand-ink); }
+  .group .serves { margin:0 0 .7rem; color:var(--brand-text-soft);
+    font-size:.9375rem; }
+  .group .reach { margin:0; font-size:1rem; white-space:pre-line; }
+  .area { font-family:var(--brand-font-mono); font-size:.6875rem;
+    letter-spacing:.11em; text-transform:uppercase; color:var(--brand-moss);
+    margin:2.5rem 0 .9rem; }
+  .no-form { border:1px solid var(--brand-ochre); background:var(--brand-warn-wash);
+    padding:1.1rem 1.25rem; margin:2.5rem 0 0; font-size:.9375rem; }
+  .no-form b { font-family:var(--brand-font-mono); font-size:.75rem;
+    letter-spacing:.1em; text-transform:uppercase; color:var(--brand-warn);
+    display:block; margin-bottom:.5rem; }
+  .no-form p:last-child { margin-bottom:0; }
+</style>
+{% endblock %}
+
+{% block content %}
+<h1>Finding help</h1>
+<p class="issued">Contact a group directly · nothing on this page is a form</p>
+
+<p>Dugnadsand takes no requests for help and holds no waiting list. It coordinates
+   supply between the groups that do that work — finding out that a contractor forty
+   miles away has material going to a skip, and getting it to a group that can use it.</p>
+
+<p>The groups below decide what they can do and for whom. Contacting one of them
+   directly is the whole of it: they know what is available this week, what their
+   own rules are, and what happens next.</p>
+
+{% if any_listed %}
+  {% for area, groups in chapters %}
+    <p class="area">{{ area }}</p>
+    {% for g in groups %}
+      <div class="group">
+        <h3>{{ g.name }}</h3>
+        {% if g.serves %}<p class="serves">{{ g.serves|linebreaksbr }}</p>{% endif %}
+        <p class="reach">{{ g.public_contact|linebreaksbr }}</p>
+      </div>
+    {% endfor %}
+  {% endfor %}
+{% else %}
+  <p>No group has published a way to be contacted yet. Until one does, this page has
+     nothing useful on it — which is better than a form that reaches nobody.</p>
+{% endif %}
+
+<div class="no-form">
+  <b>What this page is not</b>
+  <p>There is nothing here to fill in, and nothing typed on this site reaches a group.
+     Everything after the introduction happens between a person and that group, by
+     whatever means they list — a phone, an address, a Tuesday morning.</p>
+  <p>No record of the request exists here. Dugnadsand never learns who asked, what was
+     asked for, or what was decided.</p>
+</div>
+
+<p><a href="/how-it-works/">How it works</a> ·
+   <a href="/chapters/">Chapters</a> ·
+   <a href="/apply/">Applying to the network</a></p>
+{% endblock %}
