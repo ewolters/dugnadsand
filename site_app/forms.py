@@ -151,15 +151,26 @@ class PostingForm(Branded, forms.ModelForm):
     forbids.
     """
 
+    # The attestation an electrician ticks. Added in __init__ rather than
+    # declared, because for most organizations it must not exist at all --
+    # a permanently-present "I hold no licence" checkbox would be noise on
+    # every offer of a lift.
+    under_licence = None
+
     def __init__(self, *args, **kwargs):
         """Limit the project list to open projects in this organization.
 
         RLS already scopes the queryset to the tenant. This narrows it further
         to projects still running, so a form cannot quietly file new work under
         something that finished.
+
+        organization is passed rather than read from the instance because the
+        licence question has to be answerable before anything is saved.
         """
+        organization = kwargs.pop("organization", None)
         super().__init__(*args, **kwargs)
         from .models import Posting, Project
+        from .services_licence import sentence
 
         self.fields["project"].queryset = Project.objects.filter(open=True)
         self.fields["project"].empty_label = "Not part of anything"
@@ -182,6 +193,13 @@ class PostingForm(Branded, forms.ModelForm):
             "placeholder": "What is it? Write it however you would say it.",
             "autofocus": "autofocus",
         })
+
+        self.licence_sentence = sentence(organization) if organization else None
+        if self.licence_sentence:
+            self.fields["under_licence"] = forms.BooleanField(
+                required=True, label=self.licence_sentence,
+                error_messages={"required": "An offer of licensed work stands "
+                                            "under that licence."})
 
     class Meta:
         from .models import Posting

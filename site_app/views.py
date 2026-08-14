@@ -468,6 +468,7 @@ def board(request):
     """
     from datetime import date
     from .models import Member, Posting
+    from .services_licence import sentence as licence_sentence
 
     member = _member(request)
     if member is None:
@@ -585,6 +586,9 @@ def board(request):
         "feed": feed, "chapter": region.name if region else None,
         "show": show, "requests": requests,
         "is_aid_group": member.organization.is_aid_group,
+        # None for everybody holding no licence, which is most members, and
+        # the tick then does not render at all.
+        "licence_sentence": licence_sentence(member.organization),
         # Kept for anything still reading them, and for the counts in the lede.
         "needs": needs, "offers": offers,
     })
@@ -625,7 +629,21 @@ def interested(request, posting_id):
         if hours <= 0:
             return HttpResponseBadRequest("Hours must be positive.")
 
-    express_interest(posting=post, member=member, hours=hours)
+    # Putting your name to somebody else's posting is offering too, so it
+    # carries the same attestation. Refused rather than silently unticked:
+    # an interest stored blank is indistinguishable afterwards from one by
+    # somebody who holds no licence.
+    from .services_licence import LicenceNotAffirmed, snapshot
+
+    try:
+        under = snapshot(member.organization,
+                         request.POST.get("under_licence"))
+    except LicenceNotAffirmed as refusal:
+        messages.error(request, str(refusal))
+        return redirect(back)
+
+    express_interest(posting=post, member=member, hours=hours,
+                     offered_under=under)
     return redirect(back)
 
 
@@ -711,11 +729,20 @@ def posting_new(request):
     if member is None:
         return HttpResponseForbidden("Not a member of any organization.")
 
-    form = PostingForm(request.POST or None)
+    from .services_licence import snapshot
+
+    form = PostingForm(request.POST or None,
+                       organization=member.organization)
     if request.method == "POST" and form.is_valid():
         posting = form.save(commit=False)
         posting.member = member
         posting.organization_id = member.organization_id
+        # The form has already refused an unticked box, so this cannot raise
+        # here. It is called anyway because the snapshot is what gets stored,
+        # and deriving it in one place keeps the posting and the interest
+        # paths from drifting apart.
+        posting.offered_under = snapshot(
+            member.organization, form.cleaned_data.get("under_licence"))
         posting.save()
         # Everyone else in the organization, chosen by membership and nothing
         # else. Fails open — see site_app/notifications.py.

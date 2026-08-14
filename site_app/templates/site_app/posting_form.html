@@ -59,6 +59,21 @@
     </div>
   </details>
 
+  {% if form.licence_sentence %}
+    {% comment %}
+      Shown only to an organization that actually holds a verified licence.
+      For everybody else this block does not render at all — a permanent
+      "I hold no licence" line would be noise on every offer of a lift.
+    {% endcomment %}
+    <div class="attest">
+      <label>
+        {{ form.under_licence }}
+        <span>{{ form.licence_sentence }}</span>
+      </label>
+      {% if form.under_licence.errors %}<p class="err">{{ form.under_licence.errors.0 }}</p>{% endif %}
+    </div>
+  {% endif %}
+
   <div class="row send">
     <button type="submit" class="act">Post it</button>
     <a class="act quiet" href="/community/">Cancel</a>

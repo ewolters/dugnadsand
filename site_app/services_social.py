@@ -251,7 +251,7 @@ def going_quiet(*, days=21):
 # Interest: the move between keeping something privately and taking it on.
 # --------------------------------------------------------------------------
 
-def express_interest(*, posting, member, hours=None):
+def express_interest(*, posting, member, hours=None, offered_under=""):
     """Say publicly that you might help, and optionally roughly how long.
 
     hours is a CEILING. Somebody who says four and gives one has given one
@@ -264,10 +264,20 @@ def express_interest(*, posting, member, hours=None):
 
     interest, created = Interest.objects.get_or_create(
         posting=posting, member=member,
-        defaults={"organization_id": member.organization_id, "hours": hours})
-    if not created and hours != interest.hours:
-        interest.hours = hours
-        interest.save(update_fields=["hours"])
+        defaults={"organization_id": member.organization_id, "hours": hours,
+                  "offered_under": offered_under})
+    changed = []
+    if not created:
+        if hours != interest.hours:
+            interest.hours = hours
+            changed.append("hours")
+        # Re-affirmed each time somebody revises, because the sentence they
+        # agreed to is about the offer as it stands, not as it first stood.
+        if offered_under != interest.offered_under:
+            interest.offered_under = offered_under
+            changed.append("offered_under")
+    if changed:
+        interest.save(update_fields=changed)
     return interest
 
 

@@ -1,3 +1,4 @@
+import re
 import uuid
 from decimal import Decimal
 
@@ -78,6 +79,38 @@ class Organization(models.Model):
         prevent.
         """
         return self.kind == self.AID_GROUP
+
+    # What counts as a licence to practise. Deliberately not a shipped list of
+    # trades -- "Electrical contractor", "Journeyman electrician" and "Master
+    # electrician" are three different documents in one state and named
+    # differently in the next. The kind is free text an officer typed while
+    # looking at the document, so this matches the shape of the words instead.
+    LICENCE_WORDS = re.compile(r"licen[cs]e|certificat(?:e|ion)|registration"
+                               r"|permit|credential", re.I)
+
+    def licences(self, on=None):
+        """Verified, unexpired credentials that read as a licence to practise.
+
+        Sourced from the application that admitted this organization, because
+        that is where a person actually looked at the document. Nothing here
+        trusts what an applicant typed: verified_on is set by an officer, and
+        an expired licence is not a licence -- the failure nobody catches is
+        the row that was filled in correctly two years ago.
+        """
+        from datetime import date
+
+        on = on or date.today()
+        found = []
+        for application in self.applications.all():
+            for credential in application.credentials.all():
+                if credential.verified_on is None:
+                    continue
+                if not self.LICENCE_WORDS.search(credential.kind or ""):
+                    continue
+                if credential.expires_on and credential.expires_on < on:
+                    continue
+                found.append(credential)
+        return found
 
 
 class TenantScoped(models.Model):
@@ -224,6 +257,19 @@ class Posting(TenantScoped):
     kind = models.CharField(max_length=8, choices=KINDS, default=OFFER)
     description = models.TextField()
     hours_cap = models.PositiveIntegerField(null=True, blank=True)
+
+    # WHAT SOMEBODY AGREED TO WHEN THEY OFFERED, snapshotted as text.
+    #
+    # An electrician offering an evening on this board is offering it as an
+    # electrician. This records that they said so, and names the licence they
+    # said it under, at the moment they said it -- a snapshot rather than a
+    # link, because a licence later renewed, lapsed or corrected must not
+    # rewrite what somebody agreed to in March.
+    #
+    # Blank for everybody holding no licence, which is most people. It is not
+    # a rank and nothing sorts by it: an offer of a licensed trade and an
+    # offer of an afternoon sit in the same feed in the same order.
+    offered_under = models.CharField(max_length=200, blank=True)
 
     # When it stops being useful. A ride on Thursday and a fence sometime this
     # year are different problems, and until this existed the board could not
@@ -1484,6 +1530,19 @@ class Interest(TenantScoped):
     # Null is the ordinary case: "I'm interested" says nothing about how long.
     hours = models.DecimalField(max_digits=6, decimal_places=2,
                                 null=True, blank=True)
+
+    # WHAT SOMEBODY AGREED TO WHEN THEY OFFERED, snapshotted as text.
+    #
+    # An electrician offering an evening on this board is offering it as an
+    # electrician. This records that they said so, and names the licence they
+    # said it under, at the moment they said it -- a snapshot rather than a
+    # link, because a licence later renewed, lapsed or corrected must not
+    # rewrite what somebody agreed to in March.
+    #
+    # Blank for everybody holding no licence, which is most people. It is not
+    # a rank and nothing sorts by it: an offer of a licensed trade and an
+    # offer of an afternoon sit in the same feed in the same order.
+    offered_under = models.CharField(max_length=200, blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
 

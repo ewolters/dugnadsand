@@ -92,6 +92,13 @@
     /* A blind request. Marked differently from a posting because it is a
        different kind of thing: nobody in the community wrote it. */
     .post.asked { box-shadow:inset 3px 0 0 var(--brand-alert); }
+    /* An attestation is not a boast. Quiet, small, and below the offer. */
+    .post .under, .attest-inline { font-size:.8125rem; color:var(--brand-moss); }
+    .attest, .attest-inline { display:block; margin:.5rem 0; }
+    .attest label, .attest-inline { display:flex; gap:.5rem; align-items:flex-start;
+      font-size:.875rem; line-height:1.45; color:var(--brand-moss); }
+    .attest input[type=checkbox], .attest-inline input[type=checkbox] {
+      margin-top:.2rem; flex:0 0 auto; }
     .post .reach { font-family:var(--brand-font-mono); font-size:.9375rem;
       background:var(--brand-ok-wash); color:var(--brand-ink);
       padding:.6rem .8rem; border-radius:var(--brand-radius);

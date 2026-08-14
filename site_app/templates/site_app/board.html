@@ -98,6 +98,9 @@
 
     <p class="body">{{ p.description|linebreaksbr }}</p>
 
+    {% if p.offered_under %}
+      <p class="under">Offered under {{ p.offered_under }}.</p>
+    {% endif %}
     {% if p.project or p.hours_cap %}
       <p class="meta">
         {% if p.hours_cap %}Roughly {{ p.hours_cap }} hour{{ p.hours_cap|pluralize }}{% endif %}
@@ -155,6 +158,12 @@
         {% else %}
           <form method="post" action="/board/{{ p.id }}/interested/" class="keen-form">{% csrf_token %}
             <input type="hidden" name="back" value="/community/">
+            {% if licence_sentence %}
+              <label class="attest-inline">
+                <input type="checkbox" name="under_licence" value="1" required>
+                <span>{{ licence_sentence }}</span>
+              </label>
+            {% endif %}
             <button type="submit" class="act quiet">I'm interested</button>
           </form>
           <form method="post" action="/board/{{ p.id }}/interested/" class="keen-form">{% csrf_token %}
@@ -162,6 +171,12 @@
             <label class="sr" for="h-{{ p.id }}">Hours you could give</label>
             <input id="h-{{ p.id }}" name="hours" type="number" min="0.5" step="0.5"
                    inputmode="decimal" placeholder="hrs">
+            {% if licence_sentence %}
+              <label class="attest-inline">
+                <input type="checkbox" name="under_licence" value="1" required>
+                <span>{{ licence_sentence }}</span>
+              </label>
+            {% endif %}
             <button type="submit" class="act quiet">Offer hours</button>
           </form>
         {% endif %}
