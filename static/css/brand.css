@@ -37,6 +37,19 @@
   --brand-avatar-slate: #3E5A68;
   --brand-avatar-heather: #6A5670;
   --brand-avatar-rust: #8A4A32;
+  --brand-night: #101917;
+  --brand-night-paper: #182421;
+  --brand-night-raised: #20302C;
+  --brand-night-ink: #E7ECE6;
+  --brand-night-moss: #93A69B;
+  --brand-night-field: #131D1B;
+  --brand-ochre-lift: #D9A250;
+  --brand-spruce-lift: #8FBFAE;
+  --brand-night-rule: rgba(231,236,230,.14);
+  --brand-night-rule-strong: rgba(231,236,230,.24);
+  --brand-fresh: #2F6E5B;
+  --brand-fresh-lift: #6FBFA4;
+  --brand-fresh-wash: #E4EFEA;
   --brand-font-heading: 'Optima', sans-serif;
   --brand-font-body: 'Charter', sans-serif;
 }
@@ -73,6 +86,89 @@ a {
   --brand-gutter: clamp(1.25rem, 5vw, 2.5rem);
   --brand-measure: 40rem;
   --brand-measure-wide: 68rem;
+
+  /* A SCALE, where the app had one-off values. The feed grew 10px cards,
+     2rem pills, 1rem bubbles and 12px panels over three sittings, and every
+     new surface guessed again. */
+  --brand-radius-card: 12px;
+  --brand-radius-field: 10px;
+  --brand-radius-pill: 999px;
+
+  /* Paper on a table, not glass floating over it. Deliberately shallow --
+     this material world has no drop shadows, and these read as the card
+     sitting ON the ground rather than above it. */
+  --brand-lift-1: 0 1px 2px rgba(23,33,30,.05);
+  --brand-lift-2: 0 2px 8px rgba(23,33,30,.08);
+
+  /* THE STREAM COLUMN. A document is read once at 40rem; a feed is scanned
+     a hundred times and wants to be narrower than the page it sits on. */
+  --brand-feed: 34rem;
+  --brand-tap: 2.75rem;
+
+  --brand-quick: 120ms;
+  --brand-settle: 220ms;
+  --brand-ease: cubic-bezier(.2,.7,.3,1);
+}
+
+/* ---- the night axis ---------------------------------------------------
+   Scoped to body.app, which is the signed-in application. The public pages
+   set their own type and carry photographs chosen for a warm ground; giving
+   them a dark mode is a separate decision and Eric's to make.
+
+   Everything below REDEFINES EXISTING TOKENS rather than adding dark ones.
+   No component anywhere references a night colour directly, which is why
+   594 lines of app CSS flip without a single component edit -- and why a
+   surface built next week is dark-correct before anybody thinks about it.
+
+   The ground is derived from spruce, not from neutral grey. A grey with no
+   hue reads as a dimmed screen; this brand's dark is lamplight on timber. */
+@media (prefers-color-scheme: dark) {
+  body.app {
+    --brand-birch: var(--brand-night);
+    --brand-background: var(--brand-night);
+    --brand-paper: var(--brand-night-paper);
+    --brand-surface: var(--brand-night-paper);
+    --brand-white: var(--brand-night-raised);
+    --brand-field: var(--brand-night-field);
+    --brand-table-head: var(--brand-night-raised);
+    --brand-quiet-hover: var(--brand-night-raised);
+
+    --brand-ink: var(--brand-night-ink);
+    --brand-text-dark: var(--brand-night-ink);
+    --brand-text-body: var(--brand-night-ink);
+    --brand-moss: var(--brand-night-moss);
+    --brand-text-muted: var(--brand-night-moss);
+    --brand-text-soft: var(--brand-night-moss);
+
+    /* Both accents must climb to stay legible: ochre sits at 4.9:1 on the
+       night card and spruce is the link colour, which cannot be marginal. */
+    --brand-ochre: var(--brand-ochre-lift);
+    --brand-secondary: var(--brand-ochre-lift);
+    --brand-spruce: var(--brand-spruce-lift);
+    --brand-primary: var(--brand-spruce-lift);
+    --brand-spruce-hover: var(--brand-night-ink);
+    --brand-fresh: var(--brand-fresh-lift);
+
+    --brand-rule: var(--brand-night-rule);
+    --brand-rule-strong: var(--brand-night-rule-strong);
+
+    /* Washes are backgrounds behind ink. Inverted they would be blocks of
+       pale colour with dark text on a dark page -- louder than the thing
+       they qualify. On night they become tints of the ground. */
+    --brand-ok-wash: #16302A;
+    --brand-warn-wash: #2E2718;
+    --brand-alert-wash: #33201D;
+    --brand-fresh-wash: #16302A;
+    --brand-ok: #6FBFA4;
+    --brand-warn: #D9B25C;
+    --brand-alert: #E08472;
+    --brand-error: #E08472;
+
+    /* A shadow is the absence of light. On a dark ground it is a lighter
+       edge, not a darker blur -- a darker blur is invisible. */
+    --brand-lift-1: 0 1px 0 rgba(231,236,230,.05);
+    --brand-lift-2: 0 2px 10px rgba(0,0,0,.35);
+  }
 }
 
 /* Footer links. Four public pages each style `body > footer` in their own

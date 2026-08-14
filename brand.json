@@ -53,7 +53,20 @@
     "avatar_moss": "#5C6F64",
     "avatar_slate": "#3E5A68",
     "avatar_heather": "#6A5670",
-    "avatar_rust": "#8A4A32"
+    "avatar_rust": "#8A4A32",
+    "night": "#101917",
+    "night_paper": "#182421",
+    "night_raised": "#20302C",
+    "night_ink": "#E7ECE6",
+    "night_moss": "#93A69B",
+    "night_field": "#131D1B",
+    "ochre_lift": "#D9A250",
+    "spruce_lift": "#8FBFAE",
+    "night_rule": "rgba(231,236,230,.14)",
+    "night_rule_strong": "rgba(231,236,230,.24)",
+    "fresh": "#2F6E5B",
+    "fresh_lift": "#6FBFA4",
+    "fresh_wash": "#E4EFEA"
   },
   "tokens": {
     "font_sans": "Optima, Candara, 'Gill Sans', 'Gill Sans MT', 'Trebuchet MS', 'Segoe UI', sans-serif",
@@ -62,11 +75,21 @@
     "radius": "2px",
     "gutter": "clamp(1.25rem, 5vw, 2.5rem)",
     "measure": "40rem",
-    "measure_wide": "68rem"
+    "measure_wide": "68rem",
+    "radius_card": "12px",
+    "radius_field": "10px",
+    "radius_pill": "999px",
+    "lift_1": "0 1px 2px rgba(23,33,30,.05)",
+    "lift_2": "0 2px 8px rgba(23,33,30,.08)",
+    "feed": "34rem",
+    "tap": "2.75rem",
+    "quick": "120ms",
+    "settle": "220ms",
+    "ease": "cubic-bezier(.2,.7,.3,1)"
   },
   "logo": {
     "mark": "img/tally.svg",
-    "meaning": "Thirteen tally marks, scored as into wood. A tally has no unit \u2014 thirteen marks never say thirteen of what \u2014 which is why the mark held when the system grew past hours and now carries timber too, without a stroke changing. It is also deliberately the SINGLE stick and not the split tally: a split tally was broken in two so both halves had to match, which made it a record of a debt between two named parties. That is precisely what this is not. A record, never a balance."
+    "meaning": "Thirteen tally marks, scored as into wood. A tally has no unit — thirteen marks never say thirteen of what — which is why the mark held when the system grew past hours and now carries timber too, without a stroke changing. It is also deliberately the SINGLE stick and not the split tally: a split tally was broken in two so both halves had to match, which made it a record of a debt between two named parties. That is precisely what this is not. A record, never a balance."
   },
   "lint": {
     "exclude": [],

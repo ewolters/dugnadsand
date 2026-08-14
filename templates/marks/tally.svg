@@ -1,0 +1,28 @@
+{% comment %}
+  The wordmark's tally, INLINED so its currentColor strokes resolve against
+  the page. static/img/tally.svg is the same geometry and keeps the <title>
+  and <desc> that document what the mark means -- this copy drops both,
+  because aria-hidden makes them unreadable to everybody and their words
+  ("a record, not a balance") then sit in the markup of every page, where a
+  forbidden-word check reads them as the thing they deny.
+{% endcomment %}
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 60" fill="none"
+     class="mark" width="52" height="11" aria-hidden="true" focusable="false">
+  <g stroke="currentColor" stroke-width="5" stroke-linecap="round">
+    <line x1="10" y1="12" x2="12" y2="48"/>
+    <line x1="26" y1="11" x2="25" y2="47"/>
+    <line x1="41" y1="12" x2="43" y2="48"/>
+    <line x1="58" y1="11" x2="57" y2="47"/>
+    <line x1="4"  y1="44" x2="65" y2="14"/>
+
+    <line x1="100" y1="11" x2="101" y2="48"/>
+    <line x1="116" y1="12" x2="114" y2="47"/>
+    <line x1="131" y1="11" x2="133" y2="48"/>
+    <line x1="148" y1="12" x2="147" y2="47"/>
+    <line x1="94"  y1="45" x2="155" y2="13"/>
+
+    <line x1="190" y1="12" x2="191" y2="48"/>
+    <line x1="206" y1="11" x2="204" y2="47"/>
+    <line x1="221" y1="12" x2="223" y2="48"/>
+  </g>
+</svg>

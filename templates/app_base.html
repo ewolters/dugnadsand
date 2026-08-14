@@ -4,6 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="light dark">
   <title>{% block title %}Dugnadsand{% endblock %}</title>
   <!-- Must come first: every local alias below resolves to a --brand-* token
        defined here. Without it they are undefined, which invalidates the whole
@@ -15,14 +16,44 @@
            font-size:1.0625rem; line-height:1.6; -webkit-font-smoothing:antialiased; }
     a { color:var(--brand-spruce); }
     :focus-visible { outline:2px solid var(--brand-ochre); outline-offset:3px; }
+    @media (pointer:coarse) {
+      /* A feed is operated with a thumb. Anything it has to hit gets the
+         target whatever the type size says. */
+      .act, .tabs a, button, .post .who .name { min-height:var(--brand-tap);
+        display:inline-flex; align-items:center; }
+    }
+    @media (prefers-reduced-motion:reduce) {
+      *, *::before, *::after { transition-duration:1ms !important;
+        animation-duration:1ms !important; }
+    }
 
-    header.app { border-bottom:1px solid var(--brand-rule); background:var(--brand-paper); }
+    /* Sticky, because a feed is scrolled and the way out of it should not be
+       a scroll back to the top. Translucent so the column visibly runs under
+       it rather than stopping at a bar. */
+    header.app { border-bottom:1px solid var(--brand-rule); background:var(--brand-paper);
+      position:sticky; top:0; z-index:30; }
+    @supports (backdrop-filter:blur(8px)) {
+      header.app { background:color-mix(in srgb, var(--brand-paper) 88%, transparent);
+        backdrop-filter:blur(8px); }
+    }
     header.app .bar { max-width:60rem; margin-inline:auto; padding:.9rem var(--brand-gutter);
       display:flex; align-items:baseline; gap:1.5rem; flex-wrap:wrap; }
     header.app .brand { font-family:var(--brand-font-sans); font-weight:600; letter-spacing:.07em;
       text-transform:uppercase; text-decoration:none; font-size:1rem; }
     header.app nav.areas { display:flex; gap:1.25rem; margin-left:auto; align-items:baseline;
       flex-wrap:wrap; }
+    @media (max-width:58rem) {
+      /* A rail rather than a wrap. Six areas at 380px wrap into three ragged
+         rows that push the feed off the screen; scrolled sideways they stay
+         one line and every one is still reachable. */
+      header.app .bar { gap:.75rem; }
+      header.app nav.areas { order:3; width:100%; margin-left:0; gap:1.1rem;
+        flex-wrap:nowrap; overflow-x:auto; scrollbar-width:none;
+        -webkit-overflow-scrolling:touch; padding-bottom:.15rem; }
+      header.app nav.areas::-webkit-scrollbar { display:none; }
+      header.app nav.areas a { white-space:nowrap; }
+      header.app .you { margin-left:auto; }
+    }
     header.app .you { display:flex; gap:1.25rem; align-items:baseline;
       padding-left:1.25rem; border-left:1px solid var(--brand-rule); }
     header.app nav a, header.app nav button,
@@ -42,7 +73,7 @@
     header.app .menu { position:relative; }
     header.app .sheet { position:absolute; right:0; top:1.6rem; z-index:20;
       background:var(--brand-paper); border:1px solid var(--brand-rule);
-      border-radius:2px; padding:.6rem .9rem; display:grid; gap:.5rem;
+      border-radius:var(--brand-radius); padding:.6rem .9rem; display:grid; gap:.5rem;
       min-width:9rem; text-align:right; }
     header.app .sheet form { margin:0; }
 
@@ -57,12 +88,18 @@
     .subnav a[aria-current="page"] { color:var(--brand-ochre); }
 
     main { max-width:60rem; margin-inline:auto; padding:2.5rem var(--brand-gutter) 4rem; }
+    /* A STREAM IS NOT A DOCUMENT. The feed inherited the 60rem page width and
+       read as a spreadsheet of postings: at that measure the eye has to
+       traverse to find the next name. Pages that are genuinely tabular -- the
+       warehouse, the ledger -- keep the document width, so this is opt-in by
+       the page rather than a global narrowing. */
+    main.stream { max-width:var(--brand-feed); padding-top:1.75rem; }
     h1 { font-family:var(--brand-font-sans); font-weight:600; font-size:clamp(1.7rem,4vw,2.2rem);
          line-height:1.15; letter-spacing:-.02em; margin:0 0 .35rem; color:var(--brand-ink); }
     .lede { color:var(--brand-moss); margin:0 0 2rem; }
     h2 { font-family:var(--brand-font-sans); font-weight:600; font-size:1.2rem; margin:2.5rem 0 .75rem; }
 
-    .card { background:var(--brand-paper); border:1px solid var(--brand-rule); border-radius:2px;
+    .card { background:var(--brand-paper); border:1px solid var(--brand-rule); border-radius:var(--brand-radius);
             padding:1.15rem 1.25rem; margin-bottom:1rem; }
     .card p { margin:0 0 .6rem; }
     .card .who { font-family:var(--brand-font-mono); font-size:.75rem; letter-spacing:.06em;
@@ -80,13 +117,15 @@
        its way. */
     .compose { display:flex; align-items:center; gap:.75rem; text-decoration:none;
       background:var(--brand-paper); border:1px solid var(--brand-rule);
-      border-radius:2rem; padding:.7rem 1.1rem; margin:0 0 1.75rem; }
+      border-radius:var(--brand-radius-pill); padding:.7rem 1.1rem; margin:0 0 1.75rem;
+      transition:border-color var(--brand-quick) var(--brand-ease),
+                 background var(--brand-quick) var(--brand-ease); }
     .compose span { color:var(--brand-moss); font-size:1rem; }
     .compose:hover { border-color:var(--brand-rule-strong); background:var(--brand-white); }
     .compose:hover span { color:var(--brand-ink); }
 
     .post { background:var(--brand-paper); border:1px solid var(--brand-rule);
-      border-radius:10px; padding:1.1rem 1.3rem 1rem; margin:0 0 1.1rem; }
+      border-radius:var(--brand-radius-card); box-shadow:var(--brand-lift-1); padding:1.1rem 1.3rem 1rem; margin:0 0 1.1rem; }
     /* The ochre edge still says "somebody is asking", quietly. */
     .post.need { box-shadow:inset 3px 0 0 var(--brand-ochre); }
     /* A blind request. Marked differently from a posting because it is a
@@ -109,7 +148,7 @@
     .tabs { display:flex; gap:.4rem; flex-wrap:wrap; margin:0 0 1rem; }
     .tabs a { font-family:var(--brand-font-sans); font-size:.875rem;
       font-weight:600; color:var(--brand-moss); text-decoration:none;
-      padding:.35rem .8rem; border-radius:2rem;
+      padding:.35rem .8rem; border-radius:var(--brand-radius-pill);
       border:1px solid transparent; }
     .tabs a:hover { color:var(--brand-ink); background:var(--brand-quiet-hover); }
     .tabs a[aria-current="page"] { color:var(--brand-ink);
@@ -156,7 +195,7 @@
        a ceiling somebody revises, not a form they fill in. */
     .keen-form { display:flex; gap:.4rem; align-items:center; margin:0; }
     .keen-form input[type=number] { width:4.5rem; padding:.4rem .55rem;
-      font-size:.875rem; border-radius:2rem; text-align:center; }
+      font-size:.875rem; border-radius:var(--brand-radius-pill); text-align:center; }
 
     /* Conversation, on the card. A feed where talking happens on another page
        is a noticeboard with a comments section attached. */
@@ -170,7 +209,7 @@
        people actually talk. The avatar is outside it so a run of replies
        reads as a column of who is speaking. */
     .talk .comment .bubble { background:var(--brand-birch);
-      border-radius:1rem; padding:.5rem .9rem; min-width:0; }
+      border-radius:var(--brand-radius-field); padding:.5rem .9rem; min-width:0; }
     .talk .comment .said-by { font-family:var(--brand-font-sans);
       font-size:.9375rem; font-weight:600; color:var(--brand-ink);
       margin-right:.45rem; }
@@ -187,7 +226,7 @@
     .talk .more:hover { color:var(--brand-ink); }
     .reply { display:flex; gap:.55rem; align-items:center; margin:.2rem 0 0; }
     .reply input[type=text] { flex:1; padding:.5rem .9rem; font-size:.9375rem;
-      border-radius:2rem; background:var(--brand-birch);
+      border-radius:var(--brand-radius-pill); background:var(--brand-birch);
       border-color:var(--brand-rule); }
     .reply input[type=text]:focus-visible { background:var(--brand-white); }
 
@@ -197,7 +236,7 @@
        makes in half a second and it was the heaviest thing on the screen. */
     .compose-post { max-width:38rem; }
     .say-it { background:var(--brand-paper); border:1px solid var(--brand-rule);
-      border-radius:10px; padding:1.1rem 1.2rem; }
+      border-radius:var(--brand-radius-card); padding:1.1rem 1.2rem; }
     .say-it .whoami { display:flex; align-items:center; gap:.6rem; margin:0 0 .7rem; }
     .say-it .whoami b { font-family:var(--brand-font-sans); font-size:1rem;
       font-weight:600; color:var(--brand-ink); }
@@ -213,7 +252,7 @@
     .which > div { display:flex; gap:.5rem; flex-wrap:wrap; }
     .which > div > div { flex:1 1 0; min-width:11rem; }
     .which label { display:flex; align-items:center; gap:.5rem; margin:0;
-      cursor:pointer; padding:.55rem .8rem; border-radius:2rem;
+      cursor:pointer; padding:.55rem .8rem; border-radius:var(--brand-radius-pill);
       border:1px solid var(--brand-rule); background:var(--brand-birch);
       font-family:var(--brand-font-sans); font-size:.9375rem; font-weight:600;
       letter-spacing:0; text-transform:none; color:var(--brand-text-soft); }
@@ -272,7 +311,7 @@
        label; not every control needs one printed beside it. */
     .sr { position:absolute; width:1px; height:1px; padding:0; margin:-1px;
       overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0; }
-    fieldset.kind { border:1px solid var(--brand-rule); border-radius:2px; padding:.9rem 1.1rem;
+    fieldset.kind { border:1px solid var(--brand-rule); border-radius:var(--brand-radius); padding:.9rem 1.1rem;
                     margin:0; background:var(--brand-paper); }
     fieldset.kind legend { font-family:var(--brand-font-mono); font-size:.7rem; letter-spacing:.1em;
                     text-transform:uppercase; color:var(--brand-moss); padding:0 .4rem; }
@@ -285,7 +324,7 @@
           margin:.4rem 0 0; }
 
     button.act, a.act { font-family:var(--brand-font-sans); font-size:.9rem; font-weight:600;
-      color:var(--brand-paper); background:var(--brand-spruce); border:0; border-radius:2px;
+      color:var(--brand-paper); background:var(--brand-spruce); border:0; border-radius:var(--brand-radius);
       padding:.5rem 1rem; cursor:pointer; text-decoration:none; display:inline-block; }
     button.act:hover, a.act:hover { background:var(--brand-spruce-hover); }
     button.quiet, a.quiet { background:none; color:var(--brand-spruce); border:1px solid var(--brand-rule); }
@@ -309,7 +348,7 @@
        of them stays consistent when this changes again. */
     form.stack { display:grid; gap:1.1rem; max-width:34rem;
       background:var(--brand-paper); border:1px solid var(--brand-rule);
-      border-radius:10px; padding:1.25rem 1.35rem; }
+      border-radius:var(--brand-radius-card); padding:1.25rem 1.35rem; }
     form.stack > p:last-of-type, form.stack .row { margin-bottom:0; }
     form > p { margin:0 0 1.15rem; }
     label { font-family:var(--brand-font-mono); font-size:.7rem; letter-spacing:.1em;
@@ -380,7 +419,7 @@
     /* How soon a need is wanted. Colour carries the same information as the
        word, never information the word leaves out. */
     .when { font-family:var(--brand-font-mono); font-size:.6875rem; letter-spacing:.06em;
-      text-transform:uppercase; border:1px solid currentColor; border-radius:2px;
+      text-transform:uppercase; border:1px solid currentColor; border-radius:var(--brand-radius);
       padding:.05rem .35rem; margin-left:.4rem; color:var(--brand-moss); }
     .when.today, .when.tomorrow { color:var(--brand-warn); background:var(--brand-warn-wash); }
     .when.overdue { color:var(--brand-alert); background:var(--brand-alert-wash); }
@@ -408,7 +447,7 @@
        number alone is a claim about the present tense that nobody checked. */
     .qty { font-family:var(--brand-font-mono); font-size:.9rem; }
     .freshness { font-size:.6875rem; letter-spacing:.06em; text-transform:uppercase;
-      color:var(--brand-ok); background:var(--brand-ok-wash); border-radius:2px;
+      color:var(--brand-ok); background:var(--brand-ok-wash); border-radius:var(--brand-radius);
       padding:.05rem .35rem; margin-left:.5rem; }
     .freshness.old { color:var(--brand-warn); background:var(--brand-warn-wash); }
     .qty .by { font-size:.6875rem; color:var(--brand-moss); margin-left:.5rem;
@@ -438,7 +477,7 @@
     .mark-large { margin:1.5rem 0 .5rem; }
     .mark-large .avatar { margin:0; }
     .swatches { display:flex; gap:.6rem; flex-wrap:wrap; margin:.5rem 0 1rem; }
-    .swatch { background:none; border:1px solid var(--brand-rule); border-radius:2px;
+    .swatch { background:none; border:1px solid var(--brand-rule); border-radius:var(--brand-radius);
       padding:.35rem; cursor:pointer; line-height:0; }
     .swatch .avatar { margin:0; display:block; }
     .swatch.on { border-color:var(--brand-ink); }
@@ -467,20 +506,20 @@
     details.point summary:hover { color:var(--brand-ink); }
     details.point form { display:flex; gap:.5rem; align-items:center;
       flex-wrap:wrap; margin-top:.6rem; }
-    details.point select { font:inherit; padding:.35rem .5rem; border-radius:2px;
+    details.point select { font:inherit; padding:.35rem .5rem; border-radius:var(--brand-radius);
       border:1px solid var(--brand-rule-strong); background:var(--brand-white);
       color:var(--brand-ink); }
     .said { background:var(--brand-ok-wash); color:var(--brand-ok);
       border-left:3px solid var(--brand-ok); padding:.6rem .85rem;
       margin:0 0 1.25rem; font-size:.9375rem; }
     form.inline input { width:7rem; padding:.35rem .5rem; font:inherit;
-      border:1px solid var(--brand-rule-strong); border-radius:2px;
+      border:1px solid var(--brand-rule-strong); border-radius:var(--brand-radius);
       background:var(--brand-white); color:var(--brand-ink); }
     .manifest { background:var(--brand-paper); border:1px solid var(--brand-rule);
-      padding:1.5rem; border-radius:2px; }
+      padding:1.5rem; border-radius:var(--brand-radius); }
     .received { font-family:var(--brand-font-mono); font-size:.8125rem;
       color:var(--brand-ok); background:var(--brand-ok-wash); padding:.6rem .8rem;
-      border-radius:2px; }
+      border-radius:var(--brand-radius); }
     @media print { .no-print, header.app, body > footer { display:none; }
       .manifest { border:0; padding:0; }
       /* On paper the code has a real size. juniper draws it at a scannable
@@ -493,7 +532,7 @@
        than as a document — but the unread mark is a dot, not a badge with a
        number in it. Nothing counts what a reader has left. */
     .notices { background:var(--brand-paper); border:1px solid var(--brand-rule);
-      border-radius:10px; padding:.4rem 1.15rem; }
+      border-radius:var(--brand-radius-card); padding:.4rem 1.15rem; }
     .notice { display:flex; gap:.75rem; align-items:flex-start;
       border-bottom:1px solid var(--brand-rule); padding:.85rem 0; }
     .notice:last-of-type { border-bottom:0; }
@@ -532,13 +571,18 @@
     td.hrs { font-family:var(--brand-font-mono); white-space:nowrap; font-variant-numeric:tabular-nums; }
     .scroll { overflow-x:auto; }
     .note { font-size:.9rem; color:var(--brand-moss); }
-    /* The mark rides with the wordmark and inherits its colour. */
+    /* The mark rides with the wordmark and inherits its colour. It is INLINED
+       rather than <img src>, which is what makes that sentence true: tally.svg
+       strokes in currentColor, but an <img> is an isolated document, so
+       currentColor resolved to the SVG's own black and the mark went
+       invisible the moment a night ground existed. Inline, one asset serves
+       both grounds and the ink token stays the single source. */
     .mark { height:.7em; width:auto; margin-right:.55rem; vertical-align:baseline;
             opacity:.75; }
     /* The QR is rendered inline rather than fetched, so it is sized here.
        White plate behind it: scanners want quiet zone and contrast, and the
        birch page background is neither. */
-    .qr { background:var(--brand-white); border:1px solid var(--brand-rule); border-radius:2px;
+    .qr { background:var(--brand-white); border:1px solid var(--brand-rule); border-radius:var(--brand-radius);
           padding:.75rem; width:max-content; max-width:100%; margin:1.5rem 0; }
     .qr svg { display:block; width:min(15rem, 60vw); height:auto; }
     details.card summary { cursor:pointer; font-family:var(--brand-font-mono); font-size:.75rem;
@@ -549,10 +593,10 @@
     dl.meta dt { color:var(--brand-moss); } dl.meta dd { margin:0; word-break:break-all; }
   </style>
 </head>
-<body>
+<body class="app">
   <header class="app">
     <div class="bar">
-      <a class="brand" href="/"><img class="mark" src="{% static 'img/tally.svg' %}" alt="" width="52" height="11">Dugnadsand</a>
+      <a class="brand" href="/">{% include "marks/tally.svg" %}Dugnadsand</a>
       {% if user.is_authenticated %}
       <nav class="areas">
         {% comment %}
@@ -589,6 +633,10 @@
     </div>
   </header>
   {% block subnav %}{% endblock %}
-  <main>{% block content %}{% endblock %}</main>
+  {% comment %}
+    Opt-in, by the page. A stream wants the narrow column; the warehouse and
+    the ledger are genuinely tabular and would be unreadable in it.
+  {% endcomment %}
+  <main class="{% block main_class %}{% endblock %}">{% block content %}{% endblock %}</main>
 </body>
 </html>

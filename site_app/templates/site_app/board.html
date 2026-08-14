@@ -3,6 +3,7 @@
 {% load whenago %}
 {% load mentions %}
 {% block title %}The community — Dugnadsand{% endblock %}
+{% block main_class %}stream{% endblock %}
 {% block content %}
 {% if messages %}{% for m in messages %}<p class="said">{{ m }}</p>{% endfor %}{% endif %}
 
