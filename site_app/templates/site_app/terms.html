@@ -1,0 +1,215 @@
+{% extends "base.html" %}
+
+{% block title %}Terms of participation — Dugnadsand{% endblock %}
+
+{% block extra_css %}
+<style>
+  /* The same register as /acceptable-use/ and /policy/. This is the one page
+     on the site that is a contract, and it should read like the others rather
+     than borrowing the typography of a licence agreement nobody finishes. */
+  body { margin:0; background:var(--brand-birch); color:var(--brand-ink);
+         font-family:var(--brand-font-serif); line-height:1.65; }
+  body > header { border-bottom:1px solid var(--brand-rule); }
+  body > header nav { max-width:46rem; margin-inline:auto; padding:1.1rem var(--brand-gutter);
+    display:flex; align-items:baseline; justify-content:space-between; gap:1rem; flex-wrap:wrap; }
+  body > header .nav-right { display:flex; align-items:baseline; gap:1.25rem; }
+  body > header .place, body > header .signin {
+    font-family:var(--brand-font-mono); font-size:.6875rem; letter-spacing:.1em;
+    text-transform:uppercase; color:var(--brand-moss); }
+  body > header .signin { color:var(--brand-ochre); text-decoration:none; }
+  body > header .brand-name { font-family:var(--brand-font-sans); font-weight:600;
+    letter-spacing:.07em; text-transform:uppercase; text-decoration:none; color:var(--brand-ink); }
+  .mark { height:.7em; width:auto; margin-right:.55rem; vertical-align:baseline; opacity:.75; }
+  body > footer { border-top:1px solid var(--brand-rule); margin-top:4.5rem;
+    font-family:var(--brand-font-mono); font-size:.75rem; color:var(--brand-moss); }
+  body > footer p { max-width:46rem; margin:0 auto; padding:1.5rem var(--brand-gutter); }
+
+  main { max-width:46rem; margin-inline:auto; padding:0 var(--brand-gutter); }
+
+  h1 { color:var(--brand-ink); font-family:var(--brand-font-sans); font-weight:600;
+       font-size:clamp(1.8rem,4.5vw,2.4rem); line-height:1.12; letter-spacing:-.02em;
+       margin:3.5rem 0 .4rem; text-wrap:balance; }
+  .issued { font-family:var(--brand-font-mono); font-size:.75rem; letter-spacing:.08em;
+    text-transform:uppercase; color:var(--brand-moss); margin:0 0 2.5rem; }
+
+  h2 { color:var(--brand-ink); font-family:var(--brand-font-sans); font-weight:600;
+       font-size:1.3rem; margin:3rem 0 .6rem; letter-spacing:-.01em; }
+  h3 { color:var(--brand-ink); font-family:var(--brand-font-sans); font-weight:600;
+       font-size:1rem; margin:2rem 0 .5rem; }
+  p { margin:0 0 1rem; }
+  a { color:var(--brand-spruce); }
+  strong { font-weight:600; }
+  ul { margin:0 0 1rem; padding-left:1.2rem; }
+  li { margin:0 0 .5rem; }
+  .rule { border:0; border-top:1px solid var(--brand-rule); margin:3rem 0 0; }
+
+  .caveat { border:1px solid var(--brand-ochre); background:var(--brand-warn-wash);
+    padding:1.15rem 1.25rem; margin:2rem 0; font-size:.9375rem; }
+  .caveat b { font-family:var(--brand-font-mono); font-size:.75rem; letter-spacing:.1em;
+    text-transform:uppercase; color:var(--brand-warn); display:block; margin-bottom:.5rem; }
+  .caveat p:last-child { margin-bottom:0; }
+
+  .where { display:grid; grid-template-columns:minmax(11rem,15ch) 1fr; gap:.45rem 1rem;
+    font-size:.9375rem; margin:1.25rem 0; }
+  .where dt { color:var(--brand-moss); } .where dd { margin:0; }
+</style>
+{% endblock %}
+
+{% block content %}
+<h1>Terms of participation</h1>
+<p class="issued">Version {{ terms_version }} · agreed by every organization on admission</p>
+
+<p>An organization admitted to Dugnadsand agrees to these terms. They set out what the
+   network does, what it does not do, and who is answerable for what. They are written to
+   be read once and understood, rather than to be long.</p>
+
+<div class="caveat">
+  <b>Three documents, three jobs</b>
+  <p>The <a href="/policy/">statement of operating policy</a> describes what the software
+     does and binds each commitment to a check that runs against the source. The
+     <a href="/acceptable-use/">acceptable use policy</a> is the standard of conduct applied
+     by people. <strong>This page is the agreement.</strong> Where the three touch the same
+     subject, this page governs the relationship between an organization and the network.</p>
+</div>
+
+<hr class="rule">
+
+<h2>1. What the network is</h2>
+
+<p>Dugnadsand is a place where organizations post what they have and what they need, talk to
+   each other, and keep their own records. It is operated by the entity named at the foot of
+   this page.</p>
+
+<p>The network does not perform work, supervise work, direct anybody, employ anybody, or
+   stand between two organizations that have decided to help each other. It carries messages
+   and records. Everything else happens between people, off this system.</p>
+
+<h3>Admission is registration, not endorsement</h3>
+
+<p>An organization tells the network what it holds — a licence, a certificate of insurance,
+   a tax number — and that statement is recorded as made. <strong>The network does not
+   confirm it and does not vouch for it.</strong> Admission is not a representation by the
+   network that any organization is competent, insured, licensed, solvent, or safe to work
+   with. An officer may look at a document before deciding and may record that they did;
+   that is one person's note on one day and it is published to nobody.</p>
+
+<h2>2. What an organization is responsible for</h2>
+
+<p>An admitted organization is responsible, entirely and without reference to the network,
+   for:</p>
+
+<ul>
+  <li>Its own licences, registrations and permits, and for holding whatever the work it
+      offers actually requires.</li>
+  <li>Its own insurance, in whatever kinds and amounts its work requires.</li>
+  <li>The safety of the work it does and of the people who do it, including anybody it
+      brings with it.</li>
+  <li>Its own compliance with law — employment, tax, safety, licensing, and anything else
+      that applies to it.</li>
+  <li>Everything it says on this system, and everything it does after saying it.</li>
+  <li>Its own decisions about whom to help, whom to work alongside, and what to accept.</li>
+</ul>
+
+<p>Nothing on this system reduces any of that, and nothing on this system should be relied on
+   as having checked any of it.</p>
+
+<h3>Offers of licensed work</h3>
+
+<p>Where an organization has told the network it holds a licence to practise, it affirms each
+   time it posts an offer, or puts its name to somebody else's, that the offer stands under
+   that licence, that the licence is current, and that the work is within what the licence
+   covers. That affirmation is the organization's own statement. The network records that it
+   was made and which licence was named, and confirms nothing.</p>
+
+<h2>3. People who ask for help</h2>
+
+<p>Somebody who asks for help through this site is not a member of the network and is not a
+   party to these terms. Their request is shown to the mutual aid groups covering their area
+   and to nobody else, and their name and contact details are withheld until one group takes
+   it up.</p>
+
+<p><strong>What happens after that is between that group and that person.</strong> The
+   network is not a party to it, records no outcome, and makes no promise to anybody that
+   help will arrive, that it will arrive in time, or that it will be any good. A group that
+   takes up a request takes on whatever duty arises from doing so, and takes it on alone.</p>
+
+<h2>4. Indemnity</h2>
+
+<p>An admitted organization will indemnify the operator against claims, losses and reasonable
+   costs arising out of that organization's own acts and omissions — the work it performs,
+   the goods it transfers, what it posts here, its dealings with anybody who asked for help,
+   and any failure to hold the licences or insurance its work requires.</p>
+
+<p>This does not extend to anything caused by the operator's own negligence or wilful
+   misconduct, and it is not a transfer of liability the organization would not otherwise
+   have. It says that where an organization causes harm, the organization answers for it and
+   the network does not answer for it in its place.</p>
+
+<h2>5. Limits</h2>
+
+<p>The network is provided as it is. The operator makes no warranty that it will be
+   available, that anything posted on it is accurate, or that any organization on it is what
+   it says it is. Every disclaimer here is stated plainly rather than in capitals, and is
+   meant exactly as written.</p>
+
+<p>The operator is not liable for indirect or consequential loss, for lost opportunity, or
+   for anything arising from work done or not done between organizations or between an
+   organization and a person who asked for help. Where liability cannot lawfully be excluded,
+   it is limited to the amount paid to the operator for use of the network, which is
+   nothing — participation is free and always has been.</p>
+
+<p>Nothing here excludes liability for death or personal injury caused by the operator's
+   negligence, for fraud, or for anything else the law does not permit to be excluded.</p>
+
+<h2>6. No agency</h2>
+
+<p>Admission creates no partnership, joint venture, employment, agency or franchise between
+   an organization and the operator, or between two organizations. No organization may hold
+   itself out as speaking for the network, and the network does not speak for any of them.</p>
+
+<h2>7. Data</h2>
+
+<p>What the network holds and for how long is described in the
+   <a href="/policy/">statement of operating policy</a>. Two things belong here because they
+   are commitments rather than descriptions:</p>
+
+<ul>
+  <li>The name and contact details of somebody who asked for help are erased when the request
+      is closed, and in any case within ninety days of it being made.</li>
+  <li>An organization's records stay scoped to its own chapter and are never sold, licensed
+      or given to anybody for marketing.</li>
+</ul>
+
+<h2>8. Ending it</h2>
+
+<p>An organization may leave at any time. A chapter officer may remove an organization from a
+   chapter, with a reason that is recorded. Removal does not delete what the organization
+   wrote and does not disable anybody's login: the organization simply stops sharing with
+   that chapter, as one admitted into no chapter always has.</p>
+
+<h2>9. Changes</h2>
+
+<p>These terms are versioned. Changing them does not silently re-characterise what an
+   organization already agreed to — the version agreed is recorded against each admission,
+   and a material change asks for agreement again.</p>
+
+<h2>10. Where this is governed</h2>
+
+<dl class="where">
+  <dt>Governing law</dt><dd>South Carolina</dd>
+  <dt>Venue</dt><dd>The state and federal courts of South Carolina</dd>
+  <dt>Language</dt><dd>English</dd>
+</dl>
+
+<hr class="rule">
+
+<h2>Questions about these terms</h2>
+
+<p>Ask before agreeing rather than after. A question about what a clause means is answered by
+   a person, and an organization that does not want to agree to something should say so
+   instead of joining and hoping it never comes up.</p>
+
+<p><a href="/acceptable-use/">Acceptable use</a> ·
+   <a href="/policy/">Statement of operating policy</a> ·
+   <a href="/attestation/">The attestation</a></p>
+{% endblock %}

@@ -605,7 +605,8 @@ class ApplicationForm(Branded, StampedPublicForm, forms.Form):
 
     agreed = forms.BooleanField(
         required=False,
-        label="The statement of operating policy has been read and is agreed")
+        label="The terms of participation and the acceptable use policy have "
+              "been read and are agreed")
 
     website = forms.CharField(required=False, widget=forms.HiddenInput)
     t = forms.CharField(required=False, widget=forms.HiddenInput)

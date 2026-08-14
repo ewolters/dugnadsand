@@ -1,7 +1,27 @@
 # Questions for counsel
 
-**Working list, August 2026.** Organised by topic, against how Dugnadsand is
-actually built.
+**Working list. Revised 14 August 2026** — the design changed materially after
+the first draft, in four ways that bear directly on several of the questions
+below. Organised by topic, against how Dugnadsand is actually built.
+
+### What changed since the first draft
+
+1. **There is now a way in for people who need help, and they are not parties.**
+   A request submitted at `/need-help/` is shown to the mutual aid groups
+   covering that area and to nobody else. The person asking joins nothing, and
+   what happens after a group takes it up is not recorded. See §12.
+2. **The network stopped vetting its members, deliberately.** Admission is
+   registration, not endorsement: what an organization holds is recorded as
+   stated and is not confirmed. This was a liability decision and it reverses
+   what an earlier draft described. See §7.
+3. **There is a contract now.** [Terms of participation](https://dugnadsand.org/terms/),
+   agreed at admission and versioned. **The indemnity and the limitation of
+   liability in it are the single most important thing on this list to review**
+   — they were drafted in-house and have had no legal review. See §13.
+4. **Contact details are erased rather than kept.** See §9.
+
+The operator holds general liability cover and is looking at a cyber rider;
+entity separation is in progress and is not yet done.
 
 This exists to be handed to a tax attorney and a CPA together with
 [the statement of operating policy](https://dugnadsand.org/policy/) and
@@ -140,6 +160,40 @@ sense. The sharper questions:
   functions, does the nonprofit — or the founder personally — carry liability if
   donated material is misrepresented, damaged or disputed?
 
+### The vetting reversal, and whether it was the right call
+
+An earlier version verified each applicant's licence and certificate of
+insurance against the issuer, recorded who checked and when, and refused
+admission until everything was verified and unexpired.
+
+**That was removed on purpose.** The reasoning: verifying a credential and
+recording the check is a representation to every other member, and a network
+that vouches for its members appears to own what they do in a way one that
+merely registers them does not. Curation looked like a safety feature and read
+like an assumed duty.
+
+What replaced it: an applicant states what it holds, the statement is recorded
+as made, and both `/apply/` and the acceptable use policy say in terms that
+admission is registration and not endorsement. An officer may still look at a
+document and record that they did; it gates nothing and is published nowhere.
+
+Questions:
+
+- Is that the right trade? Does dropping verification actually reduce exposure,
+  or does the fact that the network *once* verified, and could, leave a duty in
+  place that the disclaimer does not remove?
+- Does an officer's optional, unpublished note that they looked at a document
+  re-create the representation for that applicant?
+- One control was kept and is access control rather than certification: only an
+  organization registered as a mutual aid group can see or take up a request
+  from a person asking for help. Does keeping *that* gate, while dropping the
+  others, read as selective assumption of duty?
+- Where skilled trades are involved the member affirms, at the moment of
+  offering, that the work is under a current licence and within its scope. That
+  affirmation is recorded verbatim against the posting. Is a recorded
+  affirmation of any use as a defence, and does asking for it imply a duty to
+  check it?
+
 ## 8. State and local
 
 Scope is Upstate SC only for now.
@@ -158,6 +212,22 @@ Scope is Upstate SC only for now.
 - Given that the platform is deliberately built to avoid producing tax
   artifacts, what records should the nonprofit maintain **independently** to stay
   compliant, since it cannot rely on the platform's exports for substantiation?
+
+### Retention of personal data
+
+The most sensitive data held is the name and contact details of somebody who
+asked for help. It is encrypted at rest with a per-site key, disclosed to
+exactly one organization, and then **erased** — on closing the request, and in
+any case within ninety days of it being made, by a nightly job. The row
+survives without the person, so it still records that a chapter was asked and
+how long anybody took to answer.
+
+- Is ninety days defensible as a retention period, and does erasure-in-place
+  satisfy South Carolina's requirements, or is row deletion expected?
+- Does holding this data at all — encrypted, briefly, on behalf of a person who
+  is not a member — create a notification obligation distinct from the
+  operator's other holdings, and does that change the answer on entity
+  separation?
 
 See the appendix for exactly what the system does and does not record.
 
@@ -246,6 +316,77 @@ person as the point of legal accountability rather than papering over it.
 
 ---
 
+## 12. The request seam — where the system stops
+
+This is new since the first draft and is the most important structural fact
+about the design.
+
+**A person who needs help does not join anything.** They write what would help
+at `/need-help/` and it appears, blind, in the feed of every organization
+registered as a mutual aid group covering that area. Blind means the need and a
+coarse area are shown; the name and contact details are withheld from every
+member — including chapter officers — until one group takes it up, and then
+disclosed to that group alone. Two groups cannot both take one.
+
+**Nothing records what happened next.** Closing a request writes a timestamp.
+There is no outcome, no result, no "was this resolved", no rating, and no field
+that could hold one. `Request` is registered in the manifest's domain models,
+so adding such a field would show as breached on the public attestation rather
+than merely failing a test.
+
+The intended reading is that the network does upstream logistics between
+organizations, and the last mile — the part where a person is actually helped —
+happens entirely between one group and one person, with the network neither
+present nor informed.
+
+Questions:
+
+- Does that structure hold? Is the operator a party to anything that happens
+  after a group takes up a request, given that the operator routed it,
+  restricted who could see it, and disclosed the contact details?
+- Does restricting requests to registered mutual aid groups amount to selecting
+  a provider on the person's behalf?
+- Is there any duty owed to a person whose request nobody takes up? Nothing
+  tells them so, because there is no account and nowhere to tell them.
+- Does the operator become a mandatory reporter, or acquire any duty to
+  escalate, by seeing a request that describes an emergency or a person at
+  risk?
+
+---
+
+## 13. The terms of participation — please review these first
+
+[Terms of participation](https://dugnadsand.org/terms/), version 1, agreed by
+every organization at admission. The version agreed is recorded against the
+application, separately from the operating-policy version, so a later change
+does not silently re-characterise what somebody already signed.
+
+**These were drafted in-house and have had no legal review.** They are on this
+list because they are the newest and least reliable part of the structure, not
+because they are settled. Specifically:
+
+- **The indemnity (§4).** Runs from the member organization to the operator,
+  covering that organization's own acts and omissions, and expressly carves out
+  the operator's own negligence and wilful misconduct. Is it enforceable as
+  drafted in South Carolina, and is the carve-out drawn correctly?
+- **The limitation of liability (§5).** Consideration is nothing — participation
+  is free — so the cap is nominal by construction. Does a limitation supported
+  by no consideration survive? Is a free service better served by a different
+  mechanism entirely?
+- **Assumption of risk.** The terms do not include an express assumption of risk
+  or a waiver by member organizations. Should they, and would one be
+  enforceable given the work involves tools, vehicles, other people's homes and
+  sometimes minors?
+- **Insurance as an obligation rather than a fact.** Organizations state they
+  carry their own cover; nothing requires them to keep it current or to name the
+  operator as an additional insured. Should either be required, and is that
+  enforceable against volunteer-run groups with no budget?
+- **Who is the operator?** The terms name "the entity named at the foot of this
+  page". Entity separation is not yet done, so today that is the founder and
+  SVEND. This is the gap that most needs closing.
+
+---
+
 # Appendix — what the system actually records
 
 *Generated from the models and the manifest, not from the prose. Counsel should
@@ -286,7 +427,10 @@ money.
 | **Manifest** — material dispatched | source line, quantity, free-text destination, who sent it, when, whether it was signed for, and a single-use receipt token |
 | **MaterialNeed / MaterialGiven** | project, description, quantity, unit, who, when |
 | **Measure** — an outcome | project, label, quantity, unit; typed by a person and never computed from the ledger |
-| **Interest** | posting, member, optional `hours` ceiling |
+| **Interest** | posting, member, optional `hours` ceiling, and the licence affirmed at the time, as text |
+| **Request** — somebody asked for help | region, free-text need, coarse area, encrypted name and contact, which organization took it up and when, and when it closed. **The name and contact are erased on closing, and within 90 days regardless.** No outcome field exists |
+| **Organization** | name, chapter, and a `kind` — mutual aid group, business, or household. Only a mutual aid group can see or take up a request |
+| **Credential** — what an applicant says it holds | application, free-text kind, encrypted issuer and reference, dates as stated by the applicant, and optionally that an officer looked at it. **Not verified, and gates nothing** |
 
 ## What is absent, and enforced as absent
 
@@ -307,6 +451,17 @@ money.
 - **No document that could function as substantiation.** The impact packet — the
   one artifact sent to somebody who gave something — states in terms that it is
   not a receipt or a valuation and cannot support a deduction.
+- **No outcome on any request.** There is no field recording whether anybody was
+  helped, how it went, or what was done. Closing writes a timestamp and nothing
+  else, and `Request` is in the manifest's domain models so adding one would be
+  reported as a breach on the public attestation.
+- **No verification claim.** Nothing published anywhere states that the network
+  checked a licence, an insurance certificate or a tax number. An officer's
+  optional note that they looked at a document is visible to officers of that
+  chapter only.
+- **No retained contact for a person who asked for help.** Erased on closing and
+  within ninety days regardless, by a nightly job, in place rather than by
+  deleting the row.
 
 ## What evidence therefore exists
 
@@ -318,6 +473,14 @@ correct an error or honour a deletion request.
 For **material**: that a described quantity moved from a named place to a named
 destination on a date, and whether the recipient signed for it. Never what it
 was worth.
+
+For **requests**: that a request was made in a region on a date, that a named
+organization took it up, and that it closed. Never who asked, never how to
+reach them after the fact, and never what happened.
+
+For **what an organization claimed about itself**: what it stated it holds, on
+what date, and the version of the terms and the operating policy it agreed to.
+Never a confirmation by the network that any of it is true.
 
 There is **no export, report or statement** that totals anything, values
 anything, or attributes a figure to a person. Anything a nonprofit needs for

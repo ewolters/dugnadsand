@@ -314,6 +314,10 @@ class EveryRouteIsAccountedFor(TestCase):
                        "between a person and a phone number is an obstacle"),
         "acceptable-use/": ("the standard every member is held to; a rule "
                             "nobody can read before joining is not a rule"),
+        "terms/": ("the agreement itself. An organization is asked to accept "
+                   "it at the point of applying, so it has to be readable "
+                   "before there is any account to read it with — a contract "
+                   "behind a login is a contract nobody consented to"),
         "chapters/": ("where chapters are and are not; somebody looking for "
                       "their own area has no account and should not need one"),
         "apply/": ("the ingress; an applicant has no account yet, and "

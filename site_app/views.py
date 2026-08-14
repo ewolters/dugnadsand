@@ -227,6 +227,20 @@ def acceptable_use(request):
     return render(request, "site_app/acceptable_use.html", {})
 
 
+def terms(request):
+    """The agreement. The third of three documents, and the only contract.
+
+    /policy/ describes what the software does and binds each commitment to a
+    check. /acceptable-use/ is the standard of conduct applied by people.
+    This is what an organization actually agrees to on admission, and the
+    version it agreed to is recorded against the application.
+    """
+    from .services_applications import terms_version
+
+    return render(request, "site_app/terms.html",
+                  {"terms_version": terms_version()})
+
+
 def policy(request):
     """The operating policy, read out of the manifest at render time.
 

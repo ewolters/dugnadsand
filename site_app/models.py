@@ -1131,6 +1131,10 @@ class Application(models.Model):
     # rather than a bare boolean means a later change to the commitments does
     # not silently re-characterise what somebody signed up to.
     agreed_policy_version = models.CharField(max_length=40, blank=True)
+    # Which version of the TERMS -- the contract at /terms/ -- was agreed.
+    # Separate from the policy version because the two documents do different
+    # jobs and change for different reasons. See services_applications.
+    agreed_terms_version = models.CharField(max_length=40, blank=True)
     agreed_at = models.DateTimeField(null=True, blank=True)
 
     submitted_at = models.DateTimeField(auto_now_add=True)

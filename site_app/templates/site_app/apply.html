@@ -195,7 +195,10 @@
     <div class="agree">
       {{ form.agreed }}
       <label for="{{ form.agreed.id_for_label }}">{{ form.agreed.label }} —
-        <a href="/policy/">read it</a>.</label>
+        read the <a href="/terms/">terms</a> and the
+        <a href="/acceptable-use/">acceptable use policy</a>. What the software
+        does is described separately in the
+        <a href="/policy/">statement of operating policy</a>.</label>
     </div>
     {% if form.agreed.errors %}<p class="err">{{ form.agreed.errors.0 }}</p>{% endif %}
   </fieldset>

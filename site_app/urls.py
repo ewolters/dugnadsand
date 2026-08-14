@@ -62,6 +62,7 @@ urlpatterns = [
     path("policy/", views.policy, name="policy"),
     path("need-help/", views.need_help, name="need_help"),
     path("acceptable-use/", views.acceptable_use, name="acceptable_use"),
+    path("terms/", views.terms, name="terms"),
     path("apply/", views.apply, name="apply"),
     path("chapters/", views.chapters, name="chapters"),
     path("projects/<uuid:project_id>/packet/", views.project_packet, name="project_packet"),

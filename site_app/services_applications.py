@@ -56,6 +56,22 @@ def _now():
     return datetime.now(timezone.utc)
 
 
+# The terms are versioned SEPARATELY from the manifest on purpose. The
+# manifest is an engineering document -- eleven commitments each bound to an
+# executable check -- and it says so on its own page. The terms are a
+# contract. Bumping one when the other changes would either re-ask every
+# organization to agree because a check was refactored, or quietly move a
+# contract underneath somebody because a clause was edited.
+#
+# BUMP THIS when a clause materially changes. Admissions record what they
+# agreed to, so an old version staying recorded is the point.
+TERMS_VERSION = "1"
+
+
+def terms_version():
+    return TERMS_VERSION
+
+
 def policy_version():
     """The manifest version an applicant is agreeing to.
 
@@ -80,6 +96,7 @@ def submit(*, kind, legal_name, contact_name, email, statement, region=None,
         contact_name=contact_name, email=email, phone=phone,
         locality=locality, statement=statement,
         agreed_policy_version=policy_version() if agreed else "",
+        agreed_terms_version=terms_version() if agreed else "",
         agreed_at=_now() if agreed else None)
 
     supplied = {k: v for k, v in (credentials or {}).items()}
