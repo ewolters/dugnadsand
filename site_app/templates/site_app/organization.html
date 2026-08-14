@@ -61,6 +61,34 @@
   <p class="empty">Nothing up at the moment.</p>
 {% endfor %}
 
+{% if on_hand %}
+  <h2>What they have on hand</h2>
+  {% comment %}
+    A quantity and a unit, never a value — no-material-valuation, which the
+    attestation checks. And never a total: eight lines are eight lines, not
+    "8 items", for the same reason the roster above is not a headcount.
+  {% endcomment %}
+  {% for line in on_hand %}
+    <div class="post">
+      <p class="who">
+        <span class="kind">on hand</span>
+        <span class="stamp">confirmed {{ line.confirmed_at|ago }}</span>
+      </p>
+      <p class="body">{{ line.description }}</p>
+      <p class="qty">{{ line.quantity|floatformat }} {{ line.unit }} · {{ line.warehouse.name }}</p>
+    </div>
+  {% endfor %}
+  {% comment %}
+    Only when it is yours. /warehouse/ lists the VIEWER's own organization's
+    lines, so on a peer's page this link said "everything on hand" and showed
+    somebody else's shelf — a link that quietly changes subject is worse than
+    no link.
+  {% endcomment %}
+  {% if is_yours %}
+    <p class="meta"><a href="/warehouse/">Everything you have on hand</a></p>
+  {% endif %}
+{% endif %}
+
 {% if days %}
   <h2>Days they have called</h2>
   {% for d in days %}

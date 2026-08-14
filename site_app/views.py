@@ -1389,9 +1389,19 @@ def organization_page(request, slug):
                                    cancelled_at__isnull=True)
             .order_by("starts_at")[:5])
 
+    # WHAT THEY HAVE ON A SHELF. The warehouse held this and nothing in the
+    # social half of the site pointed at it, so material sat where nobody
+    # looks while the feed is where people are. Freshest confirmation first,
+    # because the question a reader has is "can I rely on this" and the
+    # answer is how recently somebody checked.
+    from .services_warehouse import available_lines
+
+    on_hand = available_lines(organization.id)[:8]
+
     return render(request, "site_app/organization.html", {
         "section": "board", "org": organization, "people": people,
-        "postings": postings, "days": days, "is_yours": same})
+        "postings": postings, "days": days, "on_hand": on_hand,
+        "is_yours": same})
 
 
 @login_required

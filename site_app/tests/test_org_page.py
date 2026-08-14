@@ -212,3 +212,76 @@ class ANameIsADoor(OrgBase):
         self.sign_in(self.eric.user)
         self.assertContains(self.client.get(f"/board/{self.posting.id}/"),
                             'href="/org/ouat/"')
+
+
+class WhatIsOnTheirShelf(OrgBase):
+    """The warehouse, surfaced where people actually look.
+
+    Material lived at /warehouse/ and nothing in the social half of the site
+    pointed at it, so a group's shelf was invisible to the chapter it was for.
+    """
+
+    def a_line(self, description="Reclaimed oak, mostly 2x8"):
+        from decimal import Decimal
+
+        from django.utils import timezone
+
+        from site_app.models import StockLine, Warehouse
+
+        with tenant_context(self.ouat):
+            barn = Warehouse.objects.create(
+                organization=self.ouat, holder=self.hannah,
+                name="North barn", address="Gate code 4412")
+            return StockLine.objects.create(
+                organization=self.ouat, warehouse=barn,
+                description=description, quantity=Decimal("200.00"),
+                unit="board-feet", confirmed_at=timezone.now(),
+                confirmed_by=self.hannah)
+
+    def test_a_chapter_peer_sees_what_they_have(self):
+        """The chapter is the sharing boundary, and material is the thing it
+        exists to share."""
+        self.a_line()
+        self.sign_in(self.eric.user)
+
+        response = self.client.get("/org/ouat/")
+        self.assertContains(response, "Reclaimed oak, mostly 2x8")
+        self.assertContains(response, "board-feet")
+
+    def test_no_value_appears_beside_it(self):
+        """no-material-valuation, asserted at the surface as well as in the
+        model. A quantity and a unit; never a price."""
+        self.a_line()
+        self.sign_in(self.eric.user)
+        body = self.client.get("/org/ouat/").content.decode()
+
+        section = body[body.index("What they have on hand"):]
+        for forbidden in ("$", "value", "worth", "price", "each"):
+            self.assertNotIn(forbidden, section.lower())
+
+    def test_the_shelf_link_only_appears_on_your_own_page(self):
+        """/warehouse/ lists the VIEWER's lines, so on a peer's page the
+        link said "everything on hand" and showed somebody else's shelf."""
+        self.a_line()
+
+        # Scoped to the section. The nav shell links /warehouse/ on every
+        # page — "On hand" is one of the six areas — so a bare assertion here
+        # tests the navigation, not this block. That is the sixth time in
+        # this codebase; when a page assertion could match the shell, scope
+        # it to the section.
+        def shelf(user):
+            self.sign_in(user)
+            body = self.client.get("/org/ouat/").content.decode()
+            return body[body.index("What they have on hand"):]
+
+        self.assertNotIn('href="/warehouse/"', shelf(self.eric.user))
+        self.assertIn('href="/warehouse/"', shelf(self.hannah.user))
+
+    def test_a_line_nobody_offers_does_not_show(self):
+        line = self.a_line()
+        with tenant_context(self.ouat):
+            type(line).objects.filter(pk=line.pk).update(available=False)
+
+        self.sign_in(self.eric.user)
+        self.assertNotContains(self.client.get("/org/ouat/"),
+                               "Reclaimed oak, mostly 2x8")
