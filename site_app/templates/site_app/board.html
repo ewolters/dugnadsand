@@ -45,6 +45,7 @@
   <a href="/community/?show=asking" {% if show == "asking" %}aria-current="page"{% endif %}>Asking</a>
   <a href="/community/?show=offering" {% if show == "offering" %}aria-current="page"{% endif %}>Offering</a>
   <a href="/community/?show=saying" {% if show == "saying" %}aria-current="page"{% endif %}>Saying</a>
+  <a href="/community/?show=days" {% if show == "days" %}aria-current="page"{% endif %}>Days</a>
   <a href="/community/?show=mine" {% if show == "mine" %}aria-current="page"{% endif %}>Mine</a>
 </nav>
 
@@ -93,7 +94,8 @@
 
 <p class="ordering">Ordered by when things are needed — never by who asked.</p>
 
-{% for p in feed %}
+{% for item in feed %}
+{% if item.kind == "posting" %}{% with p=item.obj %}
   <div class="post{% if p.is_need %} need{% endif %}">
     <p class="who">
       {% avatar p.member 30 %}
@@ -230,6 +232,60 @@
       </form>
     </div>
   </div>
+{% endwith %}
+
+{% elif item.kind == "day" %}
+  {% with d=item.obj %}
+  {% comment %}
+    A day announced. Marked with the spruce edge rather than the ochre one:
+    it is not somebody asking, it is something happening.
+  {% endcomment %}
+  <div class="post day">
+    <p class="who">
+      {% avatar d.called_by 30 %}
+      <span class="by">
+        <a class="name" href="/days/{{ d.id }}/">{{ d.name }}</a>
+        <a class="org" href="/org/{{ d.organization.slug }}/">{{ d.organization.name }}</a>
+      </span>
+      <span class="kind">{{ d.starts_at|date:"D j M" }}</span>
+      <span class="stamp">{{ d.starts_at|date:"H:i" }}</span>
+    </p>
+    <p class="body">{{ d.place|linebreaksbr }}</p>
+    {% if d.muster %}<p class="meta">Gather at: {{ d.muster }}</p>{% endif %}
+    {% if d.attending.all %}
+      <p class="keen">Coming:
+        {% for a in d.attending.all %}{{ a.member.display_name }}{% if a.bringing %} ({{ a.bringing }}){% endif %}{% if not forloop.last %}, {% endif %}{% endfor %}</p>
+    {% endif %}
+    <div class="row">
+      <form method="post" action="/days/{{ d.id }}/coming/" class="keen-form">{% csrf_token %}
+        <input type="hidden" name="back" value="/board/">
+        <button type="submit" class="act">I'll be there</button>
+      </form>
+      <a class="act quiet" href="/days/{{ d.id }}/">What it needs</a>
+    </div>
+  </div>
+  {% endwith %}
+
+{% elif item.kind == "project" %}
+  {% with pr=item.obj %}
+  <div class="post project">
+    <p class="who">
+      {% avatar pr.started_by 30 %}
+      <span class="by">
+        <a class="name" href="/projects/{{ pr.id }}/">{{ pr.name }}</a>
+        <a class="org" href="/org/{{ pr.organization.slug }}/">{{ pr.organization.name }}</a>
+      </span>
+      <span class="kind">started</span>
+      <span class="stamp">{{ pr.created_at|ago }}</span>
+    </p>
+    <p class="body">{{ pr.description|truncatewords:45 }}</p>
+    <div class="row">
+      <a class="act quiet" href="/projects/{{ pr.id }}/">Have a look</a>
+    </div>
+  </div>
+  {% endwith %}
+{% endif %}
+
 {% empty %}
   {% if show %}
     <p class="empty">Nothing here under that filter.

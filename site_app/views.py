@@ -487,6 +487,88 @@ def board(request):
     return render(request, "site_app/board.html", _feed_for(request, member))
 
 
+class FeedItem:
+    """One thing on the feed, whatever kind of thing it is.
+
+    A thin wrapper rather than a model, because the feed must not become a
+    table. See the note in _feed_for: a row per thing-that-happened, stamped
+    with who did it, is a countable record of who does the most.
+
+    band and when are the SORT KEY, and both are facts about the thing:
+      band 0  dated and still ahead — soonest first
+      band 1  dated and the date has PASSED
+      band 2  no date at all
+
+    Expired sits BELOW live and above undated, which is the ordering
+    test_stepping_off.py protects: a need whose date has gone by is not
+    hidden, because a date slipping does not mean the ride stopped being
+    wanted — but it must not bury a live one either, and a graveyard of them
+    must not bury the single need that still has a date ahead of it.
+
+    Nothing here is a fact about the person. That is the whole ordering
+    contract — see no-gating and no-routing-by-record.
+    """
+
+    __slots__ = ("kind", "obj", "band", "when", "recency")
+
+    def __init__(self, kind, obj, band, when, recency):
+        self.kind = kind
+        self.obj = obj
+        self.band = band
+        self.when = when
+        self.recency = recency
+
+    def mine(self, member):
+        """Whether the reader wrote this. A fact about the row."""
+        who = getattr(self.obj, "member_id", None)
+        if who is None:
+            who = getattr(self.obj, "called_by_id", None)
+        if who is None:
+            who = getattr(self.obj, "started_by_id", None)
+        return who == member.id
+
+    @property
+    def sort_key(self):
+        return (self.band, self.when, -self.recency.timestamp())
+
+
+def _merged_feed(postings, days, projects, needs):
+    """Postings, announced days and new projects, in one stream.
+
+    A DAY SORTS BY ITS DATE, next to the needs that carry one, because that
+    is the same kind of fact: Saturday is Saturday whether it is a work day
+    or a lift somebody needs. A project has no date and joins the recency
+    group with offers and notes.
+    """
+    from datetime import date, datetime, time, timezone as tz
+
+    from .models import Posting
+
+    today = date.today()
+    far = date.max
+    items = []
+
+    for p in postings:
+        if p.kind == Posting.NEED and p.needed_by is not None:
+            # Live first, expired after. Inverting these two puts a graveyard
+            # at the top of the feed, which is what the first version did.
+            band = 1 if p.needed_by < today else 0
+            when = p.needed_by
+        else:
+            band, when = 2, far
+        items.append(FeedItem("posting", p, band, when, p.created_at))
+
+    for d in days:
+        # Already filtered to starts_at >= now, so these are always ahead.
+        items.append(FeedItem("day", d, 0, d.starts_at.date(), d.created_at))
+
+    for project in projects:
+        items.append(FeedItem("project", project, 2, far, project.created_at))
+
+    items.sort(key=lambda i: i.sort_key)
+    return items
+
+
 def _feed_for(request, member):
     """Build the feed's context. Called by board() and by posting_new().
 
@@ -495,9 +577,12 @@ def _feed_for(request, member):
     is wrong" by moving somebody to a separate screen and losing what they
     were reading is the behaviour this replaced.
     """
-    from datetime import date
+    from datetime import date, timedelta
+
+    from django.utils import timezone
+
     from .forms import PostingForm
-    from .models import Member, Posting
+    from .models import Member, Posting, Project, WorkDay
     from .services_licence import sentence as licence_sentence
 
     # RLS scopes this to the member's organization; the filter is for openness.
@@ -576,22 +661,57 @@ def _feed_for(request, member):
     # and speaking does not belong in a filing cabinet either.
     rest = [p for p in open_postings if p.kind != Posting.NEED]
     offers = [p for p in rest if p.kind == Posting.OFFER]
-    feed = needs + rest
+
+    # Announced days still ahead. A day that has happened stops being news
+    # and lives on /days/; the feed carries what is coming.
+    now = timezone.now()
+    days_ahead = (WorkDay.objects
+                  .filter(published_at__isnull=False, cancelled_at__isnull=True,
+                          starts_at__gte=now)
+                  .select_related("called_by", "project")
+                  .prefetch_related("attending__member")
+                  .order_by("starts_at"))
+
+    # A project appears as a STORY, when it starts, and then lives on its own
+    # page. Every open project for ever would make the feed a directory with
+    # the same six items pinned to the bottom of it.
+    new_projects = (Project.objects
+                    .filter(open=True, created_at__gte=now - timedelta(days=30))
+                    .select_related("started_by")
+                    .order_by("-created_at"))
+
+    # ONE FEED, FROM FOUR PLACES.
+    #
+    # The community, projects, days and the warehouse were four streams and
+    # only one of them was a feed. So announcing a work day -- a real thing
+    # at a real place on a real Saturday, the most socially significant event
+    # this system has -- appeared nowhere anybody was looking.
+    #
+    # THERE IS NO ACTIVITY TABLE, and there must not be. A row per thing-that
+    # -happened, stamped with who did it, is a countable record of who does
+    # the most: it would be a score by the end of the first month, and
+    # no-aggregate-display exists to stop exactly that. The feed is merged at
+    # render time from the models that already hold the facts, which costs a
+    # few queries and buys the absence of the one table nobody could then
+    # resist totalling.
+    feed = _merged_feed(open_postings, days_ahead, new_projects, needs)
 
     # A FILTER, NOT A RANKING. It narrows what is shown and never reorders
     # what remains, so the ordering contract holds inside every view: dated
-    # needs first, soonest at the top, and never a word about who asked.
-    # "mine" is the reader's own postings, which is a fact about the row and
-    # not a score attached to them.
+    # things first, soonest at the top, and never a word about who asked.
+    # "mine" is the reader's own, which is a fact about the row and not a
+    # score attached to them.
     show = request.GET.get("show", "")
     if show == "asking":
-        feed = [p for p in feed if p.kind == Posting.NEED]
+        feed = [i for i in feed if i.kind == "posting" and i.obj.kind == Posting.NEED]
     elif show == "offering":
-        feed = [p for p in feed if p.kind == Posting.OFFER]
+        feed = [i for i in feed if i.kind == "posting" and i.obj.kind == Posting.OFFER]
     elif show == "saying":
-        feed = [p for p in feed if p.kind == Posting.NOTE]
+        feed = [i for i in feed if i.kind == "posting" and i.obj.kind == Posting.NOTE]
+    elif show == "days":
+        feed = [i for i in feed if i.kind == "day"]
     elif show == "mine":
-        feed = [p for p in feed if p.member_id == member.id]
+        feed = [i for i in feed if i.mine(member)]
     else:
         show = ""
 
