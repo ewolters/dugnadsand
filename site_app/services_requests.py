@@ -9,10 +9,17 @@ Two rules hold everything else up:
   way to reach them are withheld from everybody until one group takes it up,
   and then shown to that group alone.
 
-  Only a VETTED MUTUAL AID GROUP may take one. Not a business, not a
-  household, not a chapter officer by virtue of the role. The vetting is done
-  by a person and recorded on the organization, and this module refuses on
-  the stored fact rather than on anybody's good intentions.
+  Only a REGISTERED MUTUAL AID GROUP may take one. Not a business, not a
+  household, not a chapter officer by virtue of the role. The kind is set by
+  an officer at admission and this module refuses on that stored fact rather
+  than on anybody's good intentions.
+
+  Note what that is and is not. It is ACCESS CONTROL -- a rule about who this
+  system shows a request to -- and not a certification that the group is any
+  good. The network stopped vouching for its members on purpose; see
+  Application.blockers. Registering is a much weaker claim than vetting, and
+  it is still the right gate here, because the alternative is a stranger
+  reaching somebody who asked for help.
 """
 
 from datetime import datetime, timezone
@@ -125,16 +132,49 @@ def release_request(*, request, member):
 
 
 def close_request(*, request, member):
-    """Off the list. NO OUTCOME IS RECORDED.
+    """Off the list. NO OUTCOME IS RECORDED, AND THE CONTACT IS ERASED.
 
     What happened between a group and a person is theirs. A field for it would
     be this system reaching into the last mile, which is the one thing the
     policy says it does not do.
+
+    The erase is the other half. The name and the way to reach somebody are
+    the most sensitive things this system ever holds -- they belong to a
+    person who was having a bad month and who never joined anything -- and
+    once a group has made contact, nothing here reads them again. Keeping
+    them would be keeping a list of who in the county needed help, indexed by
+    phone number, against no future use at all.
+
+    The row survives, so the request still closed and the count of what a
+    chapter carried is still true. What is gone is the person.
     """
     from .models import Request
 
     changed = (Request.objects
                .filter(pk=request.pk, taken_by=member.organization_id)
-               .update(closed_at=_now()))
+               .update(closed_at=_now(), asked_by="", reach_them=""))
     if not changed:
         raise NotAnAidGroup("Only the group holding it can close it.")
+
+
+def forget_stale(*, older_than_days=90, now=None):
+    """Erase the contact on anything nobody closed.
+
+    Closing erases, but a group that goes quiet leaves a request open for
+    ever, and "for ever" is the wrong retention period for the phone number
+    of somebody in trouble. This is the backstop: after the window, the
+    person is forgotten whether or not anybody remembered to close it.
+
+    Deliberately NOT a delete. The row is what says a chapter was asked and
+    how long it took anybody to answer, and a chapter that quietly never
+    answers should not be able to disappear that by doing nothing.
+    """
+    from datetime import timedelta
+
+    from .models import Request
+
+    now = now or _now()
+    cutoff = now - timedelta(days=older_than_days)
+    stale = Request.objects.filter(created_at__lt=cutoff).exclude(
+        asked_by="", reach_them="")
+    return stale.update(asked_by="", reach_them="", closed_at=now)

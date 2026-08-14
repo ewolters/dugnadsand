@@ -5,15 +5,17 @@ electrician. The offer is free; the licence is not suspended because the work
 is unpaid, and nobody's homeowner's insurance cares that the panel was rewired
 as a favour.
 
-So: an organization admitted with a verified licence cannot post an offer or
-put its name to one without saying, in that moment, that the offer stands
-under that licence. The words are shown, the tick is required, and what was
-ticked is snapshotted onto the record as text.
+So: an organization that DECLARED a licence cannot post an offer or put its
+name to one without saying, in that moment, that the offer stands under that
+licence and that the licence is current. The words are shown, the tick is
+required, and what was ticked is snapshotted onto the record as text.
 
 WHAT THIS IS NOT. It is not a check that the work is within scope, not a
-warranty, and not a claim that anybody verified today what an officer verified
-in March. It records an attestation by the person offering, which is the only
-thing a system on this side of the wire can honestly hold.
+warranty, and not a claim that anybody verified anything. Nothing here
+confirms the licence exists, and the network does not vouch for it. It
+records a statement by the person offering -- which is the only thing a
+system on this side of the wire could ever honestly hold, and is now the
+only thing it claims to.
 
 Most people hold no licence, and for them none of this appears. It is not a
 rank: nothing sorts by it, nothing filters by it, and an offer of an evening's
@@ -44,12 +46,19 @@ def held_by(organization):
 
 
 def sentence(organization):
-    """The words somebody is agreeing to, or None if none are needed."""
+    """The words somebody is agreeing to, or None if none are needed.
+
+    "current" is doing real work in this sentence. The system no longer
+    checks expiry dates -- see Organization.licences -- so currency is
+    asserted by the person who actually knows it rather than inferred from a
+    date typed into an application form months ago.
+    """
     labels = held_by(organization)
     if not labels:
         return None
     return (f"This is offered under {organization.name}'s "
-            f"{', and '.join(labels)}, and within what that licence covers.")
+            f"{', and '.join(labels)}, which is current, and it is within "
+            f"what that licence covers.")
 
 
 def snapshot(organization, affirmed):

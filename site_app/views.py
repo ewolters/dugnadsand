@@ -1442,6 +1442,7 @@ def warehouse_sweep(request):
 
     from .models import Organization
     from .notifications import _send, already_pending
+    from .services_requests import forget_stale
     from .services_social import going_quiet
     from .tenancy import bypass_rls, tenant_context
 
@@ -1492,8 +1493,19 @@ def warehouse_sweep(request):
                          "/warehouse/"):
                     asked += 1
 
-    logger.info("warehouse sweep: %s tokens purged, %s holders asked", purged, asked)
-    return JsonResponse({"tokens_purged": purged, "holders_asked": asked})
+    # Retention, on the same schedule because it is the same kind of job: a
+    # thing that has to happen whether or not anybody remembers.
+    #
+    # Deliberately OUTSIDE the per-organization loop. Request is not
+    # tenant-scoped -- it belongs to somebody who never joined anything --
+    # so sweeping it once is right and sweeping it per organization would
+    # forget the same rows N times and report a wrong number.
+    forgotten = forget_stale()
+
+    logger.info("sweep: %s tokens purged, %s holders asked, %s requests forgotten",
+                purged, asked, forgotten)
+    return JsonResponse({"tokens_purged": purged, "holders_asked": asked,
+                         "requests_forgotten": forgotten})
 
 
 @login_required

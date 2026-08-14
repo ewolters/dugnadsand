@@ -11,8 +11,9 @@ Three properties are worth more than the rest:
   other aid groups — until one group takes it up.
 
   AID GROUPS ONLY. A business in the network cannot see a request at all. The
-  refusal is on the stored kind, set by a person who vetted them, and not on
-  anything the requester or the business can influence.
+  refusal is on the stored kind, set by an officer at admission, and not on
+  anything the requester or the business can influence. It is access control,
+  not a certification -- the network does not vouch for its members.
 
   NO OUTCOME. Nothing records whether anybody was helped. A field for it
   would be this system reaching into the last mile, which the policy says it
@@ -26,9 +27,9 @@ from django.test import TestCase
 
 from site_app.models import Member, Organization, Region, Request
 from site_app.services_requests import (AlreadyTaken, NotAnAidGroup,
-                                        close_request, release_request,
-                                        submit_request, take_request,
-                                        visible_to)
+                                        close_request, forget_stale,
+                                        release_request, submit_request,
+                                        take_request, visible_to)
 from site_app.tenancy import set_tenant
 
 from .helpers import SignedIn
@@ -268,3 +269,90 @@ class NoOutcomeIsRecorded(TestCase):
         self.assertIsNotNone(fresh.closed_at)
         # It is off the list, and that is the entire record of the ending.
         self.assertEqual(list(visible_to(member)), [])
+
+
+class TheContactIsNotKept(TestCase):
+    """You cannot leak what you deleted.
+
+    The name and the way to reach somebody are the most sensitive things this
+    system holds: they belong to a person who was having a bad month and who
+    never joined anything. Once a group has made contact, nothing reads them
+    again — so keeping them would be keeping a list of who in the county
+    needed help, indexed by phone number, against no future use at all.
+
+    The ROW survives both paths. It is what says a chapter was asked and how
+    long anybody took to answer, and a chapter that quietly never answers
+    should not be able to erase that by doing nothing.
+    """
+
+    def setUp(self):
+        from django.contrib.auth.models import User
+
+        self.region = Region.objects.create(slug="up", name="Upstate")
+        self.group = Organization.objects.create(
+            slug="g", name="G", region=self.region, kind=Organization.AID_GROUP)
+        user = User.objects.create_user("h", password="dugnad-test-pw")
+        set_tenant(self.group.id, self.region.id)
+        self.member = Member.objects.create(
+            organization=self.group, user=user, display_name="H")
+        set_tenant(None)
+
+    def tearDown(self):
+        set_tenant(None)
+
+    def a_request(self):
+        return submit_request(need="A ride to dialysis.", asked_by="Marta",
+                              reach_them="864 555 0102", region=self.region)
+
+    def test_closing_erases_the_name_and_the_contact(self):
+        request = self.a_request()
+        take_request(request=request, member=self.member)
+        close_request(request=request, member=self.member)
+
+        fresh = Request.objects.get(pk=request.pk)
+        self.assertEqual(fresh.asked_by, "")
+        self.assertEqual(fresh.reach_them, "")
+
+    def test_but_the_row_and_the_need_survive(self):
+        request = self.a_request()
+        take_request(request=request, member=self.member)
+        close_request(request=request, member=self.member)
+
+        fresh = Request.objects.get(pk=request.pk)
+        self.assertEqual(fresh.need, "A ride to dialysis.")
+        self.assertEqual(fresh.taken_by, self.group)
+        self.assertIsNotNone(fresh.closed_at)
+
+    def test_a_request_nobody_closed_is_forgotten_anyway(self):
+        """The backstop. A group that goes quiet leaves a request open for
+        ever, and for ever is the wrong retention period for the phone
+        number of somebody in trouble."""
+        from datetime import timedelta
+
+        request = self.a_request()
+        Request.objects.filter(pk=request.pk).update(
+            created_at=request.created_at - timedelta(days=91))
+
+        self.assertEqual(forget_stale(older_than_days=90), 1)
+        fresh = Request.objects.get(pk=request.pk)
+        self.assertEqual(fresh.reach_them, "")
+        self.assertEqual(fresh.need, "A ride to dialysis.")
+
+    def test_a_recent_one_is_left_alone(self):
+        self.a_request()
+        self.assertEqual(forget_stale(older_than_days=90), 0)
+        self.assertEqual(Request.objects.get().reach_them, "864 555 0102")
+
+    def test_it_does_not_keep_re_closing_what_it_already_forgot(self):
+        """Idempotent, because it runs on a schedule. Re-stamping closed_at
+        every night would make an old request look freshly handled."""
+        from datetime import timedelta
+
+        request = self.a_request()
+        Request.objects.filter(pk=request.pk).update(
+            created_at=request.created_at - timedelta(days=91))
+
+        forget_stale(older_than_days=90)
+        first = Request.objects.get(pk=request.pk).closed_at
+        self.assertEqual(forget_stale(older_than_days=90), 0)
+        self.assertEqual(Request.objects.get(pk=request.pk).closed_at, first)

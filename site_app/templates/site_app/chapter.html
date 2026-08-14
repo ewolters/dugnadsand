@@ -148,6 +148,10 @@
       {% else %}
         <p class="ready">Ready to decide.</p>
       {% endif %}
+      {% if w.application.unchecked %}
+        <p class="note">Nobody has checked:
+          {% for u in w.application.unchecked %}{{ u }}{% if not forloop.last %}; {% endif %}{% endfor %}.</p>
+      {% endif %}
       <p class="who"><a href="/chapter/application/{{ w.application.id }}/">Open it</a></p>
     </div>
   {% empty %}

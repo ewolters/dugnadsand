@@ -141,7 +141,7 @@ class TheOfficerScreen(ChapterScreenBase):
 
         body = self.client.get("/chapter/").content.decode()
         self.assertIn("Alderman Electric LLC", body)
-        self.assertIn("Business license not verified", body)
+        self.assertIn("Business license — nobody has looked at this", body)
 
     def test_an_application_to_another_chapter_is_not_shown(self):
         elsewhere = Region.objects.create(slug="midlands", name="Midlands")

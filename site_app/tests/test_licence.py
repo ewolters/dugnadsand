@@ -10,9 +10,12 @@ The properties worth holding:
   standing "I hold no licence" checkbox on every offer of a lift would be the
   system talking about itself instead of getting out of the way.
 
-  An expired licence is not a licence. The failure nobody catches is the row
-  filled in correctly two years ago, so licences() re-checks the date every
-  time rather than trusting a flag set at admission.
+  IT IS DECLARED, NEVER VERIFIED. The network does not check that the licence
+  exists and does not vouch for it — that check was a representation to
+  everybody else, and it is the member's claim to make. Expiry does not
+  suppress the question either: filtering expired credentials out meant an
+  expiry made the system ask for LESS, and the posting went up looking like
+  one from somebody who had never held a licence.
 
   What was agreed is SNAPSHOTTED as text. A licence renewed, corrected or
   lapsed next year must not rewrite what somebody agreed to in March.
@@ -79,17 +82,28 @@ class WhichCredentialsCount(Fixture):
         self.assertEqual(held_by(self.sparks),
                          ["Electrical contractor licence (SC LLR)"])
 
-    def test_an_expired_one_does_not(self):
-        """The row filled in correctly two years ago. Re-checked on every
-        read rather than frozen into a flag at admission."""
-        self.give_licence(self.sparks, expires=date.today() - timedelta(days=1))
-        self.assertEqual(held_by(self.sparks), [])
+    def test_AN_EXPIRED_ONE_STILL_ASKS(self):
+        """Reversed deliberately, and it fixed a live defect.
 
-    def test_one_nobody_verified_does_not(self):
-        """What an applicant typed is not a licence. An officer looking at
-        the document is."""
+        Filtering expired credentials out meant no affirmation was asked at
+        all, so the posting went up looking exactly like one from somebody
+        who had never held a licence. An expiry made the system ask for
+        LESS. It now asks the same question either way, and the sentence
+        says the licence is current — which is a thing they know and the
+        system does not.
+        """
+        self.give_licence(self.sparks, expires=date.today() - timedelta(days=1))
+        self.assertEqual(held_by(self.sparks),
+                         ["Electrical contractor licence (SC LLR)"])
+        self.assertIn("which is current", sentence(self.sparks))
+
+    def test_one_nobody_verified_still_asks(self):
+        """It is their licence and their claim. Gating the question on our
+        check turned their statement into our representation, which is the
+        one thing this system stopped doing."""
         self.give_licence(self.sparks, verified=False)
-        self.assertEqual(held_by(self.sparks), [])
+        self.assertEqual(held_by(self.sparks),
+                         ["Electrical contractor licence (SC LLR)"])
 
     def test_a_tax_number_is_not_a_licence(self):
         self.give_licence(self.sparks, kind="Tax identification number",

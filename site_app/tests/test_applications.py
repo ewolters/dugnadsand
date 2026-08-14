@@ -108,12 +108,32 @@ class WhatEachKindMustProduce(ApplicationBase):
             self.assertNotIn(forbidden, names, f"Credential grew {forbidden}")
 
 
-class AdmissionRefusesUntilItIsProved(ApplicationBase):
-    def test_an_unverified_credential_blocks_and_is_named(self):
+class AdmissionTurnsOnAgreementNotOnProof(ApplicationBase):
+    """Retargeted when vetting-as-certification was dropped.
+
+    This class asserted that admission was refused until every credential had
+    been verified and nothing had expired. That was a stronger gate and a
+    worse idea: verifying a licence and recording that we checked is a
+    REPRESENTATION TO EVERYBODY ELSE, and a network that vouches for its
+    members owns what they do in a way one that registers them does not.
+
+    The tools survive and an officer still sees what nobody has looked at.
+    What is gone is the system withholding admission until somebody vouches.
+    """
+
+    def test_an_unchecked_credential_does_NOT_block(self):
         application = self.a_business()
-        with self.assertRaises(NotReady) as caught:
-            admit(application=application, user=self.reviewer)
-        self.assertIn("Business license not verified", str(caught.exception))
+        admit(application=application, user=self.reviewer)
+        self.assertTrue(Application.objects.get(pk=application.pk).admitted)
+
+    def test_but_the_officer_is_still_told_nobody_looked(self):
+        """Dropping the gate must not drop the information. A person
+        deciding wants to know that nobody opened the insurance
+        certificate — they simply are not overruled by a machine."""
+        application = self.a_business()
+        notes = " ".join(application.unchecked)
+        self.assertIn("Business license", notes)
+        self.assertIn("nobody has looked at this", notes)
 
     def test_verifying_everything_releases_it(self):
         application = self.a_business()
@@ -124,19 +144,20 @@ class AdmissionRefusesUntilItIsProved(ApplicationBase):
         self.assertTrue(fresh.admitted)
         self.assertEqual(fresh.decided_by, self.reviewer)
 
-    def test_an_expired_credential_blocks_even_though_it_was_verified(self):
-        """The failure nobody catches: the row was filled in correctly, two
-        years ago. A licence that ran out in March is not a licence."""
+    def test_an_expired_credential_does_not_block_either(self):
+        """It is still surfaced, and a person can still decline on it. What
+        it no longer does is refuse on the system's behalf, which would be
+        the system asserting it knows the licence is dead."""
         application = self.a_business()
         self.verify_all(application)
         stale = application.credentials.get(kind="Business license")
         stale.expires_on = date.today() - timedelta(days=1)
         stale.save(update_fields=["expires_on"])
 
-        with self.assertRaises(NotReady) as caught:
-            admit(application=Application.objects.get(pk=application.pk),
-                  user=self.reviewer)
-        self.assertIn("Business license expired", str(caught.exception))
+        fresh = Application.objects.get(pk=application.pk)
+        admit(application=fresh, user=self.reviewer)
+        self.assertTrue(Application.objects.get(pk=application.pk).admitted)
+        self.assertTrue(any("the date on it passed" in u for u in fresh.unchecked))
 
     def test_a_credential_with_no_expiry_never_lapses(self):
         """A tax number does not run out, and treating it as though it did
@@ -147,26 +168,22 @@ class AdmissionRefusesUntilItIsProved(ApplicationBase):
         self.assertIsNone(tax.expires_on)
         self.assertFalse(tax.lapsed)
 
-    def test_an_individual_is_blocked_until_somebody_has_looked(self):
+    def test_an_individual_is_not_blocked_by_the_absence_of_a_search(self):
+        """A recorded search is a representation like any other. The tool
+        stays and an officer who runs one has it on the record; the system
+        no longer refuses on its behalf."""
         application = submit(
             kind=Application.INDIVIDUAL, legal_name="Ola Nilsen",
             contact_name="Ola Nilsen", email="ola@example.test",
             statement="I have a truck.", agreed=True)
 
-        with self.assertRaises(NotReady) as caught:
-            admit(application=application, user=self.reviewer)
-        self.assertIn("no clear screening on file", str(caught.exception))
+        self.assertIn("no clear screening on file", application.unchecked)
+        admit(application=application, user=self.reviewer)
+        self.assertTrue(Application.objects.get(pk=application.pk).admitted)
 
-        record_screening(
-            application=application, user=self.reviewer,
-            source="National Sex Offender Public Website",
-            searched_name="Ola Nilsen", searched_on=date.today(), clear=True)
-        admit(application=Application.objects.get(pk=application.pk),
-              user=self.reviewer)
-
-    def test_a_screening_that_found_something_does_not_clear_it(self):
-        """clear=False means a person needs to look, and admission stays
-        blocked until somebody records a clear search or declines."""
+    def test_a_screening_that_found_something_is_still_recorded(self):
+        """clear=False used to block. It now says a person should look, to
+        the person who is looking, which is all it ever really did."""
         application = submit(
             kind=Application.INDIVIDUAL, legal_name="Ola Nilsen",
             contact_name="Ola Nilsen", email="ola@example.test",
@@ -176,9 +193,10 @@ class AdmissionRefusesUntilItIsProved(ApplicationBase):
             searched_name="Ola Nilsen", searched_on=date.today(), clear=False,
             note="A name match that needs a person.")
 
-        with self.assertRaises(NotReady):
-            admit(application=Application.objects.get(pk=application.pk),
-                  user=self.reviewer)
+        fresh = Application.objects.get(pk=application.pk)
+        self.assertIn("no clear screening on file", fresh.unchecked)
+        self.assertFalse(fresh.screenings.filter(clear=True).exists())
+
 
     def test_an_unagreed_policy_blocks(self):
         application = submit(
@@ -195,19 +213,32 @@ class AdmissionRefusesUntilItIsProved(ApplicationBase):
         self.assertIn("policy has not been agreed", str(caught.exception))
 
     def test_declining_is_always_permitted(self):
-        """A refusal needs no paperwork to be complete. Requiring a full file
-        before saying no would mean chasing documents for an applicant already
-        being turned down."""
-        application = self.a_business()
-        self.assertTrue(application.blockers)
-        decline(application=application, user=self.reviewer, note="Out of area.")
+        """Unchanged in substance: a refusal needs no paperwork to be
+        complete. It is asserted against an application that could not be
+        admitted, which is now the un-agreed one."""
+        application = submit(
+            kind=Application.BUSINESS, legal_name="Alderman Electric LLC",
+            contact_name="Dana", email="dana@example.test",
+            statement="We wire things.", agreed=False)
+
+        decline(application=application, user=self.reviewer)
         self.assertFalse(Application.objects.get(pk=application.pk).admitted)
 
-    def test_every_blocker_is_named_not_just_the_first(self):
-        application = self.a_business()
-        with self.assertRaises(NotReady) as caught:
+
+    def test_the_one_remaining_blocker_is_the_agreement(self):
+        """Six reasons became one, and that one is a contract rather than a
+        claim: they agreed to the policy. Everything else that used to
+        refuse was the network vouching for somebody."""
+        application = submit(
+            kind=Application.BUSINESS, legal_name="Alderman Electric LLC",
+            contact_name="Dana", email="dana@example.test",
+            statement="We wire things.", agreed=False,
+            credentials={"Business license": {"reference": "EL-1"}})
+
+        self.assertEqual(application.blockers,
+                         ["the policy has not been agreed"])
+        with self.assertRaises(NotReady):
             admit(application=application, user=self.reviewer)
-        self.assertEqual(len(caught.exception.blockers), 3)
 
 
 class WhatIsAgreedTo(ApplicationBase):
@@ -585,13 +616,21 @@ class AdmittingBuildsTheFrontDoor(ApplicationBase):
             Organization.objects.filter(name="Alderman Electric LLC").count(), 1)
 
     def test_nothing_is_created_for_an_application_that_is_not_ready(self):
-        """The blockers are checked BEFORE anything is built, so a refusal
-        leaves no half-made tenant behind."""
+        """Not ready now means one thing: they have not agreed to the policy.
+        The property that matters is unchanged — a refused admission builds
+        no organization, no member and no setup link."""
         from site_app.models import Organization
+        from site_app.services_applications import admit_to_network
+
+        application = submit(
+            kind=Application.BUSINESS, legal_name="Alderman Electric LLC",
+            contact_name="Dana", email="dana@example.test",
+            statement="We wire things.", agreed=False)
 
         with self.assertRaises(NotReady):
-            self.admit_it(self.a_business())
+            admit_to_network(application=application, user=self.reviewer)
         self.assertEqual(Organization.objects.count(), 0)
+
 
     def test_an_individual_must_be_admitted_into_an_existing_organization(self):
         """A person admitted into nothing can see nothing: every row is
@@ -691,12 +730,19 @@ class TheCommandIsWhatAPersonRuns(ApplicationBase):
         self.assertIn("/setup/", bodies)
 
     def test_the_command_refuses_and_names_what_is_missing(self):
+        """One reason left to name, and the command still names it rather
+        than failing with a stack trace at somebody."""
+        application = submit(
+            kind=Application.BUSINESS, legal_name="Alderman Electric LLC",
+            contact_name="Dana", email="dana@example.test",
+            statement="We wire things.", agreed=False)
+
         from django.core.management.base import CommandError
 
-        application = self.a_business()
         with self.assertRaises(CommandError) as caught:
             self.run_decide(application, "--admit")
-        self.assertIn("Business license not verified", str(caught.exception))
+        self.assertIn("policy has not been agreed", str(caught.exception))
+
 
     def test_declining_from_the_command_line_tells_the_applicant(self):
         application = self.a_business()

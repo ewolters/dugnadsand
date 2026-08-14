@@ -88,29 +88,26 @@ class Organization(models.Model):
     LICENCE_WORDS = re.compile(r"licen[cs]e|certificat(?:e|ion)|registration"
                                r"|permit|credential", re.I)
 
-    def licences(self, on=None):
-        """Verified, unexpired credentials that read as a licence to practise.
+    def licences(self):
+        """Licences this organization DECLARED when it applied.
 
-        Sourced from the application that admitted this organization, because
-        that is where a person actually looked at the document. Nothing here
-        trusts what an applicant typed: verified_on is set by an officer, and
-        an expired licence is not a licence -- the failure nobody catches is
-        the row that was filled in correctly two years ago.
+        Declared, not verified, and deliberately not date-checked. Both of
+        those used to be true and both were wrong, in opposite directions.
+
+        Verified was wrong because filtering on verified_on made the sentence
+        somebody ticks depend on OUR check, which turns their statement into
+        our representation. It is their licence and their claim to make.
+
+        Date-checking was worse, and was a live defect: an expired credential
+        dropped out of this list, so no affirmation was asked at all and the
+        posting went up looking exactly like one from somebody who had never
+        held a licence. An expiry made the system ask for LESS. It now asks
+        the same question either way, and the sentence they agree to is that
+        the licence is current -- which is a thing they know and we do not.
         """
-        from datetime import date
-
-        on = on or date.today()
-        found = []
-        for application in self.applications.all():
-            for credential in application.credentials.all():
-                if credential.verified_on is None:
-                    continue
-                if not self.LICENCE_WORDS.search(credential.kind or ""):
-                    continue
-                if credential.expires_on and credential.expires_on < on:
-                    continue
-                found.append(credential)
-        return found
+        return [c for application in self.applications.all()
+                for c in application.credentials.all()
+                if self.LICENCE_WORDS.search(c.kind or "")]
 
 
 class TenantScoped(models.Model):
@@ -1165,7 +1162,11 @@ class Application(models.Model):
 
     @property
     def outstanding(self):
-        """Required proof nobody has verified yet."""
+        """Declared proof nobody has looked at yet.
+
+        Shown to the deciding officer as context. NOT a blocker -- see
+        blockers() for why -- and never shown to another member.
+        """
         return [c for c in self.credentials.all() if not c.verified_on]
 
     @property
@@ -1181,10 +1182,24 @@ class Application(models.Model):
 
     @property
     def blockers(self):
-        reasons = [f"{c.kind} not verified" for c in self.outstanding]
-        reasons += [f"{c.kind} expired {c.expires_on}" for c in self.lapsed]
-        if self.unscreened:
-            reasons.append("no clear screening on file")
+        """What stops admission. DELIBERATELY SHORT.
+
+        This used to refuse until every credential was verified by an officer
+        and nothing had expired. That was a stronger gate and a worse idea:
+        verifying a licence and recording that we checked is a REPRESENTATION
+        TO EVERYBODY ELSE, and a network that vouches for its members owns
+        what they do in a way a network that registers them does not.
+
+        So verification stopped being a gate. The tools survive -- an officer
+        can still look at a document and record that they did, and should,
+        because a bad actor is easier to refuse before admission than to
+        remove after -- but the system no longer WITHHOLDS admission until
+        somebody vouches, and nothing published anywhere says it did.
+
+        What remains is the thing that is a contract rather than a claim:
+        they agreed to the policy. See docs/for-counsel.md.
+        """
+        reasons = []
         if not self.agreed_at:
             reasons.append("the policy has not been agreed")
         return reasons
@@ -1192,6 +1207,23 @@ class Application(models.Model):
     @property
     def ready(self):
         return not self.blockers
+
+    @property
+    def unchecked(self):
+        """What nobody has looked at, for the officer deciding.
+
+        Was `blockers` until verification stopped being a gate. It still
+        belongs on the officer's screen -- a person deciding wants to know
+        that nobody has opened the insurance certificate -- but it is context
+        for their judgement rather than a refusal by the system, and it is
+        shown to nobody else. See blockers() for why the distinction matters.
+        """
+        notes = [f"{c.kind} — nobody has looked at this" for c in self.outstanding]
+        notes += [f"{c.kind} — the date on it passed {c.expires_on}"
+                  for c in self.lapsed]
+        if self.unscreened:
+            notes.append("no clear screening on file")
+        return notes
 
 
 class Credential(models.Model):

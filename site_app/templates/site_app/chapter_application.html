@@ -129,7 +129,8 @@
 <p>{{ application.statement|linebreaksbr }}</p>
 
 <h2>Credentials</h2>
-<p class="empty">Checked against whoever issued it, not against what was typed here.</p>
+<p class="empty">As stated by the applicant. Verifying is optional and is one officer's
+   note on one day — it does not gate the decision and is shown to nobody else.</p>
 {% for c in credentials %}
   <div class="card">
     <p class="who">{{ c.kind }}{% if c.authority %} · {{ c.authority }}{% endif %}</p>
@@ -195,6 +196,19 @@
   {% if blockers %}
     <p class="wrong">Not ready:
       {% for b in blockers %}{{ b }}{% if not forloop.last %}; {% endif %}{% endfor %}.</p>
+  {% endif %}
+
+  {% comment %}
+    Context, not a refusal. Verification stopped gating admission because
+    recording that we checked a licence is a representation to everybody
+    else — but an officer deciding still wants to know what nobody opened.
+    Their judgement, on the facts, with the facts shown.
+  {% endcomment %}
+  {% if application.unchecked %}
+    <p class="note">Nobody has checked:
+      {% for u in application.unchecked %}{{ u }}{% if not forloop.last %}; {% endif %}{% endfor %}.
+      This does not stop an admission. Registering an organization is not
+      vouching for it.</p>
   {% endif %}
 
   <form class="act-form" method="post" action="/chapter/application/{{ application.id }}/">

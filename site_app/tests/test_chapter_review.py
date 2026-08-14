@@ -99,10 +99,12 @@ class WhatAnOfficerSees(ReviewBase):
         self.sign_in(self.hannah)
         self.assertNotContains(self.client.get("/chapter/"), "57-1234567")
 
-    def test_the_blockers_are_named(self):
+    def test_what_nobody_looked_at_is_named(self):
+        """Was "the blockers are named". It is context for a person now,
+        not a refusal by the system, and it still has to be on the page."""
         self.sign_in(self.hannah)
         self.assertContains(self.client.get(self.url()),
-                            "Business license not verified")
+                            "Business license — nobody has looked at this")
 
 
 class Verifying(ReviewBase):
@@ -165,20 +167,35 @@ class Screening_(ReviewBase):
 
 
 class Deciding(ReviewBase):
-    def test_admitting_is_refused_while_anything_is_outstanding(self):
-        """The property that survived the move off the command line."""
+    def test_admitting_is_permitted_with_nothing_verified(self):
+        """Was "refused while anything is outstanding". Verification stopped
+        being a gate because recording that we checked a licence is a
+        representation to everybody else — see Application.blockers."""
         self.sign_in(self.hannah)
-        response = self.client.post(self.url(), {"what": "admit"}, follow=True)
+        self.client.post(self.url(), {"what": "admit"}, follow=True)
 
-        self.assertContains(response, "Not admitted")
-        self.assertIsNone(Application.objects.get(pk=self.application.pk).admitted)
-        self.assertEqual(Organization.objects.count(), 0)
+        application = Application.objects.get(pk=self.application.pk)
+        self.assertTrue(application.admitted)
+        self.assertEqual(Organization.objects.count(), 1)
 
-    def test_the_button_is_disabled_while_it_cannot_be_pressed(self):
+
+    def test_the_button_is_not_disabled_by_an_unchecked_credential(self):
         self.sign_in(self.hannah)
         body = self.client.get(self.url()).content.decode()
-        import re
-        self.assertIsNotNone(re.search(r"<button[^>]*\bdisabled\b", body))
+        import re as re_
+
+        self.assertIsNone(re_.search(r"<button[^>]*disabled", body))
+
+    def test_but_the_page_says_nobody_checked(self):
+        """The information survives the gate being removed, and the page
+        says plainly what admission does and does not mean."""
+        self.sign_in(self.hannah)
+        body = self.client.get(self.url()).content.decode()
+        self.assertIn("Nobody has checked", body)
+        # Not "not vouching for it" -- the template wraps mid-phrase, and a
+        # bare substring across a line break is the assertion that lies.
+        self.assertIn("Registering an organization is not", body)
+
 
     def test_verifying_everything_then_admitting_builds_the_organization(self):
         from unittest.mock import patch
