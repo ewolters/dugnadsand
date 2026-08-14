@@ -140,3 +140,72 @@ class AskingForHelp(TestCase):
         group directly needs nobody logged in, so it is unaffected."""
         self.assertContains(self.client.get("/need-help/"),
                             "Or contact a group directly")
+
+
+class TheLocalServicesAreReal(TestCase):
+    """A page turning somebody away owes them somewhere that answers.
+
+    Nothing here can keep itself current — organizations move and numbers
+    change — so the page carries the date it was checked and says plainly
+    that 2-1-1 is the maintained directory this one is not. A list that looks
+    authoritative while being three years stale sends somebody in trouble to
+    a dead line, and they stop looking.
+    """
+
+    def body(self):
+        return re.sub(r"\s+", " ", self.client.get("/need-help/").content.decode())
+
+    def test_both_areas_are_named(self):
+        body = self.body()
+        self.assertIn("Greenville, South Carolina", body)
+        self.assertIn("Asheville and Buncombe County", body)
+
+    def test_the_areas_are_the_ones_this_chapter_covers(self):
+        """Upstate SC and Western North Carolina. A list of services three
+        states away is a gesture, not a destination."""
+        areas = [area for area, _ in trial.LOCAL]
+        self.assertTrue(any("Greenville" in a for a in areas))
+        self.assertTrue(any("Asheville" in a for a in areas))
+
+    def test_every_entry_carries_a_way_to_reach_it(self):
+        for area, services in trial.LOCAL:
+            for name, contact, what in services:
+                with self.subTest(service=name):
+                    self.assertTrue(contact.strip(), f"{name} has no contact")
+                    self.assertRegex(contact, r"\(\d{3}\) \d{3}-\d{4}",
+                                     f"{name}: no phone number in {contact!r}")
+                    self.assertTrue(what.strip(), f"{name} says nothing")
+
+    def test_each_area_covers_food_shelter_health_and_violence(self):
+        """Not a list of four charities that happen to be nearby. The four
+        things somebody arrives at this page needing."""
+        for area, services in trial.LOCAL:
+            joined = " ".join(f"{n} {w}" for n, _, w in services).lower()
+            for need in ("food", "shelter", "medic|health|dental",
+                         "domestic violence"):
+                with self.subTest(area=area, need=need):
+                    self.assertRegex(joined, need)
+
+    def test_a_24_hour_route_exists_in_each_area(self):
+        """The need that does not wait for opening hours."""
+        for area, services in trial.LOCAL:
+            joined = " ".join(c for _, c, _ in services).lower()
+            with self.subTest(area=area):
+                self.assertIn("24 hours", joined)
+
+    def test_the_page_says_when_it_was_checked(self):
+        self.assertIn(trial.checked_on(), self.body())
+
+    def test_it_says_it_is_not_the_maintained_directory(self):
+        """The honest limit. This page cannot keep itself current and 2-1-1
+        can, so the reader is told which is which."""
+        body = self.body()
+        self.assertIn("2-1-1 is kept current and this page is not", body)
+
+    def test_the_manna_entry_warns_about_the_old_address(self):
+        """Search results, review sites and older guides still give the
+        Swannanoa River Road warehouse, which flooded. Somebody driving there
+        with nothing in the tank is the failure this sentence prevents."""
+        body = self.body()
+        self.assertIn("Mills River", body)
+        self.assertIn("older listings still give", body)

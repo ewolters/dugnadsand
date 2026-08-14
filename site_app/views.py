@@ -220,6 +220,8 @@ def need_help(request):
         "intake_open": trial.REQUESTS_OPEN,
         "trial_ends": trial.ends_on(),
         "elsewhere": trial.ELSEWHERE,
+        "local": trial.LOCAL,
+        "checked_on": trial.checked_on(),
     })
 
 
