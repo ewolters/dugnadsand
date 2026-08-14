@@ -83,7 +83,7 @@
     <p class="who">
       {% avatar p.member 30 %}
       <span class="by">
-        <a class="name" href="/board/{{ p.id }}/">{{ p.member.display_name }}</a>
+        <a class="name" href="/member/{{ p.member_id }}/">{{ p.member.display_name }}</a>
         {% comment %}
           Which organization, because the chapter is the boundary now: a
           reader sees posts from every organization in it, and a name on its

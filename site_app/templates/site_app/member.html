@@ -1,0 +1,55 @@
+{% extends "app_base.html" %}
+{% load avatars %}
+{% load whenago %}
+{% block title %}{{ person.display_name }} — Dugnadsand{% endblock %}
+{% block main_class %}stream{% endblock %}
+{% block content %}
+
+{% comment %}
+  A person, not a record of them. There is deliberately no number anywhere on
+  this page: no hours, no count of postings, no "member since March" beside
+  somebody else's "member since 2019". A page that could be read next to
+  another one and compared is a scoreboard however quietly it is set.
+{% endcomment %}
+
+<div class="who-page">
+  <div class="mark">{% avatar person 72 %}</div>
+  <div>
+    <h1>{{ person.display_name }}</h1>
+    <p class="org">{{ person.organization.name }}{% if person.is_organizer %} · organizes here{% endif %}</p>
+    {% if is_you %}
+      <p class="meta"><a href="/you/">Change your mark</a></p>
+    {% else %}
+      {% comment %}
+        Sent and gone. Nothing is stored, so nothing here gets larger and no
+        badge appears — the absence is the feature, and it is why this can sit
+        on a profile without turning the profile into a tally.
+      {% endcomment %}
+      <form method="post" action="/thanks/{{ person.id }}/">{% csrf_token %}
+        <input type="hidden" name="back" value="/member/{{ person.id }}/">
+        <button type="submit" class="act quiet">Say thanks</button>
+      </form>
+    {% endif %}
+  </div>
+</div>
+
+<h2>{% if is_you %}What you have up{% else %}What {{ person.display_name }} has up{% endif %}</h2>
+
+{% for p in postings %}
+  <div class="post{% if p.is_need %} need{% endif %}">
+    <p class="who">
+      <span class="kind">{% if p.is_need %}asking{% elif p.is_note %}saying{% else %}offering{% endif %}</span>
+      <span class="stamp">{{ p.created_at|ago }}</span>
+    </p>
+    <p class="body"><a href="/board/{{ p.id }}/">{{ p.description }}</a></p>
+    {% if p.offered_under %}
+      <p class="under">Offered under {{ p.offered_under }}.</p>
+    {% endif %}
+  </div>
+{% empty %}
+  <p class="empty">
+    {% if is_you %}Nothing up at the moment. <a href="/board/new/">Put something up</a>.
+    {% else %}Nothing up at the moment.{% endif %}
+  </p>
+{% endfor %}
+{% endblock %}

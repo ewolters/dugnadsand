@@ -531,6 +531,21 @@
     /* Notices. A list of things that happened, so it reads as a list rather
        than as a document — but the unread mark is a dot, not a badge with a
        number in it. Nothing counts what a reader has left. */
+    /* A person's page. The mark is large because it is the only picture of
+       anybody this system will ever have. */
+    .who-page { display:flex; gap:1.1rem; align-items:flex-start; margin:0 0 2rem; }
+    .who-page .mark { flex:none; }
+    .who-page h1 { margin:0 0 .15rem; }
+    .who-page .org { font-family:var(--brand-font-mono); font-size:.75rem;
+      letter-spacing:.07em; text-transform:uppercase; color:var(--brand-moss);
+      margin:0 0 .7rem; }
+    .who-page form { margin:0; }
+    /* On a person's page the card is a pointer to a posting, not the posting
+       itself, so the words are the whole card and carry the link. */
+    .who-page ~ .post .body a { color:var(--brand-ink); text-decoration:none; }
+    .who-page ~ .post .body a:hover { color:var(--brand-spruce);
+      text-decoration:underline; }
+
     .notices { background:var(--brand-paper); border:1px solid var(--brand-rule);
       border-radius:var(--brand-radius-card); padding:.4rem 1.15rem; }
     .notice { display:flex; gap:.75rem; align-items:flex-start;
@@ -538,7 +553,11 @@
     .notice:last-of-type { border-bottom:0; }
     .notice .dot { flex:none; width:.45rem; height:.45rem; border-radius:50%;
       margin-top:.55rem; background:none; }
-    .notice.fresh .dot { background:var(--brand-ochre); }
+    /* New since you last looked. GREEN, not ochre: ochre is the colour this
+       system uses for something needing attention, and everything unread is
+       not something needing attention. A place where every new thing looks
+       urgent stops being restful within a week. */
+    .notice.fresh .dot { background:var(--brand-fresh); }
     .notice .msg { margin:0 0 .15rem; font-size:1rem; }
     .notice .msg a { color:var(--brand-ink); text-decoration:none; }
     .notice .msg a:hover { color:var(--brand-spruce); text-decoration:underline; }

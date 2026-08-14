@@ -122,6 +122,34 @@ def recent_here(email, limit=50):
         return [dict(zip(cols, row)) for row in cur.fetchall()]
 
 
+def already_pending(email, kind):
+    """Is there an unread notice of exactly this kind waiting already?
+
+    THE NUDGE THAT REPEATS. The warehouse sweep runs nightly and asked every
+    holder about every quiet stock line, every night, with an identical
+    sentence -- so a member with two quiet pallets opened the page to four
+    copies of "Something you are holding has not been confirmed in a while",
+    then eight, then twelve. A notice feed that repeats itself is unread
+    within a week, and then the one notice that mattered is unread too.
+
+    Fails open at False: a platform outage should let a nudge through twice,
+    never swallow it. The wrong direction here is silence.
+    """
+    if not email:
+        return False
+    try:
+        with _platform_cursor() as conn, conn.cursor() as cur:
+            cur.execute(
+                "SELECT 1 FROM notification "
+                "WHERE recipient_email = %s AND site = %s AND kind = %s "
+                "AND read_at IS NULL LIMIT 1",
+                (email, SITE, kind))
+            return cur.fetchone() is not None
+    except Exception:
+        logger.warning("pending check unavailable", exc_info=True)
+        return False
+
+
 def mark_read_here(email, ids):
     """Mark specific notices read.
 

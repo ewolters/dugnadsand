@@ -11,7 +11,7 @@
   <p class="who">
     {% avatar p.member 30 %}
     <span class="by">
-      <b class="name">{{ p.member.display_name }}</b>
+      <a class="name" href="/member/{{ p.member_id }}/">{{ p.member.display_name }}</a>
       <span class="org">{{ p.member.organization.name }}</span>
     </span>
     <span class="kind">{% if p.is_need %}asking{% elif p.is_note %}saying{% else %}offering{% endif %}</span>

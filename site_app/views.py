@@ -1304,6 +1304,47 @@ def point_at(request, posting_id):
 
 
 @login_required
+def member_page(request, member_id):
+    """Who somebody is, and what they have up right now.
+
+    THE GAP THIS FILLS: a name in the feed linked to the posting it appeared
+    on, so there was no way to go from "Hannah said something useful" to
+    "who is Hannah". On any board where people talk, a name is a door.
+
+    The chapter boundary needs no code here. Member is tenant-scoped, RLS
+    admits this member's own organization or any organization in its chapter,
+    so a member from outside it does not exist as far as this query is
+    concerned and get_object_or_404 is the whole gate.
+
+    WHAT IS DELIBERATELY ABSENT: any number. No hours, no count of postings,
+    no "member since" leaderboard, nothing that could be read beside somebody
+    else's page and compared. The page lists what a person has up, which is a
+    fact about the postings; it never says how much they have done, which
+    would be a fact about the person. See no-aggregate-display.
+    """
+    from .models import Member, Posting
+
+    viewer = _member(request)
+    if viewer is None:
+        return HttpResponseForbidden("Not a member of any organization.")
+
+    person = get_object_or_404(
+        Member.objects.select_related("organization"), pk=member_id)
+
+    # Their open postings, newest first. Closed ones are left off: a profile
+    # that accumulated everything somebody had ever posted would become a
+    # record of them rather than a way to reach them.
+    postings = (Posting.objects
+                .filter(member=person, open=True)
+                .select_related("member", "organization")
+                .order_by("-created_at")[:20])
+
+    return render(request, "site_app/member.html", {
+        "section": "board", "person": person, "postings": postings,
+        "is_you": person.id == viewer.id})
+
+
+@login_required
 @require_POST
 def thanks(request, member_id):
     """Thank somebody. Sent and gone — no record, so nothing to count.
@@ -1400,7 +1441,7 @@ def warehouse_sweep(request):
     from kjerne_platform.work import tokens
 
     from .models import Organization
-    from .notifications import _send
+    from .notifications import _send, already_pending
     from .services_social import going_quiet
     from .tenancy import bypass_rls, tenant_context
 
@@ -1423,13 +1464,32 @@ def warehouse_sweep(request):
 
     for organization in organizations:
         with tenant_context(organization):
+            # ONE PER HOLDER, and not again while it sits unread.
+            #
+            # This swept per LINE and ran nightly, so a member with two quiet
+            # pallets opened the notice page to four identical copies of the
+            # sentence below, then eight, then twelve. A feed that repeats
+            # itself goes unread within a week, and then the one notice that
+            # mattered goes unread with it.
+            #
+            # The obvious fix -- name the pallet, so the copies at least read
+            # as different things -- is the wrong one, and there is a test
+            # that says so. The notification table is SHARED federation
+            # infrastructure keyed on email alone; a stock description written
+            # into it has left the tenant. So the message stays deliberately
+            # incurious and the page it links to does the telling.
+            quiet_holders = set()
             for line in going_quiet():
-                holder = line.warehouse.holder.user
-                email = holder.email if holder else ""
-                if email and _send(
-                        email, "stale-stock",
-                        "Something you are holding has not been confirmed in a while.",
-                        "/warehouse/"):
+                holder = line.warehouse.holder.user if line.warehouse.holder else None
+                if holder and holder.email:
+                    quiet_holders.add(holder.email)
+
+            for email in sorted(quiet_holders):
+                if already_pending(email, "stale-stock"):
+                    continue
+                if _send(email, "stale-stock",
+                         "Something you are holding has not been confirmed in a while.",
+                         "/warehouse/"):
                     asked += 1
 
     logger.info("warehouse sweep: %s tokens purged, %s holders asked", purged, asked)

@@ -1,6 +1,7 @@
 {% extends "app_base.html" %}
 {% load avatars %}
 {% block title %}Kept for later — Dugnadsand{% endblock %}
+{% block main_class %}stream{% endblock %}
 {% block content %}
 <h1>Kept for later</h1>
 <p class="lede">Your own bookmarks. Nobody else can see these and nothing counts them —
@@ -10,7 +11,7 @@
   <div class="post">
     {% if pin.posting %}
       <p class="who">
-        {% avatar pin.posting.member 30 %}<a class="name" href="/board/{{ pin.posting_id }}/">{{ pin.posting.member.display_name }}</a>
+        {% avatar pin.posting.member 30 %}<a class="name" href="/member/{{ pin.posting.member_id }}/">{{ pin.posting.member.display_name }}</a>
         <span class="kind">{% if pin.posting.is_need %}asking{% else %}offering{% endif %}</span>
         <span class="stamp">{{ pin.posting.created_at|date:"j M" }}</span>
       </p>

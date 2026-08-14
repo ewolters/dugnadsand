@@ -552,3 +552,50 @@ class TheSweepRunsTheThingsNothingWasRunning(WarehouseBase):
         with patch("kjerne_platform.notify.send"):
             body = self.client.post(self.url(), **self.auth()).json()
         self.assertIn("tokens_purged", body)
+
+
+class TheNudgeDoesNotPileUp(TheSweepRunsTheThingsNothingWasRunning):
+    """A notice feed that repeats itself is unread within a week.
+
+    The sweep ran nightly and asked per LINE, so a member holding two quiet
+    pallets opened the page to four copies of one sentence, then eight. The
+    fix has two halves and both are here: one notice per holder rather than
+    one per line, and none at all while the last one is still unread.
+    """
+
+    def test_two_quiet_lines_produce_one_notice(self):
+        from unittest.mock import patch
+
+        self.age(self.lumber, 40)
+        # A second line in the SAME warehouse, so both belong to one holder.
+        from decimal import Decimal
+
+        from django.utils import timezone
+
+        from site_app.models import StockLine
+        from site_app.tenancy import tenant_context
+
+        with tenant_context(self.alpha):
+            second = StockLine.objects.create(
+                organization=self.alpha, warehouse=self.barn,
+                description="Cedar shakes, two bundles",
+                quantity=Decimal("2.00"), unit="bundles",
+                confirmed_at=timezone.now(), confirmed_by=self.ada)
+        self.age(second, 40)
+
+        with patch("site_app.notifications.already_pending", return_value=False), \
+             patch("kjerne_platform.notify.send") as send:
+            self.client.post(self.url(), **self.auth())
+
+        self.assertEqual(send.call_count, 1)
+
+    def test_it_says_nothing_while_the_last_one_is_unread(self):
+        from unittest.mock import patch
+
+        self.age(self.lumber, 40)
+        with patch("site_app.notifications.already_pending", return_value=True), \
+             patch("kjerne_platform.notify.send") as send:
+            body = self.client.post(self.url(), **self.auth()).json()
+
+        self.assertEqual(send.call_count, 0)
+        self.assertEqual(body["holders_asked"], 0)

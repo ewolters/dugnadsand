@@ -1,6 +1,7 @@
 {% extends "app_base.html" %}
 {% load avatars %}
 {% block title %}Worth a look — Dugnadsand{% endblock %}
+{% block main_class %}stream{% endblock %}
 {% block content %}
 <h1>Worth a look</h1>
 <p class="lede">Facts that happen to sit next to each other. Nothing here ranks anybody or
@@ -12,7 +13,7 @@
 {% for p in running_out %}
   <div class="post need">
     <p class="who">
-      {% avatar p.member 30 %}<a class="name" href="/board/{{ p.id }}/">{{ p.member.display_name }}</a>
+      {% avatar p.member 30 %}<a class="name" href="/member/{{ p.member_id }}/">{{ p.member.display_name }}</a>
       <span class="kind">asking</span>
       <span class="stamp">{{ p.created_at|date:"j M" }}</span>
       <span class="when {{ p.urgency|slugify }}">{{ p.urgency }}</span>
