@@ -290,29 +290,71 @@ class Needs(AppBase):
     """
 
     def post_need(self, description="A ride to the clinic on Thursday."):
-        self.sign_in(self.ada_user)
-        return self.client.post("/board/new/", {
-            "kind": "need", "description": description, "hours_cap": "2"})
+        """Creates the row directly, because members no longer post needs.
 
-    def test_a_member_can_ask_for_something(self):
+        Asking arrives blind through /need-help/ now, from people who never
+        join. These tests are about what happens to a need once it exists —
+        claiming it, ordering it, showing who is on it — and those behaviours
+        are unchanged for every need already in the system.
+        """
         from site_app.models import Posting
 
-        response = self.post_need()
+        self.sign_in(self.ada_user)
+        with tenant_context(self.alpha):
+            return Posting.objects.create(
+                organization=self.alpha, member=self.ada, kind=Posting.NEED,
+                description=description, hours_cap=2)
+
+    def test_a_member_can_put_something_up(self):
+        """Was "can ask for something", which the composer no longer does.
+
+        What survives is that the composer writes a posting attributed to the
+        member who wrote it — the same property, in the direction still on
+        offer."""
+        from site_app.models import Posting
+
+        self.sign_in(self.ada_user)
+        response = self.client.post("/board/new/", {
+            "kind": "offer", "description": "A trailer, most Saturdays.",
+            "hours_cap": "2"})
+
         self.assertRedirects(response, "/board/")
         with tenant_context(self.alpha):
-            need = Posting.objects.get(kind=Posting.NEED)
-            self.assertEqual(need.member, self.ada)
-            self.assertTrue(need.is_need)
+            posting = Posting.objects.get(description="A trailer, most Saturdays.")
+            self.assertEqual(posting.kind, Posting.OFFER)
+            self.assertEqual(posting.member, self.ada)
 
-    def test_somebody_who_has_given_nothing_can_still_ask(self):
-        """The whole point, restated for the asking direction."""
-        from site_app.models import Contribution, Posting
+    def test_somebody_who_has_given_nothing_is_never_gated(self):
+        """no-gating, restated for how asking works now.
+
+        The strongest version of this claim moved: asking no longer requires
+        a member account at all. Anybody can ask through /need-help/ without
+        joining anything, which is a harder promise than "a member with no
+        contributions may post". test_requests.py holds that one.
+        """
+        from site_app.models import Contribution, Posting, Request
 
         with tenant_context(self.alpha):
             self.assertEqual(Contribution.objects.filter(member=self.ada).count(), 0)
-        self.post_need()
+
+        # A member who has given nothing can still put something up. Counted
+        # as a delta because setUp already seeds one offer.
         with tenant_context(self.alpha):
-            self.assertEqual(Posting.objects.filter(kind=Posting.NEED).count(), 1)
+            before = Posting.objects.filter(kind=Posting.OFFER).count()
+        self.sign_in(self.ada_user)
+        self.client.post("/board/new/", {"kind": "offer", "description": "x",
+                                         "hours_cap": ""})
+        with tenant_context(self.alpha):
+            self.assertEqual(Posting.objects.filter(kind=Posting.OFFER).count(),
+                             before + 1)
+
+        # And somebody with no account at all can still ask.
+        from .test_requests import stamped
+
+        self.client.logout()
+        self.client.post("/need-help/", stamped(
+            need="A ride to the clinic.", reach_them="864 555 0102"))
+        self.assertEqual(Request.objects.count(), 1)
 
     def test_the_feed_carries_both_directions_in_one_stream(self):
         """Retargeted when the board became the community.
@@ -342,7 +384,7 @@ class Needs(AppBase):
         self.sign_in(self.ada_user)
         for text in ("first need", "second need"):
             self.client.post("/board/new/",
-                             {"kind": "need", "description": text, "hours_cap": ""})
+                             {"kind": "offer", "description": text, "hours_cap": ""})
 
         body = self.client.get("/board/").content.decode()
         self.assertLess(body.index("second need"), body.index("first need"))
@@ -401,7 +443,10 @@ class Needs(AppBase):
         from site_app.forms import PostingForm
 
         choices = dict(PostingForm().fields["kind"].choices)
-        self.assertEqual(set(choices), {"offer", "need", "note"})
+        # need left the composer when asking moved to blind intake. It stays
+        # valid on the model so existing postings are untouched — the same
+        # pattern a retired tier follows.
+        self.assertEqual(set(choices), {"offer", "note"})
         self.assertLessEqual(len(choices), 4, "the vocabulary is growing")
         for value in choices:
             self.assertNotIn(value, ("service", "category", "trade", "skill",
@@ -1111,11 +1156,19 @@ class ThePublicRegisterStaysTechnical(TestCase):
         body = re.sub(r"<(script|style)\b.*?</\1>", " ", body, flags=re.S | re.I)
         return html_mod.unescape(re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", body)))
 
+    # /need-help/ is the one public page whose reader IS a party to it. It
+    # is a form somebody in trouble fills in, and a form that describes its
+    # own fields in the third person is a form nobody completes. The rule
+    # holds everywhere else, which is where it was aimed: the pages that
+    # describe the system to somebody deciding whether to trust it.
+    ADDRESSES_ITS_READER = {"/need-help/"}
+
     def test_no_public_page_addresses_the_reader_directly(self):
         """Second person is the register of a pitch. These are specifications
-        about a system, and the reader is not a party to them."""
+        about a system, and the reader is not a party to them — except on the
+        one page where they are."""
         offenders = {}
-        for path in self.PAGES:
+        for path in set(self.PAGES) - self.ADDRESSES_ITS_READER:
             hits = re.findall(r"\b(you|your|you're|yours|yourself)\b",
                               self.prose(path), re.I)
             if hits:

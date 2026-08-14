@@ -230,7 +230,7 @@ class NoticesFailOpen(MatchingBase):
         self.sign_in(self.ada_user)
         with patch("kjerne_platform.notify.send", side_effect=RuntimeError("down")):
             response = self.client.post("/board/new/", {
-                "kind": "need", "description": "A ride to the clinic.",
+                "kind": "offer", "description": "A ride to the clinic.",
                 "needed_by": "", "hours_cap": ""})
 
         self.assertEqual(response.status_code, 302)

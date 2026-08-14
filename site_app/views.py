@@ -152,6 +152,7 @@ SECTIONS = (
 )
 
 
+@csrf_exempt
 def need_help(request):
     """Where somebody who needs help goes. And what this site does not do.
 
@@ -171,7 +172,31 @@ def need_help(request):
     Silence means unlisted: publishing a route to a group's door is a
     decision they make rather than a default they discover.
     """
+    from .forms import RequestForm
     from .models import Organization
+    from .services_requests import submit_request
+
+    sent = False
+    form = RequestForm(request.POST or None)
+    if request.method == "POST":
+        if form.is_valid():
+            try:
+                submit_request(
+                    need=form.cleaned_data["need"],
+                    reach_them=form.cleaned_data["reach_them"],
+                    asked_by=form.cleaned_data["asked_by"],
+                    area=form.cleaned_data["area"],
+                    region=form.cleaned_data["region"])
+            except ValueError as refused:
+                form.add_error(None, str(refused))
+            else:
+                sent = True
+                form = RequestForm(initial={"t": RequestForm.stamp()})
+        if not sent:
+            form.data = form.data.copy()
+            form.data["t"] = RequestForm.stamp()
+    else:
+        form = RequestForm(initial={"t": RequestForm.stamp()})
 
     groups = (Organization.objects
               .filter(active=True)
@@ -187,6 +212,7 @@ def need_help(request):
     return render(request, "site_app/need_help.html", {
         "chapters": sorted(by_chapter.items()),
         "any_listed": bool(groups),
+        "form": form, "sent": sent,
     })
 
 
@@ -542,6 +568,13 @@ def board(request):
     else:
         show = ""
 
+    # Blind requests, if this organization is a vetted aid group. Everybody
+    # else gets an empty queryset from visible_to() — a business browsing the
+    # feed has no reason to learn who is struggling on which street.
+    from .services_requests import visible_to
+
+    requests = list(visible_to(member))
+
     # Resolved here rather than in the template: an organization admitted into
     # no chapter has region=None, and member.organization.region.name would
     # resolve to the invalid-variable marker rather than to nothing.
@@ -550,7 +583,8 @@ def board(request):
         "section": "board",
         "member": member, "others": others,
         "feed": feed, "chapter": region.name if region else None,
-        "show": show,
+        "show": show, "requests": requests,
+        "is_aid_group": member.organization.is_aid_group,
         # Kept for anything still reading them, and for the counts in the lede.
         "needs": needs, "offers": offers,
     })
@@ -593,6 +627,45 @@ def interested(request, posting_id):
 
     express_interest(posting=post, member=member, hours=hours)
     return redirect(back)
+
+
+@login_required
+@require_POST
+def request_take(request, request_id):
+    """A vetted aid group takes up a blind request, and sees the contact.
+
+    Refused for anybody who is not one — on the stored fact recorded when the
+    organization was vetted, not on the role somebody holds or the page they
+    reached.
+    """
+    from .models import Request
+    from .services_requests import (AlreadyTaken, NotAnAidGroup,
+                                    close_request, release_request,
+                                    take_request)
+
+    member = _member(request)
+    if member is None:
+        return HttpResponseForbidden("Not a member of any organization.")
+
+    asked = get_object_or_404(Request, pk=request_id)
+    what = request.POST.get("what", "take")
+
+    try:
+        if what == "release":
+            release_request(request=asked, member=member)
+            messages.success(request, "Put back. Nothing records that it was held.")
+        elif what == "close":
+            close_request(request=asked, member=member)
+            messages.success(request, "Closed. No outcome is recorded.")
+        else:
+            take_request(request=asked, member=member)
+            messages.success(
+                request, "Taken up. How to reach them is on the card now, and "
+                         "only this organization can see it.")
+    except (NotAnAidGroup, AlreadyTaken) as refused:
+        messages.error(request, str(refused))
+
+    return redirect("/community/")
 
 
 @login_required

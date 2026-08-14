@@ -32,6 +32,49 @@
   <a href="/community/?show=mine" {% if show == "mine" %}aria-current="page"{% endif %}>Mine</a>
 </nav>
 
+{% if requests %}
+  <h2>Somebody asked</h2>
+  <p class="ordering">Blind. Names and contact details are withheld until a group
+     takes one up, and then shown to that group alone.</p>
+
+  {% for r in requests %}
+    <div class="post asked{% if r.taken %} done{% endif %}">
+      <p class="who">
+        <b class="name">Somebody{% if r.area %} in {{ r.area }}{% endif %}</b>
+        <span class="kind">asked</span>
+        <span class="stamp">{{ r.created_at|ago }}</span>
+      </p>
+      <p class="body">{{ r.need|linebreaksbr }}</p>
+
+      {% if r.taken %}
+        {% if r.taken_by_id == member.organization_id %}
+          <p class="reach">{% if r.asked_by %}{{ r.asked_by }} — {% endif %}{{ r.reach_them|linebreaksbr }}</p>
+          <div class="row">
+            <form method="post" action="/request/{{ r.id }}/">{% csrf_token %}
+              <input type="hidden" name="what" value="close">
+              <button type="submit" class="act quiet">Close it</button>
+            </form>
+            <form method="post" action="/request/{{ r.id }}/">{% csrf_token %}
+              <input type="hidden" name="what" value="release">
+              <button type="submit" class="act quiet">Put it back</button>
+            </form>
+          </div>
+        {% else %}
+          <p class="meta">{{ r.taken_by.name }} has this one.</p>
+        {% endif %}
+      {% else %}
+        <div class="row">
+          <form method="post" action="/request/{{ r.id }}/">{% csrf_token %}
+            <button type="submit" class="act">We'll take this</button>
+          </form>
+        </div>
+      {% endif %}
+    </div>
+  {% endfor %}
+
+  <h2>The community</h2>
+{% endif %}
+
 <p class="ordering">Ordered by when things are needed — never by who asked.</p>
 
 {% for p in feed %}

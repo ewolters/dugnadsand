@@ -86,6 +86,20 @@
     letter-spacing:.1em; text-transform:uppercase; color:var(--brand-warn);
     display:block; margin-bottom:.5rem; }
   .no-form p:last-child { margin-bottom:0; }
+  form.ask { max-width:34rem; margin:1.5rem 0 0; }
+  form.ask label { display:block; font-family:var(--brand-font-sans);
+    font-size:.9375rem; font-weight:600; margin:1.1rem 0 .3rem; }
+  form.ask textarea, form.ask input[type=text], form.ask select {
+    width:100%; box-sizing:border-box; font:inherit; font-size:1rem;
+    padding:.55rem .7rem; border:1px solid var(--brand-rule-strong);
+    border-radius:2px; background:var(--brand-paper); color:var(--brand-ink); }
+  form.ask textarea { resize:vertical; }
+  form.ask .hint { font-size:.875rem; color:var(--brand-moss); margin:.25rem 0 0; }
+  form.ask button { margin-top:1.4rem; font-family:var(--brand-font-sans);
+    font-size:1rem; font-weight:600; padding:.65rem 1.4rem; border:0;
+    border-radius:2px; cursor:pointer; background:var(--brand-spruce);
+    color:var(--brand-paper); }
+  .err { color:var(--brand-error); font-size:.875rem; margin:.25rem 0 0; }
 </style>
 {% endblock %}
 
@@ -100,6 +114,52 @@
 <p>The groups below decide what they can do and for whom. Contacting one of them
    directly is the whole of it: they know what is available this week, what their
    own rules are, and what happens next.</p>
+
+{% if sent %}
+  <div class="no-form">
+    <b>Sent</b>
+    <p>The groups covering that area can see what was asked for and roughly where.
+       Nobody can see the name or the contact details until one group takes it up,
+       and then only that group.</p>
+    <p>There is nothing to check back on and no account to sign into. A group that
+       takes it up will make contact directly.</p>
+  </div>
+{% else %}
+  <h2>Ask</h2>
+  <p>What is written here reaches the groups covering the area and nobody else. The
+     need and the rough area are shown to them; the name and the way to get back is
+     withheld until one group takes it up.</p>
+
+  <form method="post" action="/need-help/" class="ask" novalidate>
+    {{ form.t }}
+    {{ form.website }}
+    {% if form.non_field_errors %}<p class="err">{{ form.non_field_errors.0 }}</p>{% endif %}
+
+    <label for="{{ form.need.id_for_label }}">{{ form.need.label }}</label>
+    {{ form.need }}
+    {% if form.need.errors %}<p class="err">{{ form.need.errors.0 }}</p>{% endif %}
+
+    <label for="{{ form.region.id_for_label }}">{{ form.region.label }}</label>
+    {{ form.region }}
+
+    <label for="{{ form.area.id_for_label }}">{{ form.area.label }}</label>
+    {{ form.area }}
+    <p class="hint">{{ form.area.help_text }}</p>
+
+    <label for="{{ form.asked_by.id_for_label }}">{{ form.asked_by.label }}</label>
+    {{ form.asked_by }}
+    <p class="hint">{{ form.asked_by.help_text }}</p>
+
+    <label for="{{ form.reach_them.id_for_label }}">{{ form.reach_them.label }}</label>
+    {{ form.reach_them }}
+    <p class="hint">{{ form.reach_them.help_text }}</p>
+    {% if form.reach_them.errors %}<p class="err">{{ form.reach_them.errors.0 }}</p>{% endif %}
+
+    <button type="submit">Send it</button>
+  </form>
+{% endif %}
+
+<h2>Or contact a group directly</h2>
 
 {% if any_listed %}
   {% for area, groups in chapters %}
@@ -118,12 +178,14 @@
 {% endif %}
 
 <div class="no-form">
-  <b>What this page is not</b>
-  <p>There is nothing here to fill in, and nothing typed on this site reaches a group.
-     Everything after the introduction happens between a person and that group, by
-     whatever means they list — a phone, an address, a Tuesday morning.</p>
-  <p>No record of the request exists here. Dugnadsand never learns who asked, what was
-     asked for, or what was decided.</p>
+  <b>What happens to what is written here</b>
+  <p>The need and the rough area go to the mutual aid groups covering that area, and to
+     nobody else. Businesses and households in the same network never see it. The name
+     and the contact details are encrypted and stay withheld until one group takes it
+     up, at which point that group alone can read them.</p>
+  <p>What happens next is between that group and the person who asked. Nothing records
+     what was decided, whether anybody was helped, or how it went — that belongs to
+     them, and a field for it would be this system reaching into work it does not do.</p>
 </div>
 
 <p><a href="/how-it-works/">How it works</a> ·

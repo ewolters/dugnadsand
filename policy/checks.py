@@ -32,7 +32,7 @@ NOT_ENFORCEABLE = "not_enforceable"
 # KeyError — and because /attestation/ runs the checks when it is drawn, that
 # surfaces as a 500 on a public page rather than as a failing check. Adding a
 # model to a check means adding it here in the same edit.
-DOMAIN_MODELS = ("Posting", "Claim", "Contribution", "Interest")
+DOMAIN_MODELS = ("Posting", "Claim", "Contribution", "Interest", "Request")
 
 
 @dataclass
@@ -450,7 +450,10 @@ def no_obligation():
     # it carries an offer of hours, and an offer that grew a minimum would be
     # a promise. The list is hand-maintained, which is the standing gap --
     # anything that records what somebody said they would do belongs in it.
-    for name in ("Posting", "Claim", "Contribution", "Interest"):
+    # Request is the sharpest case: it is the one record about a person who
+    # is not a member, and a "was it resolved" field on it would be the whole
+    # last-mile boundary crossed in a single migration.
+    for name in ("Posting", "Claim", "Contribution", "Interest", "Request"):
         for f in _all_fields(_domain_models()[name]):
             fname = getattr(f, "name", "")
             if re.search(r"hours_min|minimum|required|commitment|reliability|"

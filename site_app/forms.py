@@ -167,9 +167,15 @@ class PostingForm(Branded, forms.ModelForm):
         # Said as a person would say it, at the FORM level. The model's
         # choices are untouched: editing those needs a migration, and the
         # stored values are what the rest of the system reads.
+        # NEED IS GONE FROM THE COMPOSER and kept valid on the model, the way
+        # a retired tier is: existing postings stay exactly what they are.
+        #
+        # Asking left because asking now arrives blind, through /need-help/,
+        # from people who do not join. A group's own material needs live on a
+        # project's bill of materials, which is a different object and always
+        # was — so nothing a group could say before has become unsayable.
         self.fields["kind"].choices = [
             (Posting.OFFER, "I'm offering something"),
-            (Posting.NEED, "I'm asking for something"),
             (Posting.NOTE, "I'm just saying something"),
         ]
         self.fields["description"].widget.attrs.update({
@@ -718,3 +724,52 @@ class ConsentForm(Branded, forms.Form):
     note = forms.CharField(
         max_length=2000, required=False, widget=forms.Textarea(attrs={"rows": 2}),
         label="Note (optional)")
+
+
+class RequestForm(Branded, StampedPublicForm, forms.Form):
+    """Asking for help, without joining anything.
+
+    Deliberately four fields. Somebody in trouble is not filling in an
+    intake assessment, and every extra question is a reason to close the tab.
+
+    What is shown and what is withheld is decided here and enforced in the
+    model: need and area appear in the community; the name and the way to
+    reach them are encrypted and disclosed to one group, once.
+    """
+
+    STAMP_SALT = "dugnadsand.request"
+
+    need = forms.CharField(
+        max_length=4000, label="What would help",
+        widget=forms.Textarea(attrs={
+            "rows": 4, "autofocus": "autofocus",
+            "placeholder": "What would help? Write it however you would say it."}))
+    area = forms.CharField(
+        max_length=120, required=False, label="Roughly where",
+        help_text="A town or a neighbourhood. Not an address — this part is "
+                  "shown, and the exact place is nobody else's business.",
+        widget=forms.TextInput(attrs={"placeholder": "Greenville"}))
+    asked_by = forms.CharField(
+        max_length=200, required=False, label="Name (optional)",
+        help_text="Shown to nobody. A group that takes this up sees it; "
+                  "leaving it blank is fine.")
+    reach_them = forms.CharField(
+        max_length=2000, label="How to get back to you",
+        widget=forms.Textarea(attrs={
+            "rows": 2,
+            "placeholder": "A phone number, an email, or where to find you."}),
+        help_text="Never shown in the community. Only the group that takes "
+                  "this up can see it.")
+
+    region = forms.ModelChoiceField(
+        queryset=None, required=False, label="Nearest area",
+        empty_label="Not sure")
+
+    website = forms.CharField(required=False, widget=forms.HiddenInput)
+    t = forms.CharField(required=False, widget=forms.HiddenInput)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        from .models import Region
+
+        self.fields["region"].queryset = Region.objects.filter(active=True)

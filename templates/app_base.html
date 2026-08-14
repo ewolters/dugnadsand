@@ -89,6 +89,13 @@
       border-radius:10px; padding:1.1rem 1.3rem 1rem; margin:0 0 1.1rem; }
     /* The ochre edge still says "somebody is asking", quietly. */
     .post.need { box-shadow:inset 3px 0 0 var(--brand-ochre); }
+    /* A blind request. Marked differently from a posting because it is a
+       different kind of thing: nobody in the community wrote it. */
+    .post.asked { box-shadow:inset 3px 0 0 var(--brand-alert); }
+    .post .reach { font-family:var(--brand-font-mono); font-size:.9375rem;
+      background:var(--brand-ok-wash); color:var(--brand-ink);
+      padding:.6rem .8rem; border-radius:var(--brand-radius);
+      white-space:pre-line; }
 
     /* Tabs narrow the feed. Styled as a quiet row rather than as buttons:
        they change what is listed, not what is true. */

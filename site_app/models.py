@@ -30,6 +30,22 @@ class Organization(models.Model):
     # organization is not listed at all, which is the direction to fail in:
     # publishing a way to reach people is a decision they make, not a default
     # they discover.
+    # WHAT KIND OF PARTY THIS IS, and the reason it has to be stored rather
+    # than inferred: only a vetted mutual aid group may take up a request
+    # from somebody who needs help, and "vetted" has to be a fact about the
+    # row. The Application that admitted an organization knows its kind, but
+    # organizations admitted before the ingress existed have no application
+    # at all, so the answer cannot be recovered by joining.
+    AID_GROUP = "aid"
+    BUSINESS = "business"
+    HOUSEHOLD = "household"
+    KINDS = [
+        (AID_GROUP, "Mutual aid group"),
+        (BUSINESS, "Business"),
+        (HOUSEHOLD, "Household"),
+    ]
+    kind = models.CharField(max_length=12, choices=KINDS, default=HOUSEHOLD)
+
     public_contact = models.TextField(blank=True)
 
     # What they do and who they serve, in their own words. Free text for the
@@ -51,6 +67,17 @@ class Organization(models.Model):
 
     def __str__(self):
         return self.name
+
+    @property
+    def is_aid_group(self):
+        """Whether this organization may take up a request.
+
+        Defaults to False for anything not explicitly marked, because the
+        default has to be the safe one: a household or a business reaching
+        somebody who asked for help is the failure this gate exists to
+        prevent.
+        """
+        return self.kind == self.AID_GROUP
 
 
 class TenantScoped(models.Model):
@@ -1504,3 +1531,70 @@ class ChapterRemoval(models.Model):
 
     def __str__(self):
         return f"{self.organization} removed from {self.region}"
+
+
+class Request(models.Model):
+    """Somebody asked for help. Blind, and outside every tenant.
+
+    NOT TenantScoped: the person asking belongs to no organization and never
+    will. They do not join, do not register, and are never a party to this
+    system — see the statement of operating policy, "Where this system stops".
+
+    BLIND MEANS BLIND. What appears in the community is the need and a coarse
+    area. The name and the way to reach them are encrypted at rest and are
+    disclosed to exactly one organization: the aid group that takes it up.
+    Nobody else sees them at any point, including businesses and households in
+    the same chapter, and including before anybody has taken it.
+
+    That asymmetry is the whole design. A person in trouble should not have to
+    be publicly identifiable in order to be helped, and a business browsing
+    the feed has no reason to learn who is struggling on which street.
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    # Which chapter's groups can see it. Null means nobody yet — a request
+    # from outside every covered area waits rather than going to everyone.
+    region = models.ForeignKey(
+        Region, on_delete=models.PROTECT, null=True, blank=True,
+        related_name="requests")
+
+    # Shown. Free text, written by whoever asked.
+    need = models.TextField()
+
+    # Shown, and deliberately coarse. A town, not an address: the feed says
+    # where roughly, and the group that takes it learns the rest.
+    area = models.CharField(max_length=120, blank=True)
+
+    # WITHHELD until taken. Encrypted at rest like every other personal
+    # detail this system holds.
+    asked_by = EncryptedCharField(max_length=500, blank=True)
+    reach_them = EncryptedTextField()
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    # Set when an aid group takes it up. Only then does that group see the
+    # contact, and only that group.
+    taken_by = models.ForeignKey(
+        Organization, on_delete=models.PROTECT, null=True, blank=True,
+        related_name="requests_taken")
+    taken_at = models.DateTimeField(null=True, blank=True)
+
+    # Closed by the group that took it, or left alone. No outcome is
+    # recorded: what happened between a group and a person is theirs, and a
+    # field for it would be this system reaching into the last mile.
+    closed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ("-created_at",)
+
+    def __str__(self):
+        return f"request {self.id}"
+
+    @property
+    def taken(self):
+        return self.taken_by_id is not None
+
+    @property
+    def open(self):
+        return self.taken_by_id is None and self.closed_at is None

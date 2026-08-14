@@ -54,18 +54,29 @@ class ItIsReachableByAnybody(NeedHelpBase):
 
 
 class ItIsAnIntroductionAndNothingElse(NeedHelpBase):
-    def test_the_page_carries_no_form_at_all(self):
-        """Nothing typed on this site reaches a group. There is nothing to
-        type, which is stronger than a form that routes somewhere."""
-        body = self.page()
-        self.assertNotIn("<form", body)
-        self.assertNotIn("<input", body)
-        self.assertNotIn("<textarea", body)
+    def test_the_form_asks_four_things_and_no_more(self):
+        """Somebody in trouble is not filling in an intake assessment, and
+        every extra question is a reason to close the tab."""
+        import re
 
-    def test_it_says_no_record_of_a_request_exists(self):
+        body = self.page()
+        named = set(re.findall(r'<(?:input|textarea|select)[^>]*name="([^"]+)"',
+                               body))
+        self.assertEqual(named - {"csrfmiddlewaretoken", "t", "website"},
+                         {"need", "area", "asked_by", "reach_them", "region"})
+
+    def test_it_says_exactly_who_sees_what(self):
+        """Retargeted the moment the page grew a form.
+
+        It asserted no record of a request exists here, which was true when
+        the page was a directory and became false the same day. What has to
+        hold now is narrower and more useful: who can see the need, who
+        cannot see the contact, and that no outcome is recorded.
+        """
         prose = self.prose()
-        self.assertIn("No record of the request exists here", prose)
-        self.assertIn("never learns who asked", prose)
+        self.assertIn("and to nobody else", prose)
+        self.assertIn("withheld until one group takes it up", prose)
+        self.assertIn("Nothing records what was decided", prose)
 
     def test_it_says_the_group_decides(self):
         self.assertIn("groups below decide what they can do and for whom",
