@@ -54,6 +54,7 @@ urlpatterns = [
     path("days/", views.work_days, name="work_days"),
     path("days/new/", views.work_day_new, name="work_day_new"),
     path("days/<uuid:work_day_id>/", views.work_day_detail, name="work_day_detail"),
+    path("days/<uuid:work_day_id>/coming/", views.day_coming, name="day_coming"),
     path("days/<uuid:work_day_id>/announce/", views.work_day_publish, name="work_day_publish"),
     path("days/<uuid:work_day_id>/off/", views.work_day_cancel, name="work_day_cancel"),
     path("days/clearance/<uuid:clearance_id>/", views.clearance_obtained, name="clearance_obtained"),

@@ -23,6 +23,31 @@
     <p class="body">{{ d.place|linebreaksbr }}</p>
     <p class="meta">Put in by {{ d.called_by.display_name }}{% if d.project %} ·
        part of {{ d.project.name }}{% endif %}</p>
+
+{% comment %}
+  Who is coming, BY NAME and never as a number. A count beside a day is a
+  turnout figure, and a turnout figure invites comparing this Saturday to the
+  last one and this person to that one.
+{% endcomment %}
+{% if d.attending.all %}
+  <p class="keen">Coming:
+    {% for a in d.attending.all %}{{ a.member.display_name }}{% if a.bringing %} ({{ a.bringing }}){% endif %}{% if not forloop.last %}, {% endif %}{% endfor %}</p>
+{% endif %}
+<div class="row">
+  {% if d.id in im_coming %}
+    <form method="post" action="/days/{{ d.id }}/coming/">{% csrf_token %}
+      <input type="hidden" name="back" value="/days/">
+      <input type="hidden" name="withdraw" value="1">
+      <button type="submit" class="act quiet">Can't after all</button>
+    </form>
+  {% else %}
+    <form method="post" action="/days/{{ d.id }}/coming/" class="keen-form">{% csrf_token %}
+      <input type="hidden" name="back" value="/days/">
+      <input name="bringing" type="text" maxlength="200" placeholder="Bringing anything?">
+      <button type="submit" class="act">I'll be there</button>
+    </form>
+  {% endif %}
+</div>
   </div>
 {% empty %}
   <p class="empty">Nothing announced. A day appears here once it is cleared.</p>
@@ -43,6 +68,31 @@
     {% else %}
       <p class="cap">Cleared. Nobody has announced it yet.</p>
     {% endif %}
+
+{% comment %}
+  Who is coming, BY NAME and never as a number. A count beside a day is a
+  turnout figure, and a turnout figure invites comparing this Saturday to the
+  last one and this person to that one.
+{% endcomment %}
+{% if d.attending.all %}
+  <p class="keen">Coming:
+    {% for a in d.attending.all %}{{ a.member.display_name }}{% if a.bringing %} ({{ a.bringing }}){% endif %}{% if not forloop.last %}, {% endif %}{% endfor %}</p>
+{% endif %}
+<div class="row">
+  {% if d.id in im_coming %}
+    <form method="post" action="/days/{{ d.id }}/coming/">{% csrf_token %}
+      <input type="hidden" name="back" value="/days/">
+      <input type="hidden" name="withdraw" value="1">
+      <button type="submit" class="act quiet">Can't after all</button>
+    </form>
+  {% else %}
+    <form method="post" action="/days/{{ d.id }}/coming/" class="keen-form">{% csrf_token %}
+      <input type="hidden" name="back" value="/days/">
+      <input name="bringing" type="text" maxlength="200" placeholder="Bringing anything?">
+      <button type="submit" class="act">I'll be there</button>
+    </form>
+  {% endif %}
+</div>
   </div>
 {% empty %}
   <p class="empty">Nothing waiting.</p>

@@ -1676,7 +1676,7 @@ def work_days(request):
     thing a community needs to see is the day that is stuck: a blocker nobody
     can see is a phone call nobody makes.
     """
-    from .models import WorkDay
+    from .models import Attending, WorkDay
 
     member = _member(request)
     if member is None:
@@ -1684,10 +1684,15 @@ def work_days(request):
 
     days = (WorkDay.objects.filter(cancelled_at__isnull=True)
             .select_related("project", "called_by")
-            .prefetch_related("clearances"))
+            .prefetch_related("clearances", "attending__member"))
+
+    # Which of these the viewer has already said yes to. A set of ids rather
+    # than a per-card query, and computed here because a template cannot ask.
+    im_coming = set(
+        Attending.objects.filter(member=member).values_list("day_id", flat=True))
 
     return render(request, "site_app/work_days.html", {
-        "member": member, "section": "days",
+        "member": member, "section": "days", "im_coming": im_coming,
         "announced": [d for d in days if d.published],
         "waiting": [d for d in days if not d.published],
         "cancelled": (WorkDay.objects.filter(cancelled_at__isnull=False)
@@ -1722,6 +1727,37 @@ def work_day_new(request):
 
 
 @login_required
+@require_POST
+def day_coming(request, work_day_id):
+    """Say you will be there, or take it back.
+
+    No permission check beyond membership. Anybody in the chapter can turn up
+    to a day in the chapter — that is what a work day is — and a guest list
+    would make it an invitation instead.
+    """
+    from .models import WorkDay
+    from .services_events import DayCalledOff, coming, not_coming
+
+    member = _member(request)
+    if member is None:
+        return HttpResponseForbidden("Not a member of any organization.")
+
+    day = get_object_or_404(WorkDay, pk=work_day_id)
+    back = request.POST.get("back") or f"/days/{day.id}/"
+
+    if request.POST.get("withdraw"):
+        not_coming(day=day, member=member)
+        return redirect(back)
+
+    try:
+        coming(day=day, member=member,
+               bringing=request.POST.get("bringing") or "")
+    except DayCalledOff as refusal:
+        messages.error(request, str(refusal))
+    return redirect(back)
+
+
+@login_required
 def work_day_detail(request, work_day_id):
     """The day, and everything standing between it and being announced."""
     from .forms import ClearanceForm
@@ -1733,7 +1769,8 @@ def work_day_detail(request, work_day_id):
         return HttpResponseForbidden("Not a member of any organization.")
 
     day = get_object_or_404(
-        WorkDay.objects.select_related("project", "called_by"), pk=work_day_id)
+        WorkDay.objects.select_related("project", "called_by")
+        .prefetch_related("attending__member"), pk=work_day_id)
     form = ClearanceForm(request.POST or None)
 
     if request.method == "POST" and form.is_valid():
@@ -1745,6 +1782,7 @@ def work_day_detail(request, work_day_id):
 
     return render(request, "site_app/work_day_detail.html", {
         "member": member, "section": "days", "day": day, "form": form,
+        "im_coming": day.attending.filter(member=member).exists(),
         "clearances": day.clearances.select_related("raised_by"),
         "blockers": day.blockers,
     })

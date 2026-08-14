@@ -98,3 +98,52 @@ def cancel(work_day, *, because=""):
     work_day.cancelled_because = because
     work_day.save(update_fields=["cancelled_at", "cancelled_because"])
     return work_day
+
+
+# --------------------------------------------------------------------------
+# Turning up. The social half of a work day, and the one it never had.
+# --------------------------------------------------------------------------
+
+class DayCalledOff(Exception):
+    """Nobody comes to a day that was called off."""
+
+
+def coming(*, day, member, bringing=""):
+    """Say you will be there, and optionally what you are bringing.
+
+    Saying it again updates what you are bringing rather than adding a second
+    row, so somebody can change their mind about the trailer without it
+    reading as two people.
+
+    A CANCELLED DAY REFUSES. Somebody arriving at a called-off day because
+    the button still worked is the failure this exists to prevent, and it is
+    the only refusal here -- there is no ceiling on how many can come, no
+    deadline after which it closes, and no permission needed from whoever
+    called it.
+    """
+    from .models import Attending
+
+    if day.cancelled_at is not None:
+        raise DayCalledOff("That day was called off.")
+
+    attending, created = Attending.objects.get_or_create(
+        day=day, member=member,
+        defaults={"organization_id": member.organization_id,
+                  "bringing": bringing.strip()[:200]})
+    if not created and attending.bringing != bringing.strip()[:200]:
+        attending.bringing = bringing.strip()[:200]
+        attending.save(update_fields=["bringing"])
+    return attending
+
+
+def not_coming(*, day, member):
+    """A HARD DELETE, like stepping off a claim.
+
+    No cancelled flag, no attended flag, nothing recording that somebody said
+    they would come and then did not. That record is a reliability score with
+    a friendlier name, and a day where changing your mind costs something is
+    a day people stop answering honestly.
+    """
+    from .models import Attending
+
+    Attending.objects.filter(day=day, member=member).delete()

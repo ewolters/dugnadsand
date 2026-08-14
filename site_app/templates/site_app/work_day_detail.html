@@ -28,6 +28,38 @@
 {% if day.muster %}<p class="note">Gather at: {{ day.muster|linebreaksbr }}</p>{% endif %}
 {% if day.project %}<p class="cap">Part of <a href="/projects/{{ day.project_id }}/">{{ day.project.name }}</a></p>{% endif %}
 
+<h2>Who is coming</h2>
+
+{% comment %}
+  Names, never a number, and never a record of who said they would come and
+  then did not. Withdrawing is a hard delete — see Attending.
+{% endcomment %}
+{% if day.attending.all %}
+  <ul class="coming">
+    {% for a in day.attending.all %}
+      <li><a href="/member/{{ a.member_id }}/">{{ a.member.display_name }}</a>{% if a.bringing %} — {{ a.bringing }}{% endif %}</li>
+    {% endfor %}
+  </ul>
+{% else %}
+  <p class="empty">Nobody yet.</p>
+{% endif %}
+
+{% if not day.cancelled_at %}
+  {% if im_coming %}
+    <form method="post" action="/days/{{ day.id }}/coming/">{% csrf_token %}
+      <input type="hidden" name="withdraw" value="1">
+      <button type="submit" class="act quiet">Can't after all</button>
+    </form>
+    <p class="note">Nothing is recorded when somebody changes their mind. There is no
+       attendance to fall short of.</p>
+  {% else %}
+    <form method="post" action="/days/{{ day.id }}/coming/" class="keen-form">{% csrf_token %}
+      <input name="bringing" type="text" maxlength="200" placeholder="Bringing anything?">
+      <button type="submit" class="act">I'll be there</button>
+    </form>
+  {% endif %}
+{% endif %}
+
 <h2>Permissions</h2>
 <p class="note">Recording something here does not create it. This is a note that
    somebody says permission was given, with a reference so a person who was not on

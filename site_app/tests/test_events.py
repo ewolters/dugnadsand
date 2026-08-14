@@ -184,19 +184,42 @@ class TheGateIsNotAMemberGate(WorkDayBase):
                 Contribution.objects.filter(member=self.member).count(), 0)
             publish(self.a_work_day())
 
-    def test_the_model_carries_no_attendance_or_headcount_field(self):
-        """Obligation arrives through the door marked "who is coming".
+    def test_the_day_carries_no_target_to_fall_short_of(self):
+        """Retargeted when people could finally say they were coming.
 
-        An expected-attendees field becomes a shortfall, a shortfall becomes a
-        chase, and a chase is a duty owed -- which no-obligation forbids. The
-        field names are asserted rather than the behaviour because the field
-        is the thing that cannot exist.
+        This forbade the NAME "attending" as well as the substance, and a
+        list of who is turning up now exists under exactly that name. What it
+        was protecting is untouched and is asserted here properly.
+
+        The original reasoning: an expected-attendees field becomes a
+        shortfall, a shortfall becomes a chase, and a chase is a duty owed.
+        Every word of that is about a TARGET — a number the day is measured
+        against. A list of who said they would come has nothing to fall short
+        of, which is the difference between a guest list and a quota.
+
+        So the forbidden set keeps every target and loses only the name.
         """
         names = {f.name for f in WorkDay._meta.get_fields()}
-        for forbidden in ("attendees", "attending", "headcount", "capacity",
-                          "expected", "signups", "rsvp", "quota", "target",
-                          "minimum_volunteers", "confirmed_by"):
+        for forbidden in ("headcount", "capacity", "expected", "quota",
+                          "target", "minimum_volunteers", "needed",
+                          "attendees_expected"):
             self.assertNotIn(forbidden, names, f"WorkDay grew {forbidden}")
+
+    def test_nothing_records_whether_somebody_actually_turned_up(self):
+        """The other half, and the sharper one.
+
+        A day has a DATE, which a posting does not. Saying "I'll be there
+        Saturday" and not going is visible in a way "I might be able to help"
+        never is — so the field that must not exist is the one comparing what
+        somebody said to what happened. That field is a reliability score
+        with a friendlier name.
+        """
+        from site_app.models import Attending
+
+        names = {f.name for f in Attending._meta.get_fields()}
+        for forbidden in ("attended", "turned_up", "confirmed_by", "no_show",
+                          "cancelled_at", "withdrawn", "reliability", "count"):
+            self.assertNotIn(forbidden, names, f"Attending grew {forbidden}")
 
 
 class ClearanceIsEvidenceNotPermission(WorkDayBase):

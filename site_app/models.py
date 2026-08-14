@@ -1535,6 +1535,58 @@ class PhotoConsent(TenantScoped):
         return bool(self.withdrawn_on)
 
 
+class Attending(TenantScoped):
+    """"I'll be there." A work day with nobody able to say so is a poster.
+
+    Days have had a date, a place and a muster point since they existed, and
+    no way for anybody to say they were coming. So the answer to "who is
+    turning up on Saturday" lived in somebody's texts, and the person who
+    needed it most -- whoever is deciding how many trailers to bring -- was
+    the one who had to go and ask.
+
+    NAMED, NEVER COUNTED, the same rule Interest follows and for the same
+    reason. The card says who is coming, the way it already says who called
+    the day. It does not say how many. A number beside a day is a turnout
+    figure, a turnout figure invites comparing this Saturday to the last one
+    and this person to that one, and the whole system is built without one.
+    test_attending.py asserts the absence rather than trusting the template.
+
+    NOT A COMMITMENT. Saying you will be there and then not being there
+    records nothing: withdrawing is a HARD DELETE leaving no trace, exactly
+    as stepping off a claim is, and there is no attended flag to set
+    afterwards. A day that recorded who said they would come and then did not
+    would be building the reliability score this system refuses to keep --
+    see no-obligation, whose check scans this model too.
+    """
+
+    day = models.ForeignKey(
+        "WorkDay", on_delete=models.CASCADE, related_name="attending")
+    # ONE member link, as everywhere else -- see Clearance. Two would trip
+    # no-exchange, which is the check that stops this becoming a ledger of
+    # who turned out for whom.
+    member = models.ForeignKey(
+        Member, on_delete=models.CASCADE, related_name="attending")
+
+    # What they are bringing, in their own words. Free text and optional:
+    # "the flatbed", "a chainsaw", "coffee". NOT a quantity and not a
+    # category -- a dropdown here would be a catalog, and a number would be
+    # the first thing anybody totalled.
+    bringing = models.CharField(max_length=200, blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=("day", "member"),
+                name="one_attendance_per_person_per_day"),
+        ]
+        ordering = ["created_at"]
+
+    def __str__(self):
+        return f"{self.member.display_name} at {self.day.name}"
+
+
 class Interest(TenantScoped):
     """"I might be able to help." Softer than taking something on.
 
