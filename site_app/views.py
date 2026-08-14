@@ -1344,6 +1344,57 @@ def point_at(request, posting_id):
 
 
 @login_required
+def organization_page(request, slug):
+    """A group, and what it has up. The counterpart to a member page.
+
+    Members became objects you can open; organizations did not, so a name
+    like "Once Upon A Table" under every posting went nowhere. On a network
+    whose unit is the ORGANIZATION rather than the person, that is the wrong
+    half to have built first.
+
+    THE CHAPTER CHECK IS EXPLICIT HERE, and that is the thing to notice.
+    Everywhere else this boundary is free: the model is TenantScoped, RLS
+    admits this organization or any in its chapter, and a stranger's row does
+    not exist. Organization is not tenant-scoped -- it IS the tenant -- so
+    Organization.objects.get(slug=...) reaches the whole table and nothing in
+    the database would stop it. The rule is written out, and test_org_page.py
+    asserts it from the outside rather than trusting that it was.
+    """
+    from .models import Member, Organization, Posting, WorkDay
+
+    viewer = _member(request)
+    if viewer is None:
+        return HttpResponseForbidden("Not a member of any organization.")
+
+    organization = get_object_or_404(
+        Organization.objects.select_related("region"), slug=slug, active=True)
+
+    # Its own, or one in the same chapter. An organization admitted into no
+    # chapter (region=None) is visible to its own members and nobody else --
+    # NOT to every other chapterless organization, which is what comparing
+    # two Nones would have given.
+    same = organization.id == viewer.organization_id
+    shared_chapter = (organization.region_id is not None
+                      and organization.region_id == viewer.organization.region_id)
+    if not (same or shared_chapter):
+        raise Http404("No such organization.")
+
+    # RLS scopes all three to what the viewer may see, which for a chapter
+    # peer is exactly this organization's rows.
+    people = (Member.objects.filter(organization=organization)
+              .order_by("display_name"))
+    postings = (Posting.objects.filter(organization=organization, open=True)
+                .select_related("member").order_by("-created_at")[:20])
+    days = (WorkDay.objects.filter(organization=organization,
+                                   cancelled_at__isnull=True)
+            .order_by("starts_at")[:5])
+
+    return render(request, "site_app/organization.html", {
+        "section": "board", "org": organization, "people": people,
+        "postings": postings, "days": days, "is_yours": same})
+
+
+@login_required
 def member_page(request, member_id):
     """Who somebody is, and what they have up right now.
 

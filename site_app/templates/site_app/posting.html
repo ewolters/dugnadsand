@@ -12,7 +12,7 @@
     {% avatar p.member 30 %}
     <span class="by">
       <a class="name" href="/member/{{ p.member_id }}/">{{ p.member.display_name }}</a>
-      <span class="org">{{ p.member.organization.name }}</span>
+      <a class="org" href="/org/{{ p.member.organization.slug }}/">{{ p.member.organization.name }}</a>
     </span>
     <span class="kind">{% if p.is_need %}asking{% elif p.is_note %}saying{% else %}offering{% endif %}</span>
     <span class="stamp">{{ p.created_at|ago }}</span>

@@ -16,7 +16,7 @@
   <div class="mark">{% avatar person 72 %}</div>
   <div>
     <h1>{{ person.display_name }}</h1>
-    <p class="org">{{ person.organization.name }}{% if person.is_organizer %} · organizes here{% endif %}</p>
+    <p class="org"><a href="/org/{{ person.organization.slug }}/">{{ person.organization.name }}</a>{% if person.is_organizer %} · organizes here{% endif %}</p>
     {% if is_you %}
       <p class="meta"><a href="/you/">Change your mark</a></p>
     {% else %}

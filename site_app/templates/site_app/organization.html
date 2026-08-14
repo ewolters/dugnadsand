@@ -1,0 +1,76 @@
+{% extends "app_base.html" %}
+{% load avatars %}
+{% load whenago %}
+{% block title %}{{ org.name }} — Dugnadsand{% endblock %}
+{% block main_class %}stream{% endblock %}
+{% block content %}
+
+{% comment %}
+  A group, not a record of one. The same rule the member page follows: no
+  number anywhere — not how many people are in it, not how much it has given,
+  not how long it has been here. Two of these pages side by side must not
+  invite a comparison.
+
+  What it DOES say is the kind, because that is a fact with consequences: a
+  mutual aid group can take up a request from somebody who asked for help and
+  a business cannot.
+{% endcomment %}
+
+<div class="who-page">
+  <div>
+    <h1>{{ org.name }}</h1>
+    <p class="org">{{ org.get_kind_display }}{% if org.region %} · {{ org.region.name }}{% endif %}</p>
+    {% if org.serves %}<p class="meta">{{ org.serves }}</p>{% endif %}
+    {% if is_yours %}<p class="meta">This is yours.</p>{% endif %}
+  </div>
+</div>
+
+{% comment %}
+  Said plainly, on the page where somebody would otherwise infer it. Being
+  admitted is not the network vouching for anybody — see /terms/ — and a
+  group page is exactly where that inference gets made.
+{% endcomment %}
+<p class="note">Admitted to this chapter. The network records what an organization
+   says it holds and does not check it; being here is not a recommendation.</p>
+
+<h2>Who is here</h2>
+
+{% for p in people %}
+  <div class="post">
+    <p class="who">
+      {% avatar p 30 %}<a class="name" href="/member/{{ p.id }}/">{{ p.display_name }}</a>
+      {% if p.is_organizer %}<span class="kind">organizes</span>{% endif %}
+    </p>
+  </div>
+{% empty %}
+  <p class="empty">Nobody listed.</p>
+{% endfor %}
+
+<h2>What they have up</h2>
+
+{% for p in postings %}
+  <div class="post{% if p.is_need %} need{% endif %}">
+    <p class="who">
+      <span class="kind">{% if p.is_need %}asking{% elif p.is_note %}saying{% else %}offering{% endif %}</span>
+      <span class="stamp">{{ p.created_at|ago }}</span>
+    </p>
+    <p class="body"><a href="/board/{{ p.id }}/">{{ p.description }}</a></p>
+    {% if p.offered_under %}<p class="under">Offered under {{ p.offered_under }}.</p>{% endif %}
+  </div>
+{% empty %}
+  <p class="empty">Nothing up at the moment.</p>
+{% endfor %}
+
+{% if days %}
+  <h2>Days they have called</h2>
+  {% for d in days %}
+    <div class="post">
+      <p class="who">
+        <a class="name" href="/days/{{ d.id }}/">{{ d.name }}</a>
+        <span class="kind">{{ d.starts_at|date:"D j M" }}</span>
+      </p>
+      <p class="body">{{ d.place|linebreaksbr }}</p>
+    </div>
+  {% endfor %}
+{% endif %}
+{% endblock %}

@@ -42,6 +42,7 @@ urlpatterns = [
     path("you/", views.you, name="you"),
     path("board/<uuid:posting_id>/point/", views.point_at, name="point_at"),
     path("member/<uuid:member_id>/", views.member_page, name="member_page"),
+    path("org/<slug:slug>/", views.organization_page, name="organization_page"),
     path("thanks/<uuid:member_id>/", views.thanks, name="thanks"),
     path("pairings/", views.pairings, name="pairings"),
     path("notices/", views.notices, name="notices"),

@@ -174,7 +174,12 @@
        and those are not the same weight. */
     .post .who .by { display:flex; flex-direction:column; line-height:1.25; }
     .post .who .org { font-family:var(--brand-font-mono); font-size:.625rem;
-      letter-spacing:.08em; text-transform:uppercase; color:var(--brand-moss); }
+      letter-spacing:.08em; text-transform:uppercase; color:var(--brand-moss);
+      text-decoration:none; }
+    .post .who a.org:hover { color:var(--brand-spruce); }
+    .who-page .org a { color:inherit; text-decoration:none;
+      border-bottom:1px solid var(--brand-rule-strong); }
+    .who-page .org a:hover { color:var(--brand-ink); }
     .post .who .name { font-family:var(--brand-font-sans); font-size:1rem;
       font-weight:600; color:var(--brand-ink); text-decoration:none;
       letter-spacing:0; text-transform:none; }
