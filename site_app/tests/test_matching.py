@@ -253,13 +253,37 @@ class NoticesFailOpen(MatchingBase):
 class WhenItIsNeeded(MatchingBase):
     """Ordering is a fact about the need, never about who asked."""
 
+    def feed_order(self):
+        """The descriptions on the feed's cards, in the order they appear.
+
+        These asserted on body.index() of the raw HTML, which broke the day
+        the composer moved onto the feed: its "Needed by" help text reads "A
+        ride on Thursday and a fence sometime this year are different
+        things", so a search for "fence sometime" found the HELP TEXT above
+        the feed and the ordering looked reversed.
+
+        A bare substring over a whole page is not an ordering assertion, it
+        is a coincidence that has been holding. This reads the cards.
+        """
+        import re
+
+        body = self.client.get("/board/").content.decode()
+        return re.findall(r'<p class="body">(.*?)</p>', body, re.S)
+
+    def assertBefore(self, first, second):
+        order = self.feed_order()
+        where = [i for i, text in enumerate(order) if first in text]
+        other = [i for i, text in enumerate(order) if second in text]
+        self.assertTrue(where and other,
+                        f"not both on the feed: {first!r}, {second!r} in {order}")
+        self.assertLess(where[0], other[0], f"{first!r} should precede {second!r}")
+
     def test_soonest_first(self):
         far = self.need("fence sometime", needed_by=date.today() + timedelta(days=30))
         soon = self.need("ride thursday", needed_by=date.today() + timedelta(days=2))
         self.sign_in(self.ada_user)
 
-        body = self.client.get("/board/").content.decode()
-        self.assertLess(body.index("ride thursday"), body.index("fence sometime"))
+        self.assertBefore("ride thursday", "fence sometime")
         self.assertTrue(soon.needed_by < far.needed_by)
 
     def test_undated_needs_sit_below_dated_ones_however_new_they_are(self):
@@ -267,8 +291,7 @@ class WhenItIsNeeded(MatchingBase):
         self.need("undated need")  # created later, so newer
         self.sign_in(self.ada_user)
 
-        body = self.client.get("/board/").content.decode()
-        self.assertLess(body.index("dated need"), body.index("undated need"))
+        self.assertBefore("dated need", "undated need")
 
     def test_ordering_ignores_how_much_the_asker_has_given(self):
         """Kit has given 40 hours, Ada none. Kit's need is older and undated;
@@ -287,8 +310,7 @@ class WhenItIsNeeded(MatchingBase):
         self.need("ada asks", member=self.ada, needed_by=date.today())
         self.sign_in(self.ada_user)
 
-        body = self.client.get("/board/").content.decode()
-        self.assertLess(body.index("ada asks"), body.index("kit asks"))
+        self.assertBefore("ada asks", "kit asks")
 
     def test_urgency_reads_as_words_not_as_a_date_calculation(self):
         today = date.today()

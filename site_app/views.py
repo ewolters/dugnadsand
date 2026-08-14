@@ -480,13 +480,25 @@ def board(request):
     standing, which is the exact failure this system exists to avoid. See
     no-gating in policy/manifest.toml.
     """
-    from datetime import date
-    from .models import Member, Posting
-    from .services_licence import sentence as licence_sentence
-
     member = _member(request)
     if member is None:
         return HttpResponseForbidden("Not a member of any organization.")
+
+    return render(request, "site_app/board.html", _feed_for(request, member))
+
+
+def _feed_for(request, member):
+    """Build the feed's context. Called by board() and by posting_new().
+
+    Apart from board() because an invalid post has to come back to the FEED
+    carrying its errors, with the feed still around it — answering "that date
+    is wrong" by moving somebody to a separate screen and losing what they
+    were reading is the behaviour this replaced.
+    """
+    from datetime import date
+    from .forms import PostingForm
+    from .models import Member, Posting
+    from .services_licence import sentence as licence_sentence
 
     # RLS scopes this to the member's organization; the filter is for openness.
     # claims are prefetched so the board can say who is already on something,
@@ -594,7 +606,7 @@ def board(request):
     # no chapter has region=None, and member.organization.region.name would
     # resolve to the invalid-variable marker rather than to nothing.
     region = member.organization.region
-    return render(request, "site_app/board.html", {
+    return {
         "section": "board",
         "member": member, "others": others,
         "feed": feed, "chapter": region.name if region else None,
@@ -603,9 +615,12 @@ def board(request):
         # None for everybody holding no licence, which is most members, and
         # the tick then does not render at all.
         "licence_sentence": licence_sentence(member.organization),
+        # A blank composer, ready at the top of the feed. posting_new renders
+        # this same template with a bound one when a post does not validate.
+        "form": PostingForm(organization=member.organization),
         # Kept for anything still reading them, and for the counts in the lede.
         "needs": needs, "offers": offers,
-    })
+    }
 
 
 @login_required
@@ -763,8 +778,19 @@ def posting_new(request):
         announce_posting(posting)
         return redirect("/board/")
 
+    # Straight back to the feed with the composer open and the errors on it.
+    # Rendering the standalone page instead would answer "your date is wrong"
+    # by moving somebody to a screen they did not ask for and losing the feed
+    # they were reading. board() is called for its context rather than
+    # duplicating it — the composer needs the same feed around it either way.
+    if request.method == "POST":
+        context = _feed_for(request, member)
+        context["form"] = form
+        context["compose_open"] = True
+        return render(request, "site_app/board.html", context)
+
     return render(request, "site_app/posting_form.html", {
-        "section": "board","form": form})
+        "section": "board", "form": form})
 
 
 @login_required

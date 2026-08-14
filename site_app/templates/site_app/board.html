@@ -13,13 +13,28 @@
    there is no total, so there is nothing to compare.</p>
 
 {% comment %}
-  The composer sits at the top of the feed rather than behind a separate page.
-  Posting is the ordinary act here, and putting it one click away made it read
-  as an administrative form rather than as saying something.
+  The composer sits at the top of the feed rather than behind a separate page,
+  and now opens IN PLACE. Posting is the ordinary act here, and it still cost
+  a page load, a new screen and a trip back — three steps to say "I need a
+  ride on Thursday".
+
+  A <details> rather than script. It is keyboard-operable, it survives CSS
+  never arriving, and if JavaScript is off the composer simply starts open —
+  which is the same idiom the account menu already uses. /board/new/ stays as
+  its own page: it is the deep link, and it is where an invalid post lands
+  with its errors.
 {% endcomment %}
-<a class="compose" href="/board/new/">
-  {% avatar member 26 %}<span>Ask for something, or offer something…</span>
-</a>
+<details class="compose"{% if compose_open %} open{% endif %}>
+  <summary>
+    {% avatar member 26 %}<span>Ask for something, or offer something…</span>
+  </summary>
+  <form method="post" action="/board/new/" class="compose-post">
+    {% include "site_app/_composer.html" %}
+    <div class="row send">
+      <button type="submit" class="act">Post it</button>
+    </div>
+  </form>
+</details>
 
 {% comment %}
   Tabs narrow what is shown. They never reorder what remains and they never

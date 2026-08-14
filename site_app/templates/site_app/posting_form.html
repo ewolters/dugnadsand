@@ -21,58 +21,7 @@
 {% endcomment %}
 
 <form method="post" class="compose-post">
-  {% csrf_token %}
-  {% if form.non_field_errors %}<p class="err">{{ form.non_field_errors.0 }}</p>{% endif %}
-
-  <div class="say-it">
-    <p class="whoami">{% avatar member 30 %}<b>{{ member.display_name }}</b></p>
-    <label class="sr" for="{{ form.description.id_for_label }}">{{ form.description.label }}</label>
-    {{ form.description }}
-    {% if form.description.errors %}<p class="err">{{ form.description.errors.0 }}</p>{% endif %}
-
-    <div class="which">
-      {{ form.kind }}
-      {% if form.kind.errors %}<p class="err">{{ form.kind.errors.0 }}</p>{% endif %}
-    </div>
-  </div>
-
-  <details class="more-detail">
-    <summary>Add a date, a rough size, or a project</summary>
-    <div class="pair">
-      <div>
-        <label for="{{ form.needed_by.id_for_label }}">{{ form.needed_by.label }}</label>
-        {{ form.needed_by }}
-        <p class="help">{{ form.needed_by.help_text }}</p>
-        {% if form.needed_by.errors %}<p class="err">{{ form.needed_by.errors.0 }}</p>{% endif %}
-      </div>
-      <div>
-        <label for="{{ form.hours_cap.id_for_label }}">{{ form.hours_cap.label }}</label>
-        {{ form.hours_cap }}
-        <p class="help">{{ form.hours_cap.help_text }}</p>
-        {% if form.hours_cap.errors %}<p class="err">{{ form.hours_cap.errors.0 }}</p>{% endif %}
-      </div>
-    </div>
-    <div>
-      <label for="{{ form.project.id_for_label }}">{{ form.project.label }}</label>
-      {{ form.project }}
-      <p class="help">{{ form.project.help_text }}</p>
-    </div>
-  </details>
-
-  {% if form.licence_sentence %}
-    {% comment %}
-      Shown only to an organization that actually holds a verified licence.
-      For everybody else this block does not render at all — a permanent
-      "I hold no licence" line would be noise on every offer of a lift.
-    {% endcomment %}
-    <div class="attest">
-      <label>
-        {{ form.under_licence }}
-        <span>{{ form.licence_sentence }}</span>
-      </label>
-      {% if form.under_licence.errors %}<p class="err">{{ form.under_licence.errors.0 }}</p>{% endif %}
-    </div>
-  {% endif %}
+  {% include "site_app/_composer.html" %}
 
   <div class="row send">
     <button type="submit" class="act">Post it</button>
