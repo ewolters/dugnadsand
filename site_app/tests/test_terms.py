@@ -28,6 +28,8 @@ from site_app.models import Application
 from site_app.services_applications import (TERMS_VERSION, policy_version,
                                             submit, terms_version)
 
+from .helpers import TrialDoorsOpen
+
 
 def prose(body):
     body = re.sub(r"<(script|style)\b.*?</\1>", " ", body, flags=re.S | re.I)
@@ -129,7 +131,11 @@ class WhatIsAgreedIsRecorded(TestCase):
         self.assertNotIn("policy_version", source)
 
 
-class TheAgreementPointsAtTheAgreement(TestCase):
+class TheAgreementPointsAtTheAgreement(TrialDoorsOpen, TestCase):
+    """Applications are closed for the trial period, so the door is held
+    open here — the form has to keep pointing at the right documents when it
+    comes back, and deleting the test would lose that."""
+
     def test_the_apply_page_links_the_terms_beside_the_checkbox(self):
         """It linked /policy/ alone, so an applicant ticking the box was
         agreeing to an engineering manifest."""

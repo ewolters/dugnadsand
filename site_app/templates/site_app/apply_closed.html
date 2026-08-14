@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+
+{% block title %}Applications are closed — Dugnadsand{% endblock %}
+
+{% block extra_css %}
+<style>
+  body { margin:0; background:var(--brand-birch); color:var(--brand-ink);
+         font-family:var(--brand-font-serif); line-height:1.65; }
+  body > header { border-bottom:1px solid var(--brand-rule); }
+  body > header nav { max-width:44rem; margin-inline:auto; padding:1.1rem var(--brand-gutter);
+    display:flex; align-items:baseline; justify-content:space-between; gap:1rem; flex-wrap:wrap; }
+  body > header .nav-right { display:flex; align-items:baseline; gap:1.25rem; }
+  body > header .place, body > header .signin {
+    font-family:var(--brand-font-mono); font-size:.6875rem; letter-spacing:.1em;
+    text-transform:uppercase; color:var(--brand-moss); }
+  body > header .signin { color:var(--brand-ochre); text-decoration:none; }
+  body > header .brand-name { font-family:var(--brand-font-sans); font-weight:600;
+    letter-spacing:.07em; text-transform:uppercase; text-decoration:none; color:var(--brand-ink); }
+  .mark { height:.7em; width:auto; margin-right:.55rem; vertical-align:baseline; opacity:.75; }
+  body > footer { border-top:1px solid var(--brand-rule); margin-top:4.5rem;
+    font-family:var(--brand-font-mono); font-size:.75rem; color:var(--brand-moss); }
+  body > footer p { max-width:44rem; margin:0 auto; padding:1.5rem var(--brand-gutter); }
+
+  main { max-width:44rem; margin-inline:auto; padding:0 var(--brand-gutter); }
+  h1 { color:var(--brand-ink); font-family:var(--brand-font-sans); font-weight:600;
+       font-size:clamp(1.8rem,4.5vw,2.4rem); line-height:1.12; letter-spacing:-.02em;
+       margin:3.5rem 0 .4rem; text-wrap:balance; }
+  .issued { font-family:var(--brand-font-mono); font-size:.75rem; letter-spacing:.08em;
+    text-transform:uppercase; color:var(--brand-ochre); margin:0 0 2.5rem; }
+  h2 { color:var(--brand-ink); font-family:var(--brand-font-sans); font-weight:600;
+       font-size:1.2rem; margin:2.5rem 0 .5rem; }
+  p { margin:0 0 1rem; }
+  a { color:var(--brand-spruce); }
+  .rule { border:0; border-top:1px solid var(--brand-rule); margin:3rem 0 0; }
+</style>
+{% endblock %}
+
+{% block content %}
+<h1>Applications are closed</h1>
+<p class="issued">Trial period · to {{ trial_ends }}</p>
+
+<p>Dugnadsand is running as a trial. Whether it continues past {{ trial_ends }} has not
+   been decided, and applications are not being taken until it is.</p>
+
+<p>The reason is that admitting an organization is a commitment to operate the network for
+   it. That commitment cannot honestly be made while the network's own future is open. An
+   organization admitted next month into something that closes the month after has been
+   done a disservice rather than a favour.</p>
+
+<h2>What this is not</h2>
+
+<p>It is not a waiting list, and there is nothing to join in the meantime. Organizations
+   already admitted are unaffected and the network continues to run for them through the
+   trial period.</p>
+
+<h2>Organizations with an interest</h2>
+
+<p>A note is welcome, and is more useful than an application would be: what an
+   organization does, and what it would use the network for. The open question is whether
+   this should exist rather than who should be in it, so the answer to the first is worth
+   more than a queue for the second.</p>
+
+<p><a href="/#contact">Send a note</a></p>
+
+<hr class="rule">
+
+<p><a href="/how-it-works/">How it works</a> ·
+   <a href="/policy/">Statement of operating policy</a> ·
+   <a href="/terms/">Terms of participation</a> ·
+   <a href="/chapters/">Chapters</a></p>
+{% endblock %}

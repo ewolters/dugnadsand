@@ -348,12 +348,18 @@ class Needs(AppBase):
             self.assertEqual(Posting.objects.filter(kind=Posting.OFFER).count(),
                              before + 1)
 
-        # And somebody with no account at all can still ask.
+        # And somebody with no account at all can still ask. Asserted with
+        # the door held open: blind intake is closed for the trial period
+        # (site_app/trial.py), and the PROPERTY — that asking needs no
+        # account — is what this test is about and has not changed.
+        from unittest.mock import patch
+
         from .test_requests import stamped
 
         self.client.logout()
-        self.client.post("/need-help/", stamped(
-            need="A ride to the clinic.", reach_them="864 555 0102"))
+        with patch("site_app.trial.REQUESTS_OPEN", True):
+            self.client.post("/need-help/", stamped(
+                need="A ride to the clinic.", reach_them="864 555 0102"))
         self.assertEqual(Request.objects.count(), 1)
 
     def test_the_feed_carries_both_directions_in_one_stream(self):

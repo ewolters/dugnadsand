@@ -15,6 +15,8 @@ from django.contrib.auth.models import User
 from django.test import TestCase
 
 from site_app.models import Application, Credential, Region, Screening
+
+from .helpers import TrialDoorsOpen
 from site_app.services_applications import (REQUIRED, NotReady, admit,
                                             decline, record_screening, submit,
                                             verify_credential)
@@ -284,7 +286,7 @@ class TheScreeningRecordDoesNotDecide(ApplicationBase):
             self.assertNotIn(forbidden, names, f"Screening grew {forbidden}")
 
 
-class TheApplicationPage(ApplicationBase):
+class TheApplicationPage(TrialDoorsOpen, ApplicationBase):
     def test_the_form_is_public(self):
         self.assertEqual(self.client.get("/apply/").status_code, 200)
 
@@ -407,7 +409,7 @@ class ThePersonalDataIsSealed(ApplicationBase):
             Application.BUSINESS)
 
 
-class WhoIsTold(ApplicationBase):
+class WhoIsTold(TrialDoorsOpen, ApplicationBase):
     def test_the_applicant_is_acknowledged_on_submitting(self):
         from unittest.mock import patch
 

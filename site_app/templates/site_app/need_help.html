@@ -100,6 +100,10 @@
     border-radius:2px; cursor:pointer; background:var(--brand-spruce);
     color:var(--brand-paper); }
   .err { color:var(--brand-error); font-size:.875rem; margin:.25rem 0 0; }
+  dl.elsewhere { margin:1.25rem 0 2rem; }
+  dl.elsewhere dt { font-family:var(--brand-font-sans); font-weight:600;
+    margin-top:1.1rem; }
+  dl.elsewhere dd { margin:.2rem 0 0; color:var(--brand-text-soft); }
 </style>
 {% endblock %}
 
@@ -115,7 +119,38 @@
    directly is the whole of it: they know what is available this week, what their
    own rules are, and what happens next.</p>
 
-{% if sent %}
+{% if not intake_open %}
+  {% comment %}
+    Closed on arithmetic, not policy. A request here is shown to the mutual
+    aid groups covering its area and to nobody else; with no group reading
+    them it reaches nobody at all. Taking a name and a phone number from
+    somebody having the worst week of their year, into a queue with no
+    reader, would be worse than saying so.
+
+    Real destinations, named. A page turning somebody away owes them
+    somewhere to actually go.
+  {% endcomment %}
+  <div class="no-form">
+    <b>Not taking requests at the moment</b>
+    <p>Dugnadsand is running as a trial, and whether it continues past
+       {{ trial_ends }} has not been decided. While that is open there is no group
+       here reading requests, so anything written on this page would reach nobody —
+       and a form that collects a name and a number for a queue with no reader is
+       worse than a page that says it cannot help.</p>
+  </div>
+
+  <h2>Where to go instead, today</h2>
+
+  <dl class="elsewhere">
+    {% for name, what in elsewhere %}
+      <dt>{{ name }}</dt><dd>{{ what }}</dd>
+    {% endfor %}
+  </dl>
+
+  <p>Those are staffed, and they are the routes this page would have pointed at
+     anyway once a group had made contact.</p>
+
+{% elif sent %}
   <div class="no-form">
     <b>Sent</b>
     <p>The groups covering that area can see what was asked for and roughly where.
@@ -178,7 +213,7 @@
 {% endif %}
 
 <div class="no-form">
-  <b>What happens to what is written here</b>
+  <b>What happens to what is written here, when it is open</b>
   <p>The need and the rough area go to the mutual aid groups covering that area, and to
      nobody else. Businesses and households in the same network never see it. The name
      and the contact details are encrypted and stay withheld until one group takes it
@@ -190,5 +225,5 @@
 
 <p><a href="/how-it-works/">How it works</a> ·
    <a href="/chapters/">Chapters</a> ·
-   <a href="/apply/">Applying to the network</a></p>
+   <a href="/apply/">Applications (closed for the trial period)</a></p>
 {% endblock %}

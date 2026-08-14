@@ -68,3 +68,30 @@ class CleansPlatformTokens:
             cur.execute("DELETE FROM work_action_token WHERE token = ANY(%s)",
                         (list(new),))
             conn.commit()
+
+
+class TrialDoorsOpen:
+    """Run a test as though the trial period were not on.
+
+    Applications and blind requests are closed while the network's future is
+    being decided (see site_app/trial.py). The tests that exercise those doors
+    are not deleted for it — the behaviour has to keep working, and it has to
+    still be described somewhere when they reopen. They open the door for the
+    duration of the test instead.
+
+    The tests for the CLOSED behaviour are separate and do not use this.
+
+    A subclass defining its own setUp MUST call super().setUp(), or this one
+    never runs and the door stays shut — which shows up as every test in the
+    class failing on an empty table rather than as anything to do with the
+    trial period.
+    """
+
+    def setUp(self):
+        from unittest.mock import patch
+
+        for flag in ("APPLICATIONS_OPEN", "REQUESTS_OPEN"):
+            patcher = patch(f"site_app.trial.{flag}", True)
+            patcher.start()
+            self.addCleanup(patcher.stop)
+        super().setUp()

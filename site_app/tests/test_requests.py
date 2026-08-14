@@ -32,7 +32,7 @@ from site_app.services_requests import (AlreadyTaken, NotAnAidGroup,
                                         take_request, visible_to)
 from site_app.tenancy import set_tenant
 
-from .helpers import SignedIn
+from .helpers import SignedIn, TrialDoorsOpen
 
 
 def stamped(**fields):
@@ -49,10 +49,13 @@ def stamped(**fields):
             **fields}
 
 
-class Intake(TestCase):
+class Intake(TrialDoorsOpen, TestCase):
     """The public form. No account, no session, no tenant."""
 
     def setUp(self):
+        # TrialDoorsOpen patches in its own setUp, so this has to chain or
+        # the door stays shut and every test here fails on an empty table.
+        super().setUp()
         self.upstate = Region.objects.create(
             slug="upstate", name="Upstate SC and WNC")
 

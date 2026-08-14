@@ -172,13 +172,17 @@ def need_help(request):
     Silence means unlisted: publishing a route to a group's door is a
     decision they make rather than a default they discover.
     """
+    from . import trial
     from .forms import RequestForm
     from .models import Organization
     from .services_requests import submit_request
 
     sent = False
     form = RequestForm(request.POST or None)
-    if request.method == "POST":
+    # Refused at the view, not merely hidden in the template. A form that is
+    # only absent is still there to anybody holding the page open in a tab,
+    # and this one takes a name and a phone number.
+    if request.method == "POST" and trial.REQUESTS_OPEN:
         if form.is_valid():
             try:
                 submit_request(
@@ -213,6 +217,9 @@ def need_help(request):
         "chapters": sorted(by_chapter.items()),
         "any_listed": bool(groups),
         "form": form, "sent": sent,
+        "intake_open": trial.REQUESTS_OPEN,
+        "trial_ends": trial.ends_on(),
+        "elsewhere": trial.ELSEWHERE,
     })
 
 
@@ -2083,8 +2090,16 @@ def apply(request):
     self-service signup and that stays true — this records a request, and the
     decision is still made by a person running a command.
     """
+    from . import trial
     from .forms import ApplicationForm
     from .services_applications import acknowledge, submit, tell_the_reviewer
+
+    # Closed for the trial period. The URL still answers rather than 404s,
+    # because somebody following an old link deserves to be told what
+    # happened rather than to conclude the site is broken.
+    if not trial.APPLICATIONS_OPEN:
+        return render(request, "site_app/apply_closed.html",
+                      {"trial_ends": trial.ends_on()})
 
     if request.method != "POST":
         form = ApplicationForm(initial={"t": ApplicationForm.stamp()})

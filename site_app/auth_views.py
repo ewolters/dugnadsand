@@ -14,7 +14,7 @@ from urllib.parse import quote
 from django.contrib.auth import login as auth_login
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
-from django.http import HttpResponseBadRequest
+from django.http import HttpResponseBadRequest, HttpResponseForbidden
 from django.shortcuts import redirect, render
 from django.views.decorators.csrf import csrf_exempt
 from kjerne_platform import federation_sso, mfa
@@ -179,6 +179,22 @@ def sso_entry(request):
         user.email = email
         user.save(update_fields=["email"])
 
+    # A DISABLED ACCOUNT STAYS DISABLED, INCLUDING THROUGH THIS DOOR.
+    #
+    # authenticate() refuses an inactive user; auth_login() does not, and this
+    # path calls the second directly because the assertion IS the credential.
+    # So without this check, turning an account off did nothing at all to
+    # anybody who could reach the vault: a removed member or a compromised
+    # login walked back in through SSO, and the password door being shut
+    # made it look as though they could not.
+    #
+    # Refused rather than re-enabled, and the account is not resurrected: a
+    # disabled user who signs in through the federation is exactly the case
+    # this is for.
+    if not user.is_active:
+        logger.warning("Refused SSO for disabled account %s", email)
+        return HttpResponseForbidden("That account is not active.")
+
     auth_login(request, user, backend="django.contrib.auth.backends.ModelBackend")
     logger.info("SSO sign-in for %s (new=%s)", email, created)
     return redirect("/board/")
@@ -226,6 +242,14 @@ def setup(request, token):
         with bypass_rls():
             member.must_change_password = False
             member.save(update_fields=["must_change_password"])
+        # Same reason as sso_entry: auth_login does not check is_active, and
+        # a setup link is a credential somebody may still be holding when
+        # their account is turned off.
+        if not user.is_active:
+            logger.warning("Refused setup link for disabled account %s",
+                           user.username)
+            return HttpResponseForbidden("That account is not active.")
+
         auth_login(request, user, backend="django.contrib.auth.backends.ModelBackend")
         # Straight into enrolling a second factor; the gate would send them
         # there anyway, and arriving on purpose reads better than a bounce.

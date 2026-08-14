@@ -16,6 +16,8 @@ from django.test import TestCase
 from site_app.models import Organization, Region
 from site_app.tenancy import set_tenant
 
+from .helpers import TrialDoorsOpen
+
 
 class NeedHelpBase(TestCase):
     def setUp(self):
@@ -55,11 +57,14 @@ class ItIsReachableByAnybody(NeedHelpBase):
 
 class ItIsAnIntroductionAndNothingElse(NeedHelpBase):
     def test_the_form_asks_four_things_and_no_more(self):
+        from unittest.mock import patch
+
         """Somebody in trouble is not filling in an intake assessment, and
         every extra question is a reason to close the tab."""
         import re
 
-        body = self.page()
+        with patch("site_app.trial.REQUESTS_OPEN", True):
+            body = self.page()
         named = set(re.findall(r'<(?:input|textarea|select)[^>]*name="([^"]+)"',
                                body))
         self.assertEqual(named - {"csrfmiddlewaretoken", "t", "website"},
