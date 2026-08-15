@@ -209,3 +209,29 @@ class TheLocalServicesAreReal(TestCase):
         body = self.body()
         self.assertIn("Mills River", body)
         self.assertIn("older listings still give", body)
+
+
+class TheOneDoorLeftOpen(TestCase):
+    """Interest is the only thing still being taken. It has to arrive.
+
+    The closed-applications page pointed at /#contact while the form on the
+    home page is id="say-hello", so the single route left open landed
+    somebody at the top of the home page with no idea what to do next — a
+    broken anchor being the quietest kind of broken.
+    """
+
+    def test_the_closed_page_links_an_anchor_that_exists(self):
+        import re
+
+        closed = self.client.get("/apply/").content.decode()
+        anchors = set(re.findall(r'href="/#([a-z0-9-]+)"', closed))
+        self.assertTrue(anchors, "the closed page offers no way to say anything")
+
+        home = self.client.get("/").content.decode()
+        for anchor in anchors:
+            with self.subTest(anchor=anchor):
+                self.assertIn(f'id="{anchor}"', home)
+
+    def test_the_home_page_still_takes_a_message(self):
+        home = self.client.get("/").content.decode()
+        self.assertIn('name="message"', home)
