@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{# ⚠ Django's default error pages leak the stack trace and settings when
+   DEBUG is on. `audit error-pages` requires all four; the template did not
+   ship them until 2026-08-15, so every new site failed from birth.
+   Deliberately says nothing about what went wrong internally. #}
+{% block title %}Not permitted — Dugnadsand{% endblock %}
+{% block content %}
+  <h1>Not permitted</h1>
+  <p>You do not have access to this page.</p>
+  <p><a href="/">Back to the start</a></p>
+{% endblock %}
