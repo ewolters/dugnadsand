@@ -331,7 +331,14 @@
     </form>
   {% endif %}
 
-  <p class="credits">Dugnadsand is sponsored by <a href="https://svend.ai">SVEND</a>.<br>
+  {% comment %}
+    Reads the same value as the footer. This line used to name SVEND as a
+    backer, which claimed a different relationship than the terms do — one
+    party funds a thing, the other runs it and answers for it — and left a
+    reader unable to tell which was meant.
+  {% endcomment %}
+  <p class="credits">{% if operator_legal_name %}Dugnadsand is operated by
+     <a href="https://svend.ai">{{ operator_legal_name }}</a>.<br>{% endif %}
      Photographs, in order: <em>Community gathering at a barn raising bee</em>, early 1900s, and
      <em>Little Bear Trail Work Day</em>, Coconino National Forest, 2016. Both public domain,
      via Wikimedia Commons.</p>

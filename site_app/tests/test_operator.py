@@ -31,3 +31,21 @@ class TheFooterNamesTheOperator(TestCase):
             response = self.client.get("/terms/")
         self.assertEqual(response.status_code, 200)
         self.assertNotContains(response, "Operated by")
+
+
+class TheSiteSaysOneThingAboutWhoRunsIt(TestCase):
+    """The front page used to credit SVEND as a *sponsor* while the terms made
+    the same party the *operator*. Those are different relationships — one
+    funds a thing, the other runs it and answers for it — and a reader had no
+    way to tell which was being claimed. Both now read the same value."""
+
+    def test_the_front_page_does_not_call_the_operator_a_sponsor(self):
+        self.assertNotContains(self.client.get("/"), "sponsored by")
+
+    def test_the_front_page_names_the_same_party_as_the_terms(self):
+        with override_settings(OPERATOR_LEGAL_NAME="Some Other Entity, LLC"):
+            front = self.client.get("/")
+            terms = self.client.get("/terms/")
+        for response in (front, terms):
+            self.assertContains(response, "Some Other Entity, LLC")
+            self.assertNotContains(response, "SVEND")
