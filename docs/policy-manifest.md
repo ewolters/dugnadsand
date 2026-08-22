@@ -157,18 +157,28 @@ The alternative — passing because there was nothing to find — is the failure
 manifest invites, and it is the most dangerous possible reading, because a green light is
 least deserved exactly when the thing it protects has not been built.
 
-At the time of writing the run reports:
+The run now reports:
+
+```
+STATUS: UPHELD   upheld: 11   not_enforceable: 0   breached: 0
+```
+
+All eleven claims are tested against the code and hold. Nothing is standing on an
+untested check.
+
+This document previously recorded a different answer, and it is worth keeping the shape
+of it:
 
 ```
 STATUS: INCOMPLETE   upheld: 2   not_enforceable: 6   breached: 0
 ```
 
-Two claims hold today and are genuinely enforced: no payment rails, no tax artifact. Six
-cannot yet be tested, because the ledger they describe has not been built. The manifest
-says so, and will keep saying so until it is.
-
-That amber is the honest answer, and the list of unenforceable checks doubles as the
-punch list.
+Six claims could not be tested then, because the ledger they describe had not been built
+yet. The manifest reported amber and kept reporting it until the subjects existed — it
+never rounded the six up to a pass. That amber was the honest answer at the time, its
+list of unenforceable checks served as the punch list, and the punch list is now worked
+through. The reason to record both here is that the second number only means anything
+because the first one was allowed to be ugly.
 
 ---
 

@@ -1,8 +1,8 @@
-django>=5.2
-gunicorn>=23.0
-pydantic-settings>=2.0
-dj-database-url>=2.0
-whitenoise>=6.0
+django==5.2.16
+gunicorn==24.1.1
+pydantic-settings==2.14.2
+dj-database-url==3.1.0
+whitenoise==6.11.0
 kjerne-platform
-tomli>=2.0; python_version < "3.11"
-qrcode>=7.4
+tomli==2.4.0; python_version < "3.11"
+qrcode==8.2

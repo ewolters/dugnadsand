@@ -8,6 +8,7 @@ from django.http import (Http404, HttpResponseBadRequest,
                          HttpResponseForbidden, JsonResponse)
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 from kjerne_platform import email, rate_limit
@@ -465,6 +466,7 @@ def member_login(request):
     return render(request, "site_app/login.html", {"form": form, "error": error})
 
 
+@require_POST
 def member_logout(request):
     from django.contrib.auth import logout
 
@@ -474,6 +476,22 @@ def member_logout(request):
 
 def _member(request):
     return getattr(request.user, "member", None)
+
+
+def _back(request, default="/board/"):
+    """Where a form said to return to, if it named somewhere on this site.
+
+    The `back` field exists so acting on a posting does not throw the reader
+    back to the top of the board. It arrives from the browser, so it can say
+    anything, and a redirect that repeats it verbatim lends this site's name
+    to whatever it names. Anything not on this host is dropped for the board.
+    """
+    back = request.POST.get("back")
+    if back and url_has_allowed_host_and_scheme(
+            back, allowed_hosts={request.get_host()},
+            require_https=request.is_secure()):
+        return back
+    return default
 
 
 @login_required
@@ -948,7 +966,7 @@ def step_off(request, posting_id):
     # Only when the last person leaves. Still covered is not news.
     if remaining == 0:
         announce_uncovered(posting)
-    return redirect(request.POST.get("back") or "/board/")
+    return redirect(_back(request))
 
 
 @login_required
@@ -1444,7 +1462,7 @@ def pin_toggle(request):
         project = get_object_or_404(Project, pk=request.POST.get("project"))
 
     toggle_pin(member=member, posting=posting, project=project)
-    return redirect(request.POST.get("back") or "/board/")
+    return redirect(_back(request))
 
 
 @login_required
@@ -1469,7 +1487,7 @@ def point_at(request, posting_id):
 
     messages.info(request, "Sent. You will not hear back through this — if they "
                            "take it on it shows on the board like anyone else.")
-    return redirect(request.POST.get("back") or "/board/")
+    return redirect(_back(request))
 
 
 @login_required
@@ -1592,7 +1610,7 @@ def thanks(request, member_id):
 
     say_thanks(to_member=get_object_or_404(Member, pk=member_id),
                from_member=member)
-    return redirect(request.POST.get("back") or "/board/")
+    return redirect(_back(request))
 
 
 @login_required
