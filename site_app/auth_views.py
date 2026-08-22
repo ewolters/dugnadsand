@@ -16,6 +16,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.http import HttpResponseBadRequest, HttpResponseForbidden
 from django.shortcuts import redirect, render
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.csrf import csrf_exempt
 from kjerne_platform import federation_sso, mfa
 
@@ -114,7 +115,15 @@ def mfa_challenge(request):
         code = (request.POST.get("code") or "").strip()
         if mfa.verify(email, code):
             request.session[SESSION_FLAG] = True
-            return redirect(request.GET.get("next") or "/board/")
+            # `next` arrives in the query string, so a link can carry it. It is
+            # followed the moment the code verifies, which is the worst moment
+            # to hand somebody to a site that is not this one.
+            nxt = request.GET.get("next")
+            if nxt and url_has_allowed_host_and_scheme(
+                    nxt, allowed_hosts={request.get_host()},
+                    require_https=request.is_secure()):
+                return redirect(nxt)
+            return redirect("/board/")
         # Deliberately vague: a distinct message for "wrong code" versus
         # "replayed code" would tell an attacker which they had.
         error = "That code did not match."

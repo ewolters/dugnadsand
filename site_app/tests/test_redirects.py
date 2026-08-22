@@ -66,3 +66,36 @@ class BackFieldStaysOnThisSite(SignedIn, TestCase):
 
     def test_a_missing_back_falls_back_to_the_board(self):
         self.assertEqual(self._thanks("")["Location"], "/board/")
+
+
+class NextAfterTheSecondFactorStaysOnThisSite(TestCase):
+    """The same hole on the auth path, where it is worth more to an attacker.
+
+    `/mfa/?next=…` is followed the instant the code verifies. A link handed to
+    somebody signing in would spend their second factor and then land them on
+    whatever it named, at the one moment they are most primed to believe a
+    page asking for something.
+    """
+
+    def setUp(self):
+        self.user = User.objects.create_user(
+            "ada", email="ada@example.test", password="dugnad-test-pw")
+        self.client.force_login(self.user)
+
+    def _challenge(self, nxt):
+        from unittest.mock import patch
+
+        with patch("kjerne_platform.mfa.is_enrolled", return_value=True), \
+                patch("kjerne_platform.mfa.verify", return_value=True):
+            return self.client.post(f"/mfa/?next={nxt}", {"code": "000000"})
+
+    def test_a_path_on_this_site_is_honoured(self):
+        self.assertEqual(self._challenge("/days/")["Location"], "/days/")
+
+    def test_an_absolute_url_elsewhere_is_refused(self):
+        self.assertEqual(
+            self._challenge("https://evil.example/")["Location"], "/board/")
+
+    def test_a_scheme_relative_url_elsewhere_is_refused(self):
+        self.assertEqual(
+            self._challenge("//evil.example/")["Location"], "/board/")
