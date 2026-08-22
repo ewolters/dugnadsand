@@ -34,6 +34,18 @@ class Settings(BaseSettings):
     # than silently storing plaintext.
     field_encryption_key: str = ""
 
+    # The legal person the terms run to. Section 1 tells a joining organization
+    # the network "is operated by the entity named at the foot of this page",
+    # and sections 4 and 5 hand that entity an indemnity and a limitation of
+    # liability — so if the foot of the page names nobody, an organization has
+    # agreed to indemnify a party it cannot identify.
+    #
+    # It lives here, once, because entity separation is expected to change it
+    # (see docs/for-counsel.md §7) and the change should be a value rather than
+    # a hunt through templates. Empty renders nothing at all: a page silent
+    # about the operator is better than one naming the wrong one.
+    operator_legal_name: str = "SVEND, LLC"
+
     # Hosts
     allowed_hosts: str = "localhost,127.0.0.1"
 

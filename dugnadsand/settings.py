@@ -17,6 +17,10 @@ FIELD_ENCRYPTION_KEY = config.field_encryption_key
 DEBUG = config.debug
 ALLOWED_HOSTS = config.get_allowed_hosts()
 
+# Rendered by site_app.context.operator into the footer of every page. See the
+# field in config.py for why it is one value rather than a string in templates.
+OPERATOR_LEGAL_NAME = config.operator_legal_name
+
 INSTALLED_APPS = [
     "django.contrib.admin",
     "django.contrib.auth",
@@ -75,6 +79,9 @@ TEMPLATES = [
                 # The header shows a member's mark and name, so every app page
                 # needs it — not just the views that remembered to pass it.
                 "site_app.context.member",
+                # The terms send a reader to the foot of the page to find out
+                # who the operator is, so the footer needs it everywhere.
+                "site_app.context.operator",
             ],
         },
     },
