@@ -33,6 +33,11 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    # Answers every public request while the site is behind a placeholder, and
+    # is inert unless DUGNADSAND_PLACEHOLDER says otherwise. Nothing below it is
+    # removed or disabled — see dugnadsand/placeholder.py. Below
+    # SecurityMiddleware so a closed site still gets HSTS and the SSL redirect.
+    "dugnadsand.placeholder.PlaceholderMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
     # Request observability: correlation IDs, exception capture, slow requests.
     "kjerne_platform.middleware.OpsMiddleware",
