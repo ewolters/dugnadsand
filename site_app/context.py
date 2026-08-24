@@ -9,6 +9,18 @@ Chrome data belongs to the chrome.
 """
 
 
+def operator(request):
+    """The legal person named in the footer, which the terms point at.
+
+    Chrome data, for the same reason `member` is: the terms say the operator is
+    named at the foot of *this page*, which means every page, not the ones a
+    view remembered to pass it to.
+    """
+    from django.conf import settings
+
+    return {"operator_legal_name": getattr(settings, "OPERATOR_LEGAL_NAME", "")}
+
+
 def member(request):
     """The signed-in member, or nothing.
 
